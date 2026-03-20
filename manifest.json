@@ -1,0 +1,17 @@
+{
+  "name": "Su voz a diario",
+  "short_name": "Su voz",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7fafc",
+  "theme_color": "#ffffff",
+  "description": "Lectura bíblica del día, sencilla y accesible.",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
