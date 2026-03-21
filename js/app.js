@@ -164,7 +164,9 @@ const App = {
                 : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
             }
 
-    ${isHome
+<button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
+
+${isHome
                 ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
                 : `<button class="btn-primary" data-nav="calendar">Volver al calendario</button>`
             }
