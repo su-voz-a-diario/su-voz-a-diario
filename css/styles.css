@@ -364,13 +364,18 @@ body {
 }
 
 .calendar-day.today {
-    border: 2px solid var(--accent);
-    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.12);
+    border: 2px solid #3182ce;
+    background-color: #ebf8ff;
 }
 
 .calendar-day.read {
     background-color: #f0fff4;
     border-color: #9ae6b4;
+}
+
+.calendar-day.read.today {
+    background-color: #e6fffa;
+    border-color: #3182ce;
 }
 
 .day-number {
