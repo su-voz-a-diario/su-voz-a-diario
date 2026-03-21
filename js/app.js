@@ -32,33 +32,29 @@ const App = {
     },
 
     bindEvents: function () {
-        this.$navHome.addEventListener('click', () => this.navigate('home'));
-        this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
-        window.addEventListener('popstate', () => this.handleRoute());
+    this.$navHome.addEventListener('click', () => this.navigate('home'));
+    this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
+    window.addEventListener('popstate', () => this.handleRoute());
 
-        // Listen to clicks within the container (event delegation)
-        this.$content.addEventListener('click', (e) => {
-            // Marcar como leído
-            if (e.target.closest('[data-action="mark-read"]')) {
-                this.$content.addEventListener('click', (e) => {
-    // Marcar como leído
-    if (e.target.closest('[data-action="mark-read"]')) {
-        const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
-        this.markAsRead(date);
-        this.renderReading(date);
-        return;
-    }
+    this.$content.addEventListener('click', (e) => {
+        // Marcar como leído
+        if (e.target.closest('[data-action="mark-read"]')) {
+            const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
+            this.markAsRead(date);
+            this.renderReading(date);
+            return;
+        }
 
-    // 👉 AQUÍ PEGAS ESTO 👇
-    if (e.target.closest('[data-action="share-reading"]')) {
-        const date = e.target.closest('[data-action="share-reading"]').getAttribute('data-date');
-        const reading = this.data.find(r => r.date === date);
+        // Compartir lectura
+        if (e.target.closest('[data-action="share-reading"]')) {
+            const date = e.target.closest('[data-action="share-reading"]').getAttribute('data-date');
+            const reading = this.data.find(r => r.date === date);
 
-        if (!reading) return;
+            if (!reading) return;
 
-        const cleanText = reading.text.replace(/<[^>]+>/g, '');
+            const cleanText = reading.text.replace(/<[^>]+>/g, '');
 
-        const shareText = `Su voz a diario
+            const shareText = `Su voz a diario
 
 Pasaje de hoy:
 ${reading.reference}
@@ -67,41 +63,35 @@ ${cleanText}
 
 — Compartido desde Su voz a diario`;
 
-        if (navigator.share) {
-            navigator.share({
-                title: 'Su voz a diario',
-                text: shareText
-            }).catch(() => {});
-        } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(shareText).then(() => {
-                alert('Lectura copiada para compartir');
-            }).catch(() => {
-                alert('No se pudo compartir ni copiar la lectura');
-            });
-        } else {
-            alert('Tu dispositivo no permite compartir esta lectura');
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Su voz a diario',
+                    text: shareText
+                }).catch(() => {});
+            } else if (navigator.clipboard) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Lectura copiada para compartir');
+                }).catch(() => {
+                    alert('No se pudo compartir ni copiar la lectura');
+                });
+            } else {
+                alert('Tu dispositivo no permite compartir esta lectura');
+            }
+            return;
         }
-        return;
-    }
 
-    // ⬇️ ESTO YA LO TENÍAS
-    if (e.target.closest('[data-nav]')) {
-                const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
-                this.markAsRead(date);
-                this.renderReading(date);
-                return;
+        // Navegación
+        if (e.target.closest('[data-nav]')) {
+            const targetView = e.target.closest('[data-nav]').getAttribute('data-nav');
+            const param = e.target.closest('[data-nav]').getAttribute('data-param');
+            if (targetView === 'calendar') {
+                this.navigate('calendar');
+            } else if (targetView === 'reading' && param) {
+                this.navigate('reading', param);
             }
-            if (e.target.closest('[data-nav]')) {
-                const targetView = e.target.closest('[data-nav]').getAttribute('data-nav');
-                const param = e.target.closest('[data-nav]').getAttribute('data-param');
-                if (targetView === 'calendar') {
-                    this.navigate('calendar');
-                } else if (targetView === 'reading' && param) {
-                    this.navigate('reading', param);
-                }
-            }
-        });
-    },
+        }
+    });
+},
 
     loadData: async function () {
         try {
