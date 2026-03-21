@@ -113,9 +113,18 @@ body {
 
 .reading-text {
     font-family: var(--font-reading);
-    font-size: 1.15rem;
-    line-height: 1.8;
+    font-size: 1.08rem;
+    line-height: 1.9;
     color: var(--text-main);
+    text-align: left;
+}
+
+.reading-text p {
+    margin-bottom: 1rem;
+}
+
+.reading-text p:last-child {
+    margin-bottom: 0;
 }
 
 .btn-primary {
