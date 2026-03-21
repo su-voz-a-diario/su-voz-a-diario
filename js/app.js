@@ -236,7 +236,8 @@ const App = {
 
     html += `</div>`;
     this.$content.innerHTML = html;
-},
+}
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
