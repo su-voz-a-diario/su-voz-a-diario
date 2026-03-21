@@ -220,9 +220,10 @@ ${isHome
     this.data.forEach(item => {
         const dateStr = this.formatDateEs(item.date);
         const readClass = this.isRead(item.date) ? 'read' : '';
+        const todayClass = item.date === this.getTodayDateStr() ? 'today' : '';
 
         html += `
-            <div class="calendar-day ${readClass}" data-nav="reading" data-param="${item.date}">
+            <div class="calendar-day ${readClass} ${todayClass}" data-nav="reading" data-param="${item.date}">
                 <div class="cal-date">${dateStr}</div>
                 <div class="cal-ref">
                     ${item.reference}
