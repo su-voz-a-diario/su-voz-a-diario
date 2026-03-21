@@ -177,14 +177,14 @@ const App = {
         return;
     }
 
-    let html = '<ul class="calendar-list">';
+    let html = '<div class="calendar-grid">';
 
     this.data.forEach(item => {
         const dateStr = this.formatDateEs(item.date);
         const readClass = this.isRead(item.date) ? 'read' : '';
 
         html += `
-            <li class="calendar-item ${readClass}" data-nav="reading" data-param="${item.date}">
+            <div class="calendar-day ${readClass}" data-nav="reading" data-param="${item.date}">
                 <div class="cal-date">${dateStr}</div>
                 <div class="cal-ref">
                     ${item.reference}
@@ -195,11 +195,11 @@ const App = {
                         <polyline points="9 18 15 12 9 6"/>
                     </svg>
                 </div>
-            </li>
+            </div>
         `;
     });
 
-    html += '</ul>';
+    html += '</div>';
     this.$content.innerHTML = html;
 }
 };
