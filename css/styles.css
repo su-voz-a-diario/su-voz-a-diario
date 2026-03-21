@@ -304,3 +304,76 @@ body {
 .reading-text p {
     text-align: justify;
 }
+
+.calendar-header-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 16px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 8px;
+}
+
+.calendar-weekday {
+    text-align: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 6px 0;
+}
+
+.calendar-day {
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    min-height: 85px;
+    padding: 8px 6px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.calendar-day.has-reading {
+    cursor: pointer;
+}
+
+.calendar-day.empty {
+    background: transparent;
+    border: none;
+}
+
+.calendar-day.today {
+    border: 2px solid var(--accent);
+}
+
+.calendar-day.read {
+    background-color: #f0fff4;
+}
+
+.day-number {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.day-ref {
+    font-size: 0.62rem;
+    line-height: 1.2;
+    color: var(--text-main);
+}
+
+.day-read-check {
+    position: absolute;
+    bottom: 6px;
+    right: 6px;
+    font-size: 0.75rem;
+    color: #2f855a;
+    font-weight: 700;
+}
