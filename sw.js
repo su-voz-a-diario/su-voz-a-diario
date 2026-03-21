@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-voz-v2';
+const CACHE_NAME = 'su-voz-v4';
 const urlsToCache = [
   './',
   './index.html',
