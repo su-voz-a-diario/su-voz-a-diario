@@ -377,3 +377,11 @@ body {
     color: #2f855a;
     font-weight: 700;
 }
+
+.reading-text sup {
+    font-size: 0.7em;
+    color: var(--text-muted);
+    vertical-align: super;
+    margin-right: 2px;
+    font-weight: 600;
+}
