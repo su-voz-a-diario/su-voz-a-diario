@@ -40,6 +40,52 @@ const App = {
         this.$content.addEventListener('click', (e) => {
             // Marcar como leído
             if (e.target.closest('[data-action="mark-read"]')) {
+                this.$content.addEventListener('click', (e) => {
+    // Marcar como leído
+    if (e.target.closest('[data-action="mark-read"]')) {
+        const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
+        this.markAsRead(date);
+        this.renderReading(date);
+        return;
+    }
+
+    // 👉 AQUÍ PEGAS ESTO 👇
+    if (e.target.closest('[data-action="share-reading"]')) {
+        const date = e.target.closest('[data-action="share-reading"]').getAttribute('data-date');
+        const reading = this.data.find(r => r.date === date);
+
+        if (!reading) return;
+
+        const cleanText = reading.text.replace(/<[^>]+>/g, '');
+
+        const shareText = `Su voz a diario
+
+Pasaje de hoy:
+${reading.reference}
+
+${cleanText}
+
+— Compartido desde Su voz a diario`;
+
+        if (navigator.share) {
+            navigator.share({
+                title: 'Su voz a diario',
+                text: shareText
+            }).catch(() => {});
+        } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareText).then(() => {
+                alert('Lectura copiada para compartir');
+            }).catch(() => {
+                alert('No se pudo compartir ni copiar la lectura');
+            });
+        } else {
+            alert('Tu dispositivo no permite compartir esta lectura');
+        }
+        return;
+    }
+
+    // ⬇️ ESTO YA LO TENÍAS
+    if (e.target.closest('[data-nav]')) {
                 const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
                 this.markAsRead(date);
                 this.renderReading(date);
