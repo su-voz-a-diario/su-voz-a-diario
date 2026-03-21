@@ -296,3 +296,11 @@ body {
 .reading-text p {
   margin-bottom: 1em;
 }
+
+.reading-text {
+    letter-spacing: 0.2px;
+}
+
+.reading-text p {
+    text-align: justify;
+}
