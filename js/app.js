@@ -170,37 +170,73 @@ const App = {
             }
 `;
     },
-    renderCalendar: function () {
-        if (this.data.length === 0) {
-            this.$content.innerHTML = `<div class="empty-state">No hay lecturas disponibles.</div>`;
-            return;
-        }
+    renderCalendar: function() {
+    if (this.data.length === 0) {
+        this.$content.innerHTML = `<div class="empty-state">No hay lecturas disponibles.</div>`;
+        return;
+    }
 
-        let html = '<ul class="calendar-list">';
+    const todayStr = this.getTodayDateStr();
 
-        this.data.forEach(item => {
-            const dateStr = this.formatDateEs(item.date);
-            const readClass = this.isRead(item.date) ? 'read' : '';
-            html += `
-            <li class="calendar-item ${readClass}" data-nav="reading" data-param="${item.date}">
-                <div class="cal-date">${dateStr}</div>
-                <div class="cal-ref">
-                    ${item.reference}
-                    ${this.isRead(item.date) ? '<span class="read-badge">Leído ✔</span>' : ''}
-                </div>
-                <div class="cal-arrow">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                </div>
-            </li>
+    const readingsByDate = {};
+    this.data.forEach(item => {
+        readingsByDate[item.date] = item;
+    });
+
+    const dates = this.data.map(item => new Date(item.date + 'T12:00:00'));
+    const firstDate = new Date(Math.min(...dates));
+    const year = firstDate.getFullYear();
+    const month = firstDate.getMonth();
+
+    const firstDayOfMonth = new Date(year, month, 1);
+    const startWeekDay = firstDayOfMonth.getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const monthName = firstDayOfMonth.toLocaleDateString('es-ES', {
+        month: 'long',
+        year: 'numeric'
+    });
+
+    let html = `
+        <div class="calendar-header-title">${monthName.charAt(0).toUpperCase() + monthName.slice(1)}</div>
+        <div class="calendar-grid">
+            <div class="calendar-weekday">Dom</div>
+            <div class="calendar-weekday">Lun</div>
+            <div class="calendar-weekday">Mar</div>
+            <div class="calendar-weekday">Mié</div>
+            <div class="calendar-weekday">Jue</div>
+            <div class="calendar-weekday">Vie</div>
+            <div class="calendar-weekday">Sáb</div>
+    `;
+
+    for (let i = 0; i < startWeekDay; i++) {
+        html += `<div class="calendar-day empty"></div>`;
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateObj = new Date(year, month, day);
+        const dateStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        const reading = readingsByDate[dateStr];
+        const isToday = dateStr === todayStr;
+        const isRead = reading ? this.isRead(dateStr) : false;
+
+        let dayClasses = 'calendar-day';
+        if (reading) dayClasses += ' has-reading';
+        if (isToday) dayClasses += ' today';
+        if (isRead) dayClasses += ' read';
+
+        html += `
+            <div class="${dayClasses}" ${reading ? `data-nav="reading" data-param="${dateStr}"` : ''}>
+                <div class="day-number">${day}</div>
+                ${reading ? `<div class="day-ref">${reading.reference}</div>` : ''}
+                ${isRead ? `<div class="day-read-check">✔</div>` : ''}
+            </div>
         `;
-        });
+    }
 
-        html += '</ul>';
-        this.$content.innerHTML = html;
-    },
-};
+    html += `</div>`;
+    this.$content.innerHTML = html;
+},
 
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
