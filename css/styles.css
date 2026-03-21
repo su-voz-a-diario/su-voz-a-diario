@@ -283,3 +283,10 @@ body {
 .calendar-item.read {
     opacity: 0.7;
 }
+.reading-text p {
+  margin-bottom: 1.2em;
+}
+
+.reading-text p:last-child {
+  margin-bottom: 0;
+}
