@@ -1,10 +1,9 @@
-const CACHE_NAME = 'su-voz-v1';
+const CACHE_NAME = 'su-voz-v2';
 const urlsToCache = [
   './',
   './index.html',
   './css/styles.css',
   './js/app.js',
-  './data/readings.json',
   './manifest.json',
   './icons/icon.svg',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap'
@@ -25,11 +24,9 @@ self.addEventListener('fetch', event => {
       .then(response => {
         if (response) {
             // For JSON data, return cache immediately but fetch fresh in background
-            if (event.request.url.includes('readings.json')) {
-                fetch(event.request).then(res => {
-                    caches.open(CACHE_NAME).then(cache => cache.put(event.request, res.clone()));
-                }).catch(() => {});
-            }
+           if (event.request.url.includes('readings.json')) {
+    return fetch(event.request);
+}
             return response;
         }
         return fetch(event.request);
