@@ -172,13 +172,16 @@ body {
 }
 
 .cal-date {
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--primary);
-    width: 80px;
-    font-size: 0.95rem;
+    line-height: 1.25;
+    margin-bottom: 10px;
 }
 
 .cal-ref {
+    font-size: 0.95rem;
+    line-height: 1.4;
     color: var(--text-main);
     font-weight: 500;
     flex: 1;
@@ -186,6 +189,9 @@ body {
 
 .cal-arrow {
     color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-top: 10px;
+    align-self: flex-start;
 }
 
 /* Bottom Navigation */
@@ -280,13 +286,13 @@ body {
 
 .read-badge {
     display: inline-block;
-    margin-left: 8px;
-    font-size: 0.75rem;
+    margin-top: 10px;
+    font-size: 0.7rem;
     font-weight: 600;
     color: #2f855a;
     background-color: #c6f6d5;
-    padding: 2px 6px;
-    border-radius: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
 }
 
 .calendar-item.read {
@@ -332,13 +338,20 @@ body {
 .calendar-day {
     background-color: var(--surface-color);
     border: 1px solid var(--border-color);
-    border-radius: 10px;
-    min-height: 85px;
-    padding: 8px 6px;
+    border-radius: 14px;
+    padding: 16px 14px;
+    min-height: 150px;
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    justify-content: space-between;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.calendar-day:active {
+    transform: scale(0.98);
 }
 
 .calendar-day.has-reading {
@@ -356,6 +369,7 @@ body {
 
 .calendar-day.read {
     background-color: #f0fff4;
+    border-color: #9ae6b4;
 }
 
 .day-number {
