@@ -98,7 +98,7 @@ ${cleanText}
             const response = await fetch('data/readings.json');
             this.data = await response.json();
             // Sort by date descending
-            this.data.sort((a, b) => new Date(b.date) - new Date(a.date));
+            this.data.sort((a, b) => new Date(a.date) - new Date(b.date));
         } catch (error) {
             console.error('Error loading data:', error);
             this.$content.innerHTML = `<div class="empty-state">No se pudieron cargar las lecturas. Por favor, revisa tu conexión.</div>`;
