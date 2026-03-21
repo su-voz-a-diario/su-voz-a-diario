@@ -180,16 +180,16 @@ body {
 }
 
 .cal-ref {
-    font-size: 0.95rem;
-    line-height: 1.4;
-    color: var(--text-main);
+    font-size: 0.9rem;
+    line-height: 1.35;
+    color: var(--text-muted);
     font-weight: 500;
     flex: 1;
 }
 
 .cal-arrow {
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    color: #a0aec0;
+    font-size: 0.8rem;
     margin-top: 10px;
     align-self: flex-start;
 }
@@ -365,6 +365,7 @@ body {
 
 .calendar-day.today {
     border: 2px solid var(--accent);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.12);
 }
 
 .calendar-day.read {
