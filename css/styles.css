@@ -17,6 +17,19 @@
     --border-radius: 12px;
 }
 
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #e2e8f0;
+        --primary-light: #cbd5e0;
+        --accent: #63b3ed;
+        --accent-hover: #4299e1;
+        --bg-color: #0f172a;
+        --surface-color: #1e293b;
+        --text-main: #f8fafc;
+        --text-muted: #94a3b8;
+        --border-color: #334155;
+    }
+}
 * {
     box-sizing: border-box;
     margin: 0;
@@ -269,8 +282,8 @@ body {
     display: block;
     margin: 10px auto 16px auto;
     padding: 10px 16px;
-    background-color: #e2e8f0;
-    color: #2d3748;
+    background-color: var(--border-color);
+    color: var(--text-main);
     border: none;
     border-radius: 8px;
     font-size: 0.95rem;
@@ -281,7 +294,7 @@ body {
 
 .btn-secondary:hover,
 .btn-secondary:active {
-    background-color: #cbd5e0;
+    background-color: var(--primary-light);
 }
 
 .read-badge {
