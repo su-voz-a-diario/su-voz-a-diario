@@ -488,14 +488,6 @@ body.light-mode {
     transition: background-color 0.3s ease;
 }
 
-.user-highlight {
-    background-color: #fff3a3;
-    color: inherit;
-    padding: 0 2px;
-    border-radius: 3px;
-    transition: background-color 0.3s ease, color 0.3s ease;
-}
-
 body.dark-mode .user-highlight {
     background-color: #b7791f;
     color: #fffaf0;
