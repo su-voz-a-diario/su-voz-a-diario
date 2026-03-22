@@ -379,10 +379,12 @@ if (e.target.closest('[data-action="delete-note"]')) {
 </div>
 
             <div class="note-box">
-                <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
-                <button class="btn-secondary" data-action="save-note" data-date="${reading.date}">Guardar nota</button>
-                <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
-            </div>
+    <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
+    <div class="note-actions">
+        <button class="btn-secondary" data-action="save-note" data-date="${reading.date}">Guardar nota</button>
+        <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
+    </div>
+</div>
 
     ${isHome
         ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
