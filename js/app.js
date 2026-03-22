@@ -365,16 +365,18 @@ if (e.target.closest('[data-action="delete-note"]')) {
     </div>
 </div>
 
-   ${this.isRead(reading.date)
-         ? `<button class="btn-secondary" disabled>Leído ✔</button>`
-         : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
-        }
+   <div class="action-group">
+    ${this.isRead(reading.date)
+        ? `<button class="btn-secondary" disabled>Leído ✔</button>`
+        : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
+    }
 
-            <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
+    <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
 
-            <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
+    <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
 
-            <button class="btn-secondary" data-action="toggle-note" data-date="${reading.date}">Nota del día</button>
+    <button class="btn-secondary" data-action="toggle-note" data-date="${reading.date}">Nota del día</button>
+</div>
 
             <div class="note-box">
                 <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
