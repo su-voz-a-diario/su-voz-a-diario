@@ -525,3 +525,31 @@ body.light-mode .user-highlight {
     background-color: #fff3a3;
     color: inherit;
 }
+
+.note-box {
+    margin: 10px 0 20px 0;
+    background-color: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.note-textarea {
+    width: 100%;
+    min-height: 120px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 0.95rem;
+    font-family: var(--font-ui);
+    resize: vertical;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin-bottom: 12px;
+}
+
+.note-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.15);
+}
