@@ -19,10 +19,11 @@ const App = {
     // ----------------------------------
 
     init: async function () {
-        this.cacheDOM();
-        this.bindEvents();
-        await this.loadData();
-        this.handleRoute();
+    this.cacheDOM();
+    this.initTheme();
+    this.bindEvents();
+    await this.loadData();
+    this.handleRoute();
     },
 
     cacheDOM: function () {
@@ -31,6 +32,28 @@ const App = {
         this.$navCalendar = document.getElementById('nav-calendar');
     },
 
+    initTheme: function () {
+    const savedTheme = localStorage.getItem('theme');
+    const toggleBtn = document.getElementById('theme-toggle');
+
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        if (toggleBtn) toggleBtn.textContent = '☀️';
+    } else {
+        if (toggleBtn) toggleBtn.textContent = '🌙';
+    }
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+
+            const isDark = document.body.classList.contains('dark-mode');
+
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            toggleBtn.textContent = isDark ? '☀️' : '🌙';
+        });
+    }
+},
     bindEvents: function () {
     this.$navHome.addEventListener('click', () => this.navigate('home'));
     this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
