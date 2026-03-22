@@ -456,7 +456,7 @@ body {
     z-index: 2;
 }
 
-.dark-mode {
+body.dark-mode {
     --primary: #e2e8f0;
     --primary-light: #cbd5e0;
     --accent: #63b3ed;
