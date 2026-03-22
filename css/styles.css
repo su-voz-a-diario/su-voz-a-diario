@@ -444,3 +444,15 @@ body {
     letter-spacing: 0.04em;
     z-index: 2;
 }
+
+.dark-mode {
+    --primary: #e2e8f0;
+    --primary-light: #cbd5e0;
+    --accent: #63b3ed;
+    --accent-hover: #4299e1;
+    --bg-color: #0f172a;
+    --surface-color: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --border-color: #334155;
+}
