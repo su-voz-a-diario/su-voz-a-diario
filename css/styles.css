@@ -391,6 +391,17 @@ body {
     border-color: #3182ce;
 }
 
+.calendar-day.today .cal-date {
+    color: #1e3a5f;
+}
+
+.calendar-day.today .cal-ref {
+    color: #4a5568;
+}
+
+.calendar-day.today .cal-arrow {
+    color: #4a5568;
+}
 .day-number {
     font-size: 0.9rem;
     font-weight: 700;
