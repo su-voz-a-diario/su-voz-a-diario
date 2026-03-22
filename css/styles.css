@@ -488,6 +488,34 @@ body.light-mode {
     transition: background-color 0.3s ease;
 }
 
+.highlight-btn {
+    position: absolute;
+    z-index: 9999;
+    background: linear-gradient(135deg, #3182ce, #2b6cb0);
+    color: #ffffff;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    transform: scale(1);
+}
+
+.highlight-btn:active {
+    transform: scale(0.95);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-mode .highlight-btn {
+    background: linear-gradient(135deg, #63b3ed, #4299e1);
+    color: #0f172a;
+}
+
 body.dark-mode .user-highlight {
     background-color: #b7791f;
     color: #fffaf0;
