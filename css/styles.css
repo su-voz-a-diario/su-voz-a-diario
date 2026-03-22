@@ -467,3 +467,46 @@ body.dark-mode {
     --text-muted: #94a3b8;
     --border-color: #334155;
 }
+
+body.light-mode {
+    --primary: #2d3748;
+    --primary-light: #4a5568;
+    --accent: #3182ce;
+    --accent-hover: #2b6cb0;
+    --bg-color: #f7fafc;
+    --surface-color: #ffffff;
+    --text-main: #1a202c;
+    --text-muted: #718096;
+    --border-color: #e2e8f0;
+}
+
+.user-highlight {
+    background-color: #fff3a3;
+    color: inherit;
+    padding: 0 2px;
+    border-radius: 3px;
+}
+
+.highlight-btn {
+    position: absolute;
+    z-index: 9999;
+    background-color: #3182ce;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+}
+
+body.dark-mode .user-highlight {
+    background-color: #b7791f;
+    color: #fffaf0;
+}
+
+body.light-mode .user-highlight {
+    background-color: #fff3a3;
+    color: inherit;
+}
