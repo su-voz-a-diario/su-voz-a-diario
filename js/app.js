@@ -16,6 +16,70 @@ const App = {
         let readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
         return readDates.includes(dateStr);
     },
+    getHighlightsKey: function (dateStr) {
+    return `su-voz-highlights-${dateStr}`;
+},
+getHighlights: function (dateStr) {
+    return JSON.parse(localStorage.getItem(this.getHighlightsKey(dateStr))) || [];
+},
+saveHighlights: function (dateStr, highlights) {
+    localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(highlights));
+},
+escapeRegExp: function (string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+},
+applyHighlightsToHtml: function (html, highlights) {
+    let result = html;
+
+    highlights.forEach(text => {
+        if (!text || !text.trim()) return;
+
+        const escaped = this.escapeRegExp(text.trim());
+
+        result = result.replace(
+            new RegExp(`(${escaped})(?![^<]*>|[^<>]*<\\/mark>)`),
+            '<mark class="user-highlight">$1</mark>'
+        );
+    });
+
+    return result;
+},
+removeHighlightButton: function () {
+    const existing = document.getElementById('highlight-btn');
+    if (existing) existing.remove();
+},
+showHighlightButton: function (selection, dateStr) {
+    this.removeHighlightButton();
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    const btn = document.createElement('button');
+    btn.id = 'highlight-btn';
+    btn.className = 'highlight-btn';
+    btn.textContent = 'Resaltar';
+
+    btn.style.top = `${window.scrollY + rect.top - 45}px`;
+    btn.style.left = `${window.scrollX + rect.left}px`;
+
+    btn.addEventListener('click', () => {
+        const highlights = this.getHighlights(dateStr);
+
+        if (!highlights.includes(selectedText)) {
+            highlights.push(selectedText);
+            this.saveHighlights(dateStr, highlights);
+        }
+
+        selection.removeAllRanges();
+        this.removeHighlightButton();
+        this.renderReading(dateStr);
+    });
+
+    document.body.appendChild(btn);
+},
     // ----------------------------------
 
     init: async function () {
@@ -38,23 +102,36 @@ const App = {
 
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
+        document.body.classList.remove('light-mode');
         if (toggleBtn) toggleBtn.textContent = '☀️';
-    } else {
+    } else if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        document.body.classList.remove('dark-mode');
         if (toggleBtn) toggleBtn.textContent = '🌙';
+    } else {
+        const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (toggleBtn) toggleBtn.textContent = systemDark ? '☀️' : '🌙';
     }
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('dark-mode');
-
             const isDark = document.body.classList.contains('dark-mode');
 
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-            toggleBtn.textContent = isDark ? '☀️' : '🌙';
+            if (isDark) {
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+                localStorage.setItem('theme', 'light');
+                toggleBtn.textContent = '🌙';
+            } else {
+                document.body.classList.remove('light-mode');
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                toggleBtn.textContent = '☀️';
+            }
         });
     }
 },
-    bindEvents: function () {
+  bindEvents: function () {
     this.$navHome.addEventListener('click', () => this.navigate('home'));
     this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
     window.addEventListener('popstate', () => this.handleRoute());
@@ -103,6 +180,15 @@ ${cleanText}
             return;
         }
 
+        // Quitar resaltados
+        if (e.target.closest('[data-action="clear-highlights"]')) {
+            const date = e.target.closest('[data-action="clear-highlights"]').getAttribute('data-date');
+            localStorage.removeItem(this.getHighlightsKey(date));
+            this.removeHighlightButton();
+            this.renderReading(date);
+            return;
+        }
+
         // Navegación
         if (e.target.closest('[data-nav]')) {
             const targetView = e.target.closest('[data-nav]').getAttribute('data-nav');
@@ -112,6 +198,37 @@ ${cleanText}
             } else if (targetView === 'reading' && param) {
                 this.navigate('reading', param);
             }
+        }
+    });
+
+    document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+
+        if (!selection || selection.isCollapsed) {
+            this.removeHighlightButton();
+            return;
+        }
+
+        const anchorNode = selection.anchorNode;
+        if (!anchorNode) return;
+
+        const readingTextEl = document.querySelector('.reading-text');
+        if (!readingTextEl) return;
+
+        if (!readingTextEl.contains(anchorNode)) {
+            this.removeHighlightButton();
+            return;
+        }
+
+        const dateStr = readingTextEl.getAttribute('data-reading-date');
+        if (!dateStr) return;
+
+        this.showHighlightButton(selection, dateStr);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('#highlight-btn') && !e.target.closest('.reading-text')) {
+            this.removeHighlightButton();
         }
     });
 },
@@ -211,26 +328,28 @@ ${cleanText}
     ${isHome ? `<div style="text-align: center;"><span class="date-badge">${todayStr === reading.date ? 'HOY, ' + dateFormatted.toUpperCase() : dateFormatted.toUpperCase()}</span></div>` : ''}
     
     <div class="reading-card">
-        <div class="section-title">Su voz ${isHome ? 'hoy' : 'este día'}</div>
-        <h2 class="reading-reference">${reading.reference}</h2>
-        <div class="reading-text">
-            ${reading.text}
-        </div>
+    <div class="section-title">Su voz ${isHome ? 'hoy' : 'este día'}</div>
+    <h2 class="reading-reference">${reading.reference}</h2>
+    <div class="reading-text" data-reading-date="${reading.date}">
+        ${this.applyHighlightsToHtml(reading.text, this.getHighlights(reading.date))}
     </div>
+</div>
 
-    ${this.isRead(reading.date)
-                ? `<button class="btn-secondary" disabled>Leído ✔</button>`
-                : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
-            }
+   ${this.isRead(reading.date)
+         ? `<button class="btn-secondary" disabled>Leído ✔</button>`
+         : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
+        }
 
-<button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
+            <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
 
-${isHome
-                ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
-                : `<button class="btn-primary" data-nav="calendar">Volver al calendario</button>`
-            }
-`;
-    },
+            <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
+
+    ${isHome
+        ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
+        : `<button class="btn-primary" data-nav="calendar">Volver al calendario</button>`
+        }
+    `;
+},
     
     renderCalendar: function () {
     if (this.data.length === 0) {
