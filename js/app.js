@@ -403,11 +403,6 @@ ${this.openNoteDate === reading.date ? `
     </div>
 </div>
 ` : ''}
-
-    ${isHome
-        ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
-        : `<button class="btn-primary" data-nav="calendar">Volver al calendario</button>`
-        }
     `;
 },
     
