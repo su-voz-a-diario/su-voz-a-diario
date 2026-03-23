@@ -393,6 +393,7 @@ if (e.target.closest('[data-action="delete-note"]')) {
     ${this.openNoteDate === reading.date ? 'Ocultar nota' : 'Nota del día'}
     ${this.hasNote(reading.date) ? ' •' : ''}
 </button>
+</div>
 
 ${this.openNoteDate === reading.date ? `
 <div class="note-box">
