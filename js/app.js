@@ -270,11 +270,20 @@ if (e.target.closest('[data-action="delete-note"]')) {
         this.showHighlightButton(selection, dateStr);
     });
 
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('#highlight-btn') && !e.target.closest('.reading-text')) {
-            this.removeHighlightButton();
+   document.addEventListener('click', (e) => {
+    if (!e.target.closest('#highlight-btn') && !e.target.closest('.reading-text')) {
+        this.removeHighlightButton();
+    }
+});
+
+this.$content.addEventListener('input', (e) => {
+    if (e.target.matches('.note-textarea')) {
+        const date = e.target.getAttribute('data-note-date');
+        if (date) {
+            this.saveNote(date, e.target.value);
         }
-    });
+    }
+});
 },
 
     loadData: async function () {
