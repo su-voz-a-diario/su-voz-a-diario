@@ -390,7 +390,7 @@ if (e.target.closest('[data-action="delete-note"]')) {
     <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
 
     <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
-    ${this.openNoteDate === reading.date ? 'Ocultar nota' : 'Nota del día'}
+    ${this.openNoteDate === reading.date ? 'Cerrar nota' : 'Abrir nota'}
     ${this.hasNote(reading.date) ? ' •' : ''}
 </button>
 </div>
