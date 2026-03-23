@@ -3,6 +3,7 @@ const App = {
     currentView: 'home',
     today: new Date(),
     openNoteDate: null,
+    noteSavedMessageDate: null,
 
     // --- Futuras Funciones (Stubs) ---
     // Guardar estado de lectura localmente
