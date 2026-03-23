@@ -565,6 +565,7 @@ body.light-mode .user-highlight {
     border-radius: 16px;
     padding: 16px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    width: 100%;
 }
 
 .note-textarea {
@@ -581,10 +582,9 @@ body.light-mode .user-highlight {
     margin-bottom: 12px;
 }
 
-.note-textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(49, 130, 206, 0.15);
+.note-textarea {
+    width: 100%;
+    min-height: 140px;
 }
 
 .note-actions {
