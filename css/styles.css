@@ -567,11 +567,11 @@ body.light-mode .user-highlight {
 
 .note-box {
     margin: 16px 0 30px 0;
-    background-color: var(--surface-color);
+    background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 14px;
-
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     animation: fadeNote 0.25s ease;
 }
 
@@ -613,4 +613,16 @@ body.light-mode .user-highlight {
 .btn-secondary.has-note {
     border-color: var(--accent);
     box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.btn-secondary.has-note {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.4);
+}
+
+.btn-secondary.has-note::after {
+    content: '●';
+    margin-left: 6px;
+    font-size: 0.6rem;
+    color: var(--accent);
 }
