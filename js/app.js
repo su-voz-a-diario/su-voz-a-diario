@@ -246,6 +246,16 @@ if (e.target.closest('[data-action="delete-note"]')) {
         }
     });
 
+      this.$content.addEventListener('input', (e) => {
+    if (e.target.matches('.note-textarea')) {
+        const date = e.target.getAttribute('data-note-date');
+        if (date) {
+            this.saveNote(date, e.target.value);
+            this.showNoteSavedMessage(date);
+        }
+    }
+});
+
     document.addEventListener('selectionchange', () => {
         const selection = window.getSelection();
 
