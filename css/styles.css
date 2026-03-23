@@ -580,3 +580,8 @@ body.light-mode .user-highlight {
     grid-template-columns: 1fr 1fr;
     gap: 12px;
 }
+
+.btn-secondary.has-note {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
