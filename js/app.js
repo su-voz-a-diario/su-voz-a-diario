@@ -2,6 +2,7 @@ const App = {
     data: [],
     currentView: 'home',
     today: new Date(),
+    openNoteDate: null,
 
     // --- Futuras Funciones (Stubs) ---
     // Guardar estado de lectura localmente
@@ -31,11 +32,17 @@ getNoteKey: function (dateStr) {
 getNote: function (dateStr) {
     return localStorage.getItem(this.getNoteKey(dateStr)) || '';
 },
+hasNote: function (dateStr) {
+    return this.getNote(dateStr).trim().length > 0;
+},
 saveNote: function (dateStr, noteText) {
     localStorage.setItem(this.getNoteKey(dateStr), noteText);
 },
 deleteNote: function (dateStr) {
     localStorage.removeItem(this.getNoteKey(dateStr));
+},
+toggleNote: function (dateStr) {
+    this.openNoteDate = this.openNoteDate === dateStr ? null : dateStr;
 },
 escapeRegExp: function (string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -201,6 +208,13 @@ ${cleanText}
             return;
         }
 
+        // Abrir / cerrar nota
+if (e.target.closest('[data-action="toggle-note"]')) {
+    const date = e.target.closest('[data-action="toggle-note"]').getAttribute('data-date');
+    this.toggleNote(date);
+    this.renderReading(date);
+    return;
+}
         // Guardar nota
 if (e.target.closest('[data-action="save-note"]')) {
     const date = e.target.closest('[data-action="save-note"]').getAttribute('data-date');
@@ -375,16 +389,20 @@ if (e.target.closest('[data-action="delete-note"]')) {
 
     <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
 
-    <button class="btn-secondary" data-action="toggle-note" data-date="${reading.date}">Nota del día</button>
-</div>
+    <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
+    ${this.openNoteDate === reading.date ? 'Ocultar nota' : 'Nota del día'}
+    ${this.hasNote(reading.date) ? ' •' : ''}
+</button>
 
-            <div class="note-box">
+${this.openNoteDate === reading.date ? `
+<div class="note-box">
     <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
     <div class="note-actions">
         <button class="btn-secondary" data-action="save-note" data-date="${reading.date}">Guardar nota</button>
         <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
     </div>
 </div>
+` : ''}
 
     ${isHome
         ? `<button class="btn-primary" data-nav="calendar">Ver calendario</button>`
