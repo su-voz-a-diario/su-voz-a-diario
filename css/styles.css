@@ -312,6 +312,14 @@ body {
     appearance: none;
 }
 
+.btn-secondary {
+    opacity: 0.95;
+}
+
+.btn-secondary:active {
+    transform: scale(0.98);
+}
+
 .btn-secondary:hover,
 .btn-secondary:active {
     background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
