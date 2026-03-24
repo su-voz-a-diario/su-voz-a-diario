@@ -394,8 +394,8 @@ if (e.target.closest('[data-action="delete-note"]')) {
 
    <div class="action-group">
     ${this.isRead(reading.date)
-        ? `<button class="btn-secondary" disabled>Leído ✔</button>`
-        : `<button class="btn-secondary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
+        ? `<button class="btn-primary" disabled>Leído ✔</button>`
+        : `<button class="btn-primary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
     }
 
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
