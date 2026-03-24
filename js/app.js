@@ -449,6 +449,7 @@ ${this.openNoteDate === reading.date ? `
                 <div class="cal-ref">
                     ${item.reference}
                     ${this.isRead(item.date) ? '<span class="read-badge">Leído ✔</span>' : ''}
+                    ${this.hasNote(item.date) ? '<span class="note-badge">Nota</span>' : ''}
                 </div>
                 <div class="cal-arrow">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
