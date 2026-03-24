@@ -689,3 +689,26 @@ body.reading-mode .app-header {
 body.reading-mode .reading-card {
     margin-top: 20px;
 }
+
+.exit-reading-btn {
+    position: fixed;
+    bottom: 84px;
+    right: 16px;
+    z-index: 1000;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 999px;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+body.reading-mode .reading-text {
+    font-size: 1.2rem;
+    line-height: 2.1;
+}
