@@ -51,14 +51,14 @@ body {
 .app-header {
     background-color: var(--surface-color);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    height: var(--header-height);
+    min-height: var(--header-height);
     display: flex;
     align-items: center;
-    justify-content: space-between; /* 👈 CLAVE */
+    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 0 20px; /* 👈 CLAVE */
+    padding: 12px 20px;
 }
 
 .theme-toggle {
@@ -728,4 +728,50 @@ body.reading-mode .reading-text {
 
 body.reading-mode .reading-card {
     transform: translateY(-6px);
+}
+
+/* ===== Controles del header (tema + tamaño de letra) ===== */
+
+.header-tools {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.font-controls {
+    display: flex;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 4px;
+}
+
+.font-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.font-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.font-btn:active {
+    transform: scale(0.96);
+}
+
+/* Ajuste del botón de tema */
+.theme-toggle {
+    align-self: flex-end;
 }
