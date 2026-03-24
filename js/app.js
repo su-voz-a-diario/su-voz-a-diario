@@ -45,6 +45,18 @@ deleteNote: function (dateStr) {
 toggleNote: function (dateStr) {
     this.openNoteDate = this.openNoteDate === dateStr ? null : dateStr;
 },
+showNoteSavedMessage: function (dateStr) {
+    this.noteSavedMessageDate = dateStr;
+
+    clearTimeout(this.noteSavedTimeout);
+
+    this.noteSavedTimeout = setTimeout(() => {
+        this.noteSavedMessageDate = null;
+        if (this.currentView === 'reading') {
+            this.renderReading(dateStr);
+        }
+    }, 1200);
+},
 escapeRegExp: function (string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 },
@@ -216,16 +228,6 @@ if (e.target.closest('[data-action="toggle-note"]')) {
     this.renderReading(date);
     return;
 }
-        // Guardar nota
-if (e.target.closest('[data-action="save-note"]')) {
-    const date = e.target.closest('[data-action="save-note"]').getAttribute('data-date');
-    const textarea = document.querySelector(`.note-textarea[data-note-date="${date}"]`);
-    if (textarea) {
-        this.saveNote(date, textarea.value.trim());
-        alert('Nota guardada');
-    }
-    return;
-}
 
 // Borrar nota
 if (e.target.closest('[data-action="delete-note"]')) {
@@ -284,15 +286,6 @@ if (e.target.closest('[data-action="delete-note"]')) {
    document.addEventListener('click', (e) => {
     if (!e.target.closest('#highlight-btn') && !e.target.closest('.reading-text')) {
         this.removeHighlightButton();
-    }
-});
-
-this.$content.addEventListener('input', (e) => {
-    if (e.target.matches('.note-textarea')) {
-        const date = e.target.getAttribute('data-note-date');
-        if (date) {
-            this.saveNote(date, e.target.value);
-        }
     }
 });
 },
@@ -416,12 +409,17 @@ this.$content.addEventListener('input', (e) => {
 </div>
 
 ${this.openNoteDate === reading.date ? `
-        <div class="note-box">
-            <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
-            <div class="note-actions">
+    <div class="note-box">
+        <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
+
+        ${this.noteSavedMessageDate === reading.date ? `
+            <div class="note-saved-message">Guardado automáticamente</div>
+        ` : ''}
+
+        <div class="note-actions">
             <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
         </div>
-</div>
+    </div>
 ` : ''}
     `;
 },
