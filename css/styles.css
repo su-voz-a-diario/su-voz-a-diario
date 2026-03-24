@@ -676,3 +676,16 @@ body.dark-mode .note-badge {
 .main-action {
     margin: 12px 0 16px 0;
 }
+
+body.reading-mode .main-action,
+body.reading-mode .action-group,
+body.reading-mode .bottom-nav,
+body.reading-mode .app-header {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+body.reading-mode .reading-card {
+    margin-top: 20px;
+}
