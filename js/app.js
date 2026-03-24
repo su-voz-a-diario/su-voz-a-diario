@@ -459,7 +459,16 @@ if (e.target.closest('[data-action="delete-note"]')) {
     </div>
 </div>
 
-   <div class="main-action">
+  <!-- BOTÓN DE NOTA (PRIMERO) -->
+<div class="main-action">
+    <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
+        ${this.openNoteDate === reading.date ? 'Cerrar nota' : 'Abrir nota'}
+        ${this.hasNote(reading.date) ? ' •' : ''}
+    </button>
+</div>
+
+<!-- BOTÓN PRINCIPAL -->
+<div class="main-action">
     ${this.isRead(reading.date)
         ? `<button class="btn-primary" disabled>Leído ✔</button>`
         : `<button class="btn-primary" data-action="mark-read" data-date="${reading.date}">Marcar como leído</button>`
@@ -475,10 +484,6 @@ if (e.target.closest('[data-action="delete-note"]')) {
         : ''
     }
 
-    <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
-    ${this.openNoteDate === reading.date ? 'Cerrar nota' : 'Abrir nota'}
-    ${this.hasNote(reading.date) ? ' •' : ''}
-</button>
 </div>
 
 ${this.openNoteDate === reading.date ? `
