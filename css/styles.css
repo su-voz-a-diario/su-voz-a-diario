@@ -15,6 +15,7 @@
     --nav-height: 64px;
     --header-height: 70px;
     --border-radius: 12px;
+    --reading-size: 1.08rem;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -137,7 +138,7 @@ body {
 
 .reading-text {
     font-family: var(--font-reading);
-    font-size: 1.08rem;
+    font-size: var(--reading-size);
     line-height: 1.9;
     color: var(--text-main);
     text-align: left;
@@ -716,7 +717,7 @@ body.reading-mode .reading-card {
 }
 
 body.reading-mode .reading-text {
-    font-size: 1.2rem;
+    font-size: calc(var(--reading-size) + 0.12rem);
     line-height: 2.1;
     letter-spacing: 0.3px;
 }
