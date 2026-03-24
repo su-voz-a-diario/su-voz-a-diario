@@ -24,6 +24,9 @@ const App = {
 getHighlights: function (dateStr) {
     return JSON.parse(localStorage.getItem(this.getHighlightsKey(dateStr))) || [];
 },
+hasHighlights: function (dateStr) {
+    return this.getHighlights(dateStr).length > 0;
+},
 saveHighlights: function (dateStr, highlights) {
     localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(highlights));
 },
@@ -403,7 +406,10 @@ if (e.target.closest('[data-action="delete-note"]')) {
 
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
 
-    <button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>
+   ${this.hasHighlights(reading.date)
+        ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>`
+        : ''
+    }
 
     <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
     ${this.openNoteDate === reading.date ? 'Cerrar nota' : 'Abrir nota'}
