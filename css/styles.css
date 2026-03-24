@@ -316,14 +316,14 @@ body {
     opacity: 0.95;
 }
 
-.btn-secondary:active {
-    transform: scale(0.98);
-}
-
-.btn-secondary:hover,
-.btn-secondary:active {
+.btn-secondary:hover {
     background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
     transform: translateY(-1px);
+}
+
+.btn-secondary:active {
+    background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
+    transform: scale(0.98);
 }
 
 .btn-secondary:focus {
@@ -521,10 +521,10 @@ body.light-mode {
 
 .user-highlight {
     background-color: #fff3a3;
-    color: inherit;
+    color: #1a202c;
     padding: 0 2px;
     border-radius: 3px;
-    transition: background-color 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .action-group {
@@ -583,9 +583,16 @@ body.dark-mode .user-highlight {
     color: #1a202c;
 }
 
+body.dark-mode mark.user-highlight,
+body.dark-mode .user-highlight,
+body.dark-mode .user-highlight * {
+    color: #1a202c !important;
+    background-color: #f6e58d !important;
+}
+
 body.light-mode .user-highlight {
     background-color: #fff3a3;
-    color: inherit;
+    color: #1a202c;
 }
 
 .note-box {
@@ -610,7 +617,7 @@ body.light-mode .user-highlight {
 }
 .note-textarea {
     width: 100%;
-    min-height: 120px;
+    min-height: 140px;
     border: 1px solid var(--border-color);
     border-radius: 10px;
     padding: 12px;
