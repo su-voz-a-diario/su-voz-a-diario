@@ -636,3 +636,15 @@ body.light-mode .user-highlight {
     text-align: right;
     opacity: 0.9;
 }
+
+.note-badge {
+    display: inline-block;
+    margin-top: 8px;
+    margin-left: 0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #744210;
+    background-color: #fef3c7;
+    padding: 4px 8px;
+    border-radius: 999px;
+}
