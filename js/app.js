@@ -35,13 +35,20 @@ getNoteKey: function (dateStr) {
     return `su-voz-note-${dateStr}`;
 },
 getNote: function (dateStr) {
-    return localStorage.getItem(this.getNoteKey(dateStr)) || '';
+    return JSON.parse(localStorage.getItem(this.getNoteKey(dateStr))) || {
+        dios: '',
+        aprendizaje: '',
+        respuesta: ''
+    };
 },
 hasNote: function (dateStr) {
-    return this.getNote(dateStr).trim().length > 0;
+    const note = this.getNote(dateStr);
+    return note.dios.trim().length > 0 ||
+           note.aprendizaje.trim().length > 0 ||
+           note.respuesta.trim().length > 0;
 },
-saveNote: function (dateStr, noteText) {
-    localStorage.setItem(this.getNoteKey(dateStr), noteText);
+saveNote: function (dateStr, noteObj) {
+    localStorage.setItem(this.getNoteKey(dateStr), JSON.stringify(noteObj));
 },
 deleteNote: function (dateStr) {
     localStorage.removeItem(this.getNoteKey(dateStr));
@@ -313,11 +320,15 @@ if (e.target.closest('[data-action="delete-note"]')) {
         }
     });
 
-      this.$content.addEventListener('input', (e) => {
+    this.$content.addEventListener('input', (e) => {
     if (e.target.matches('.note-textarea')) {
         const date = e.target.getAttribute('data-note-date');
-        if (date) {
-            this.saveNote(date, e.target.value);
+        const field = e.target.getAttribute('data-field');
+
+        if (date && field) {
+            const note = this.getNote(date);
+            note[field] = e.target.value;
+            this.saveNote(date, note);
             this.showNoteSavedMessage(date);
         }
     }
@@ -468,14 +479,28 @@ if (e.target.closest('[data-action="delete-note"]')) {
 
 ${this.openNoteDate === reading.date ? `
     <div class="note-box">
-        <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
+
+        <div class="note-section">
+            <div class="note-title">Lo que veo de Dios</div>
+            <textarea class="note-textarea" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.getNote(reading.date).dios}</textarea>
+        </div>
+
+        <div class="note-section">
+            <div class="note-title">Lo que aprendo del pasaje</div>
+            <textarea class="note-textarea" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.getNote(reading.date).aprendizaje}</textarea>
+        </div>
+
+        <div class="note-section">
+            <div class="note-title">Mi respuesta hoy</div>
+            <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.getNote(reading.date).respuesta}</textarea>
+        </div>
 
         ${this.noteSavedMessageDate === reading.date ? `
             <div class="note-saved-message">Guardado automáticamente</div>
         ` : ''}
 
         <div class="note-actions">
-            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
+            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar reflexión</button>
         </div>
     </div>
 ` : ''}
