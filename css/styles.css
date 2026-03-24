@@ -734,14 +734,14 @@ body.reading-mode .reading-card {
 
 .header-tools {
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
 }
 
 .font-controls {
     display: flex;
-    gap: 6px;
+    align-items: center;
+    gap: 4px;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid var(--border-color);
     border-radius: 999px;
@@ -753,7 +753,7 @@ body.reading-mode .reading-card {
     background: transparent;
     color: var(--text-main);
     font-family: var(--font-ui);
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 700;
     padding: 6px 10px;
     border-radius: 999px;
@@ -761,6 +761,7 @@ body.reading-mode .reading-card {
     -webkit-appearance: none;
     appearance: none;
     transition: background-color 0.15s ease, transform 0.1s ease;
+    line-height: 1;
 }
 
 .font-btn:hover {
@@ -771,7 +772,7 @@ body.reading-mode .reading-card {
     transform: scale(0.96);
 }
 
-/* Ajuste del botón de tema */
 .theme-toggle {
-    align-self: flex-end;
+    align-self: center;
+    margin: 0;
 }
