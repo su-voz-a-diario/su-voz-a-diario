@@ -49,6 +49,18 @@ deleteNote: function (dateStr) {
 toggleNote: function (dateStr) {
     this.openNoteDate = this.openNoteDate === dateStr ? null : dateStr;
 },
+changeFontSize: function (delta) {
+    let current = parseFloat(localStorage.getItem('reading-size')) || 1.08;
+
+    current += delta;
+
+    // límites razonables
+    if (current < 0.9) current = 0.9;
+    if (current > 1.6) current = 1.6;
+
+    localStorage.setItem('reading-size', current);
+    document.documentElement.style.setProperty('--reading-size', current + 'rem');
+},
 resetReadingMode: function () {
     this.readingMode = false;
     document.body.classList.remove('reading-mode');
@@ -124,6 +136,10 @@ showHighlightButton: function (selection, dateStr) {
 
     init: async function () {
         this.cacheDOM();
+        const savedSize = localStorage.getItem('reading-size');
+        if (savedSize) {
+        document.documentElement.style.setProperty('--reading-size', savedSize + 'rem');
+    }
         this.resetReadingMode();
         this.initTheme();
         this.bindEvents();
@@ -246,6 +262,18 @@ ${cleanText}
             } else {
                 alert('Tu dispositivo no permite compartir esta lectura');
             }
+            return;
+        }
+
+         // Aumentar tamaño de letra
+        if (e.target.closest('[data-action="font-increase"]')) {
+            this.changeFontSize(0.05);
+            return;
+        }
+
+        // Reducir tamaño de letra
+        if (e.target.closest('[data-action="font-decrease"]')) {
+            this.changeFontSize(-0.05);
             return;
         }
 
@@ -441,6 +469,10 @@ if (e.target.closest('[data-action="delete-note"]')) {
 <div class="action-group">
 
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
+    
+    <button class="btn-secondary" data-action="font-increase">Aumentar letra</button>
+    
+    <button class="btn-secondary" data-action="font-decrease">Reducir letra</button>
 
    ${this.hasHighlights(reading.date)
         ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>`
