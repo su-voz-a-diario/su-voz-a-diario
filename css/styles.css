@@ -637,3 +637,12 @@ body.light-mode .user-highlight {
     font-size: 0.6rem;
     color: var(--accent);
 }
+
+.note-saved-message {
+    margin: 6px 0 12px 0;
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+    text-align: right;
+    opacity: 0.9;
+}
