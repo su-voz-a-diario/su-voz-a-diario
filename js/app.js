@@ -459,7 +459,6 @@ if (e.target.closest('[data-action="delete-note"]')) {
     </div>
 </div>
 
-  <!-- BOTÓN DE NOTA (PRIMERO) -->
 <div class="main-action">
     <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
         ${this.openNoteDate === reading.date ? 'Cerrar reflexión' : 'Mi reflexión'}
@@ -467,7 +466,20 @@ if (e.target.closest('[data-action="delete-note"]')) {
     </button>
 </div>
 
-<!-- BOTÓN PRINCIPAL -->
+${this.openNoteDate === reading.date ? `
+    <div class="note-box">
+        <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
+
+        ${this.noteSavedMessageDate === reading.date ? `
+            <div class="note-saved-message">Guardado automáticamente</div>
+        ` : ''}
+
+        <div class="note-actions">
+            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
+        </div>
+    </div>
+` : ''}
+
 <div class="main-action">
     ${this.isRead(reading.date)
         ? `<button class="btn-primary" disabled>Leído ✔</button>`
@@ -485,20 +497,6 @@ if (e.target.closest('[data-action="delete-note"]')) {
     }
 
 </div>
-
-${this.openNoteDate === reading.date ? `
-    <div class="note-box">
-        <textarea class="note-textarea" data-note-date="${reading.date}" placeholder="Escribe aquí tu nota sobre esta lectura...">${this.getNote(reading.date)}</textarea>
-
-        ${this.noteSavedMessageDate === reading.date ? `
-            <div class="note-saved-message">Guardado automáticamente</div>
-        ` : ''}
-
-        <div class="note-actions">
-            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
-        </div>
-    </div>
-` : ''}
 
 ${this.readingMode ? `
     <button class="exit-reading-btn" data-action="exit-reading-mode">Salir</button>
