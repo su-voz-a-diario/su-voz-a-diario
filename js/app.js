@@ -193,6 +193,18 @@ showHighlightButton: function (selection, dateStr) {
     this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
     window.addEventListener('popstate', () => this.handleRoute());
 
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-action="font-increase"]')) {
+        this.changeFontSize(0.05);
+        return;
+        }
+
+        if (e.target.closest('[data-action="font-decrease"]')) {
+        this.changeFontSize(-0.05);
+        return;
+        }
+    });
+
    this.$content.addEventListener('click', (e) => {
        if (e.target.closest('.reading-text')) {
             const readingEl = e.target.closest('.reading-text');
@@ -262,18 +274,6 @@ ${cleanText}
             } else {
                 alert('Tu dispositivo no permite compartir esta lectura');
             }
-            return;
-        }
-
-         // Aumentar tamaño de letra
-        if (e.target.closest('[data-action="font-increase"]')) {
-            this.changeFontSize(0.05);
-            return;
-        }
-
-        // Reducir tamaño de letra
-        if (e.target.closest('[data-action="font-decrease"]')) {
-            this.changeFontSize(-0.05);
             return;
         }
 
@@ -469,10 +469,6 @@ if (e.target.closest('[data-action="delete-note"]')) {
 <div class="action-group">
 
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
-    
-    <button class="btn-secondary" data-action="font-increase">Aumentar letra</button>
-    
-    <button class="btn-secondary" data-action="font-decrease">Reducir letra</button>
 
    ${this.hasHighlights(reading.date)
         ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>`
