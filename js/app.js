@@ -49,6 +49,10 @@ deleteNote: function (dateStr) {
 toggleNote: function (dateStr) {
     this.openNoteDate = this.openNoteDate === dateStr ? null : dateStr;
 },
+resetReadingMode: function () {
+    this.readingMode = false;
+    document.body.classList.remove('reading-mode');
+},
 showNoteSavedMessage: function (dateStr) {
     this.noteSavedMessageDate = dateStr;
 
@@ -119,11 +123,12 @@ showHighlightButton: function (selection, dateStr) {
     // ----------------------------------
 
     init: async function () {
-    this.cacheDOM();
-    this.initTheme();
-    this.bindEvents();
-    await this.loadData();
-    this.handleRoute();
+        this.cacheDOM();
+        this.resetReadingMode();
+        this.initTheme();
+        this.bindEvents();
+        await this.loadData();
+        this.handleRoute();
     },
 
     cacheDOM: function () {
@@ -332,6 +337,8 @@ if (e.target.closest('[data-action="delete-note"]')) {
         const parts = hash.split('/');
         const view = parts[0];
         const param = parts[1] || null;
+
+        this.resetReadingMode();
 
         this.currentView = view;
         this.updateNavUI();
