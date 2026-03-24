@@ -804,5 +804,5 @@ body.reading-mode .reading-card {
 }
 
 .note-textarea:not(:placeholder-shown) {
-    border-color: #4da6ff;
+    border-color: rgba(77, 166, 255, 0.6);
 }
