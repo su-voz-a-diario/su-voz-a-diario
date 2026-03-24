@@ -648,3 +648,8 @@ body.light-mode .user-highlight {
     padding: 4px 8px;
     border-radius: 999px;
 }
+
+body.dark-mode .note-badge {
+    color: #fef3c7;
+    background-color: #92400e;
+}
