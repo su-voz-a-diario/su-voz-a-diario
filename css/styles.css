@@ -802,3 +802,7 @@ body.reading-mode .reading-card {
     margin-bottom: 0;
     line-height: 1.5;
 }
+
+.note-textarea:not(:placeholder-shown) {
+    border-color: #4da6ff;
+}
