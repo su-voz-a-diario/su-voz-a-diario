@@ -661,3 +661,7 @@ body.dark-mode .note-badge {
     color: #fef3c7;
     background-color: #92400e;
 }
+
+.main-action {
+    margin: 12px 0 16px 0;
+}
