@@ -538,6 +538,10 @@ body.light-mode {
     grid-column: span 2;
 }
 
+.action-group .btn-secondary[data-action="clear-highlights"] {
+    grid-column: span 2;
+}
+
 .action-group .btn-secondary[data-action="toggle-note"] {
     grid-column: span 2;
 }
@@ -575,8 +579,8 @@ body.dark-mode .highlight-btn {
 }
 
 body.dark-mode .user-highlight {
-    background-color: #b7791f;
-    color: #fffaf0;
+    background-color: #f6e58d;
+    color: #1a202c;
 }
 
 body.light-mode .user-highlight {
