@@ -4,7 +4,8 @@ const App = {
     today: new Date(),
     openNoteDate: null,
     noteSavedMessageDate: null,
-
+    readingMode: false,
+    
     // --- Futuras Funciones (Stubs) ---
     // Guardar estado de lectura localmente
     markAsRead: function (dateStr) {
@@ -171,7 +172,13 @@ showHighlightButton: function (selection, dateStr) {
     this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
     window.addEventListener('popstate', () => this.handleRoute());
 
-    this.$content.addEventListener('click', (e) => {
+   this.$content.addEventListener('click', (e) => {
+        if (e.target.closest('.reading-text')) {
+            this.readingMode = !this.readingMode;
+            document.body.classList.toggle('reading-mode', this.readingMode);
+        }
+    });
+        
         // Marcar como leído
         if (e.target.closest('[data-action="mark-read"]')) {
             const date = e.target.closest('[data-action="mark-read"]').getAttribute('data-date');
