@@ -176,8 +176,8 @@ showHighlightButton: function (selection, dateStr) {
         if (e.target.closest('.reading-text')) {
             this.readingMode = !this.readingMode;
             document.body.classList.toggle('reading-mode', this.readingMode);
+            return;
         }
-    });
         
         // Marcar como leído
         if (e.target.closest('[data-action="mark-read"]')) {
