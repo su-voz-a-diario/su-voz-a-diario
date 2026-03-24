@@ -610,20 +610,10 @@ body.light-mode .user-highlight {
     margin-bottom: 12px;
 }
 
-.note-textarea {
-    width: 100%;
-    min-height: 140px;
-}
-
 .note-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 12px;
-}
-
-.btn-secondary.has-note {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px rgba(49, 130, 206, 0.18), 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .btn-secondary.has-note {
