@@ -677,13 +677,20 @@ body.dark-mode .note-badge {
     margin: 12px 0 16px 0;
 }
 
+.main-action,
+.action-group,
+.bottom-nav,
+.app-header {
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
 body.reading-mode .main-action,
 body.reading-mode .action-group,
 body.reading-mode .bottom-nav,
 body.reading-mode .app-header {
     opacity: 0;
+    transform: translateY(10px);
     pointer-events: none;
-    transition: opacity 0.25s ease;
 }
 
 body.reading-mode .reading-card {
@@ -711,4 +718,13 @@ body.reading-mode .reading-card {
 body.reading-mode .reading-text {
     font-size: 1.2rem;
     line-height: 2.1;
+    letter-spacing: 0.3px;
+}
+
+.reading-card {
+    transition: transform 0.25s ease;
+}
+
+body.reading-mode .reading-card {
+    transform: translateY(-6px);
 }
