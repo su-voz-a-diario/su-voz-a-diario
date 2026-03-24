@@ -179,18 +179,32 @@ showHighlightButton: function (selection, dateStr) {
 
    this.$content.addEventListener('click', (e) => {
        if (e.target.closest('.reading-text')) {
+            const readingEl = e.target.closest('.reading-text');
+            const date = readingEl.getAttribute('data-reading-date');
+
             this.readingMode = !this.readingMode;
             document.body.classList.toggle('reading-mode', this.readingMode);
-            this.renderReading(window.location.hash.split('/')[1]);
-            return;
+
+            if (date) {
+            this.renderReading(date);
         }
+
+        return;
+    }
         
        if (e.target.closest('[data-action="exit-reading-mode"]')) {
+            const readingEl = document.querySelector('.reading-text');
+            const date = readingEl ? readingEl.getAttribute('data-reading-date') : null;
+
             this.readingMode = false;
             document.body.classList.remove('reading-mode');
-            this.renderReading(window.location.hash.split('/')[1]);
-            return;
+
+        if (date) {
+        this.renderReading(date);
         }
+
+        return;
+    }
         
         // Marcar como leído
         if (e.target.closest('[data-action="mark-read"]')) {
