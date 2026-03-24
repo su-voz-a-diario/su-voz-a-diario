@@ -173,9 +173,17 @@ showHighlightButton: function (selection, dateStr) {
     window.addEventListener('popstate', () => this.handleRoute());
 
    this.$content.addEventListener('click', (e) => {
-        if (e.target.closest('.reading-text')) {
+       if (e.target.closest('.reading-text')) {
             this.readingMode = !this.readingMode;
             document.body.classList.toggle('reading-mode', this.readingMode);
+            this.renderReading(window.location.hash.split('/')[1]);
+            return;
+        }
+        
+       if (e.target.closest('[data-action="exit-reading-mode"]')) {
+            this.readingMode = false;
+            document.body.classList.remove('reading-mode');
+            this.renderReading(window.location.hash.split('/')[1]);
             return;
         }
         
@@ -436,6 +444,10 @@ ${this.openNoteDate === reading.date ? `
             <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar nota</button>
         </div>
     </div>
+` : ''}
+
+${this.readingMode ? `
+    <button class="exit-reading-btn" data-action="exit-reading-mode">Salir</button>
 ` : ''}
     `;
 },
