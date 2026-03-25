@@ -313,7 +313,7 @@ checkReminderOnOpen: function() {
 
     if (now >= reminderTime) {
         new Notification('📖 Su Voz a Diario', {
-            body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
+            body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
             icon: './icons/icon-192.png'
         });
 
