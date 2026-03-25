@@ -247,7 +247,7 @@ async function showDailyReminderNotification() {
 
 function sendNotification() {
   self.registration.showNotification('📖 Su Voz a Diario', {
-    body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
+    body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
     icon: './icons/icon-192.png',
     badge: './icons/icon-72.png',
     vibrate: [200, 100, 200],
