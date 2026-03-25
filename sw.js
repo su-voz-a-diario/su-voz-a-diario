@@ -1,21 +1,22 @@
 /**
- * Service Worker - Su Voz a Diario v4.1
+ * Service Worker - Su Voz a Diario v5.0
  * Funcionalidades:
  * - Caché offline de recursos estáticos y lecturas
  * - Notificaciones programadas diarias
  * - Sincronización en segundo plano
  * - Actualización inteligente de caché
  * - Manejo de red con estrategia "stale-while-revalidate"
+ * - Página offline personalizada
  */
 
-const CACHE_NAME = 'su-voz-v4';
-const DYNAMIC_CACHE = 'su-voz-dynamic-v1';
+const CACHE_NAME = 'su-voz-v5';
+const DYNAMIC_CACHE = 'su-voz-dynamic-v2';
 
 // Recursos estáticos para cachear en la instalación
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './offline.html',       
+  './offline.html',
   './css/styles.css',
   './js/app.js',
   './manifest.json',
@@ -44,7 +45,6 @@ self.addEventListener('install', event => {
         return cache.addAll(STATIC_ASSETS);
       })
       .then(() => {
-        // Forzar activación inmediata
         return self.skipWaiting();
       })
       .catch(err => {
@@ -61,7 +61,6 @@ self.addEventListener('activate', event => {
   
   event.waitUntil(
     Promise.all([
-      // Limpiar cachés antiguas
       caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames.map(cacheName => {
@@ -72,41 +71,35 @@ self.addEventListener('activate', event => {
           })
         );
       }),
-      // Tomar control de clientes abiertos
       self.clients.claim()
     ])
   );
 });
 
 // ========================================
-// ESTRATEGIA DE FETCH (Stale-While-Revalidate)
+// ESTRATEGIA DE FETCH
 // ========================================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
-  // Estrategia especial para lecturas JSON
   if (url.pathname.includes('readings.json')) {
     event.respondWith(networkFirstStrategy(event.request));
     return;
   }
   
-  // Estrategia para imágenes y fuentes (cache first)
   if (event.request.destination === 'image' || event.request.destination === 'font') {
     event.respondWith(cacheFirstStrategy(event.request));
     return;
   }
   
-  // Estrategia stale-while-revalidate para el resto
   event.respondWith(staleWhileRevalidateStrategy(event.request));
 });
 
-// Estrategia: Cache First (con actualización en segundo plano)
 async function cacheFirstStrategy(request) {
   const cache = await caches.open(CACHE_NAME);
   const cachedResponse = await cache.match(request);
   
   if (cachedResponse) {
-    // Actualizar en segundo plano sin bloquear la respuesta
     fetch(request)
       .then(networkResponse => {
         if (networkResponse.ok) {
@@ -120,7 +113,6 @@ async function cacheFirstStrategy(request) {
   return fetch(request);
 }
 
-// Estrategia: Network First (con fallback a caché)
 async function networkFirstStrategy(request) {
   try {
     const networkResponse = await fetch(request);
@@ -137,7 +129,13 @@ async function networkFirstStrategy(request) {
       return cachedResponse;
     }
     
-    // Fallback para lecturas
+    if (request.destination === 'document') {
+      const offlinePage = await caches.match('./offline.html');
+      if (offlinePage) {
+        return offlinePage;
+      }
+    }
+    
     if (request.url.includes('readings.json')) {
       return new Response(
         JSON.stringify({ error: 'Sin conexión. Las lecturas no están disponibles offline.' }),
@@ -149,7 +147,6 @@ async function networkFirstStrategy(request) {
   return new Response('Recurso no disponible offline', { status: 404 });
 }
 
-// Estrategia: Stale-While-Revalidate (devuelve caché y actualiza en bg)
 async function staleWhileRevalidateStrategy(request) {
   const cache = await caches.open(CACHE_NAME);
   const cachedResponse = await cache.match(request);
@@ -171,6 +168,9 @@ async function staleWhileRevalidateStrategy(request) {
 // ========================================
 // NOTIFICACIONES PROGRAMADAS
 // ========================================
+let notificationTimeout = null;
+let pendingNotes = [];
+
 self.addEventListener('message', event => {
   if (!event.data) return;
   
@@ -184,13 +184,19 @@ self.addEventListener('message', event => {
     case 'SKIP_TODAY':
       skipTodayNotification();
       break;
+    case 'QUEUE_NOTE':
+      queueNoteForSync(event.data.note);
+      break;
+    case 'SYNC_NOW':
+      syncNotes();
+      break;
+    case 'SKIP_WAITING':
+      self.skipWaiting();
+      break;
   }
 });
 
-let notificationTimeout = null;
-
 function scheduleDailyNotification(time) {
-  // Cancelar notificación anterior si existe
   if (notificationTimeout) {
     clearTimeout(notificationTimeout);
   }
@@ -204,7 +210,6 @@ function scheduleDailyNotification(time) {
   
   let delay = scheduled - now;
   
-  // Si la hora ya pasó hoy, programar para mañana
   if (delay < 0) {
     delay += 24 * 60 * 60 * 1000;
   }
@@ -213,19 +218,16 @@ function scheduleDailyNotification(time) {
   
   notificationTimeout = setTimeout(() => {
     showDailyReminderNotification();
-    // Reprogramar para el día siguiente
     scheduleDailyNotification(time);
   }, delay);
 }
 
 async function showDailyReminderNotification() {
-  // Verificar si el usuario ya leyó hoy
   const clients = await self.clients.matchAll({ type: 'window' });
   let todayRead = false;
   
   for (const client of clients) {
     if (client.url.includes('index.html')) {
-      // Intentar obtener estado de lectura a través de mensaje
       return new Promise(resolve => {
         const channel = new MessageChannel();
         channel.port1.onmessage = (event) => {
@@ -240,7 +242,6 @@ async function showDailyReminderNotification() {
     }
   }
   
-  // Si no hay clientes abiertos, mostrar notificación
   if (!todayRead) {
     sendNotification();
   }
@@ -275,7 +276,6 @@ function cancelScheduledNotifications() {
 }
 
 function skipTodayNotification() {
-  // Programar para mañana a la misma hora
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
   tomorrow.setHours(8, 0, 0, 0);
@@ -286,6 +286,40 @@ function skipTodayNotification() {
   }, delay);
   
   console.log('[SW] Notificación saltada hasta mañana');
+}
+
+function queueNoteForSync(note) {
+  const saved = localStorage.getItem('pending-notes');
+  if (saved) {
+    pendingNotes = JSON.parse(saved);
+  }
+  pendingNotes.push(note);
+  localStorage.setItem('pending-notes', JSON.stringify(pendingNotes));
+  console.log('[SW] Nota encolada para sincronización');
+}
+
+async function syncNotes() {
+  console.log('[SW] Sincronizando notas pendientes...');
+  
+  const saved = localStorage.getItem('pending-notes');
+  if (saved) {
+    pendingNotes = JSON.parse(saved);
+  }
+  
+  if (pendingNotes.length === 0) {
+    console.log('[SW] No hay notas pendientes');
+    return;
+  }
+  
+  console.log(`[SW] Sincronizando ${pendingNotes.length} notas...`);
+  
+  const clients = await self.clients.matchAll({ type: 'window' });
+  clients.forEach(client => {
+    client.postMessage({ type: 'SYNC_COMPLETE', count: pendingNotes.length });
+  });
+  
+  pendingNotes = [];
+  localStorage.removeItem('pending-notes');
 }
 
 // ========================================
@@ -302,7 +336,6 @@ self.addEventListener('notificationclick', event => {
       openAppAndNavigate(notificationData.url);
       break;
     case 'snooze':
-      // Reprogramar para 30 minutos después
       setTimeout(() => {
         showDailyReminderNotification();
       }, 30 * 60 * 1000);
@@ -315,7 +348,6 @@ self.addEventListener('notificationclick', event => {
 async function openAppAndNavigate(url) {
   const clients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   
-  // Si ya hay una ventana abierta, usarla
   for (const client of clients) {
     if (client.url.includes('index.html') && 'focus' in client) {
       await client.focus();
@@ -324,14 +356,13 @@ async function openAppAndNavigate(url) {
     }
   }
   
-  // Si no, abrir nueva ventana
   if (clients.openWindow) {
     await clients.openWindow(url);
   }
 }
 
 // ========================================
-// SINCRONIZACIÓN EN SEGUNDO PLANO (Background Sync)
+// SINCRONIZACIÓN EN SEGUNDO PLANO
 // ========================================
 self.addEventListener('sync', event => {
   if (event.tag === 'sync-notes') {
@@ -339,24 +370,8 @@ self.addEventListener('sync', event => {
   }
 });
 
-async function syncNotes() {
-  console.log('[SW] Sincronizando notas pendientes...');
-  // Aquí puedes implementar sincronización con un backend si lo tienes
-  // Por ahora, solo logueamos
-  return Promise.resolve();
-}
-
 // ========================================
-// MANEJO DE ACTUALIZACIONES
-// ========================================
-self.addEventListener('message', event => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
-});
-
-// ========================================
-// PUSH NOTIFICATIONS (para futura implementación con backend)
+// PUSH NOTIFICATIONS
 // ========================================
 self.addEventListener('push', event => {
   if (event.data) {
