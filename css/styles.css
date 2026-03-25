@@ -50,15 +50,15 @@ body {
 
 .app-header {
     background-color: var(--surface-color);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    min-height: var(--header-height);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 12px 20px;
+    padding: 16px 20px 12px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 .theme-toggle {
@@ -68,13 +68,6 @@ body {
     font-size: 1.2rem;
     cursor: pointer;
     padding: 8px;
-}
-
-.header-content {
-    width: 100%;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
 }
 
 .main-title {
