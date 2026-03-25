@@ -5,9 +5,7 @@
  */
 
 const App = {
-    // ========================================
     // DATOS Y ESTADO
-    // ========================================
     data: [],
     currentView: 'home',
     today: new Date(),
@@ -35,9 +33,7 @@ const App = {
     noteSavedTimeout: null,
     renderScheduled: false,
     
-    // ========================================
     // INICIALIZACIÓN
-    // ========================================
         init: async function() {
         console.log('[App] Inicializando...');
         
@@ -45,10 +41,13 @@ const App = {
         this.loadSettings();
         this.loadStreak();
         this.loadFontSize();
-        this.themes.loadTheme();
+        const savedVersion = localStorage.getItem('current-version');
+            if (savedVersion) {
+            this.currentVersion = savedVersion;
+        }
+        this.loadTheme();
         this.achievements.init();
         this.audioPlayer.init();
-        this.audioPlayer.setSpanishVoice();
         this.initTheme();
         this.initNotifications();
         this.setupSWCommunication();
@@ -75,9 +74,7 @@ const App = {
         this.$streakCount = document.getElementById('streak-count');
     },
     
-    // ========================================
     // COMUNICACIÓN CON SERVICE WORKER
-    // ========================================
     setupSWCommunication: function() {
         if (!('serviceWorker' in navigator)) return;
         
@@ -123,10 +120,8 @@ const App = {
             navigator.serviceWorker.controller.postMessage(message);
         }
     },
-    
-    // ========================================
+
     // SISTEMA DE RACHAS (MEJORADO)
-    // ========================================
     loadStreak: function() {
         const saved = localStorage.getItem('su-voz-streak');
         if (saved) {
@@ -192,7 +187,7 @@ const App = {
     },
     
     getYesterdayDateStr: function() {
-        const yesterday = new Date(this.today);
+        const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const year = yesterday.getFullYear();
         const month = String(yesterday.getMonth() + 1).padStart(2, '0');
@@ -211,9 +206,7 @@ const App = {
         }
     },
 
-        // ========================================
     // SISTEMA DE LOGROS Y MEDALLAS
-    // ========================================
     achievements: {
         list: {
             first_read: {
@@ -406,9 +399,6 @@ const App = {
         }
     },
     
-    // ========================================
-    // CONFIGURACIÓN (MEJORADA CON SW)
-    // ========================================
     loadSettings: function() {
         const saved = localStorage.getItem('su-voz-settings');
         if (saved) {
@@ -444,9 +434,6 @@ const App = {
         }
     },
     
-    // ========================================
-    // NOTIFICACIONES (MEJORADAS CON SW)
-    // ========================================
     initNotifications: function() {
         if (!('Notification' in window)) {
             console.log('[App] Notificaciones no soportadas');
@@ -496,9 +483,7 @@ const App = {
         }
     },
 
-        // ========================================
     // AUDIO BIBLIA - TEXTO A VOZ
-    // ========================================
     audioPlayer: {
         isPlaying: false,
         currentUtterance: null,
@@ -507,11 +492,19 @@ const App = {
         
         init: function() {
             if (!window.speechSynthesis) {
-                console.log('Text-to-speech no soportado');
-                return false;
-            }
+            console.log('Text-to-speech no soportado');
+            return false;
+        }
+
+            const loadVoices = () => {
+            this.setSpanishVoice();
+        };
+
+            loadVoices();
+            window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+
             return true;
-        },
+    },
         
         getVoices: function() {
             return window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('es'));
@@ -603,9 +596,7 @@ const App = {
         }
     },
 
-        // ========================================
     // GENERACIÓN DE IMÁGENES PARA COMPARTIR
-    // ========================================
     shareImage: {
         canvas: null,
         
@@ -728,9 +719,7 @@ const App = {
         return lines;
     },
 
-        // ========================================
     // TEMAS PERSONALIZABLES
-    // ========================================
     themes: {
         default: {
             name: 'Clásico',
@@ -838,68 +827,51 @@ const App = {
         html += '</div>';
         return html;
     },
-    
-    // ========================================
+  
     // ESTADÍSTICAS (MEJORADAS)
-    // ========================================
     getStats: function() {
-        const readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
-        const totalRead = readDates.length;
-        const totalAvailable = this.data.length;
-        
-        // Calcular días consecutivos actuales (más preciso)
-        let currentStreak = 0;
-        let checkDate = new Date(this.today);
-        
-        while (true) {
-            const dateStr = this.formatDateForCompare(checkDate);
-            if (readDates.includes(dateStr)) {
-                currentStreak++;
-                checkDate.setDate(checkDate.getDate() - 1);
-            } else {
-                break;
-            }
-        }
-        
-        // Calcular porcentaje
-        const percentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
-        
-        // Notas totales
-        let totalNotes = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('su-voz-note-')) {
-                const note = JSON.parse(localStorage.getItem(key));
-                if (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim()) {
-                    totalNotes++;
-                }
-            }
-        }
-        
-        // Resaltados totales
-        let totalHighlights = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('su-voz-highlights-')) {
-                const highlights = JSON.parse(localStorage.getItem(key));
-                totalHighlights += highlights.length;
-            }
-        }
-        
-        return {
-            totalRead,
-            totalAvailable,
-            percentage,
-            currentStreak,
-            longestStreak: this.streak.longest,
-            totalNotes,
-            totalHighlights
-        };
-    },
+    const readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
+    const totalRead = readDates.length;
+    const totalAvailable = this.data.length;
+    const currentStreak = this.streak.current;
     
-    // ========================================
+    // Calcular porcentaje
+    const percentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
+    
+    // Notas totales
+    let totalNotes = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('su-voz-note-')) {
+            const note = JSON.parse(localStorage.getItem(key));
+            if (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim()) {
+                totalNotes++;
+            }
+        }
+    }
+    
+    // Resaltados totales
+    let totalHighlights = 0;
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('su-voz-highlights-')) {
+            const highlights = JSON.parse(localStorage.getItem(key));
+            totalHighlights += highlights.length;
+        }
+    }
+    
+    return {
+        totalRead,
+        totalAvailable,
+        percentage,
+        currentStreak,
+        longestStreak: this.streak.longest,
+        totalNotes,
+        totalHighlights
+    };
+},
+
     // FUNCIONES PRINCIPALES
-    // ========================================
     markAsRead: function(dateStr) {
         let readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
         if (!readDates.includes(dateStr)) {
@@ -915,10 +887,9 @@ const App = {
                 this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
             }
             
-            // 👇👇👇 NUEVO: Verificar logros después de marcar como leído 👇👇👇
+            // Verificar logros después de marcar como leído 
             const stats = this.getStats();
             this.achievements.check(stats);
-            // 👆👆👆 NUEVO 👆👆👆
             
             this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
         }
@@ -1153,10 +1124,8 @@ const App = {
         
         document.body.appendChild(btn);
     },
-    
-    // ========================================
+
     // NAVEGACIÓN Y RENDERIZADO
-    // ========================================
     loadData: async function() {
         try {
             const response = await fetch('data/readings.json');
@@ -1254,10 +1223,11 @@ const App = {
     },
     
     getTodayDateStr: function() {
-        const year = this.today.getFullYear();
-        const month = String(this.today.getMonth() + 1).padStart(2, '0');
-        const day = String(this.today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
     },
     
     renderHome: function() {
@@ -1470,7 +1440,7 @@ const App = {
                     <div class="setting-item">
                         <label>🎨 Tema de la app</label>
                         <div id="theme-selector-container">
-                            ${this.themes.renderThemeSelector()}
+                            ${this.renderThemeSelector()}
                         </div>
                     </div>
                     <div class="setting-item">
@@ -1574,12 +1544,12 @@ const App = {
             });
         } 
         
-        // 👇👇👇 Selector de temas 👇👇👇
+        // Selector de temas 
         const themeCards = document.querySelectorAll('.theme-card');
         themeCards.forEach(card => {
             card.addEventListener('click', () => {
                 const themeName = card.getAttribute('data-theme');
-                this.themes.applyTheme(themeName);
+                this.applyTheme(themeName);
                 this.renderSettings();
             });
         });
@@ -1687,9 +1657,7 @@ const App = {
         setTimeout(() => location.reload(), 1000);
     },
     
-    // ========================================
     // EVENTOS
-    // ========================================
     bindEvents: function() {
         // Navegación
         if (this.$navHome) this.$navHome.addEventListener('click', () => this.navigate('home'));
