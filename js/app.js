@@ -206,17 +206,24 @@ showHighlightButton: function (selection, dateStr) {
     // ----------------------------------
 
     init: async function () {
-        this.cacheDOM();
-        const savedSize = localStorage.getItem('reading-size');
-        if (savedSize) {
+    this.cacheDOM();
+
+    const savedSize = localStorage.getItem('reading-size');
+    if (savedSize) {
         document.documentElement.style.setProperty('--reading-size', savedSize + 'rem');
     }
-        this.resetReadingMode();
-        this.initTheme();
-        this.bindEvents();
-        await this.loadData();
-        this.handleRoute();
-    },
+
+    const savedVersion = localStorage.getItem('current-version');
+    if (savedVersion) {
+        this.currentVersion = savedVersion;
+    }
+
+    this.resetReadingMode();
+    this.initTheme();
+    this.bindEvents();
+    await this.loadData();
+    this.handleRoute();
+},
 
     cacheDOM: function () {
         this.$content = document.getElementById('app-content');
@@ -265,16 +272,32 @@ showHighlightButton: function (selection, dateStr) {
     window.addEventListener('popstate', () => this.handleRoute());
 
     document.addEventListener('click', (e) => {
-        if (e.target.closest('[data-action="font-increase"]')) {
+    if (e.target.closest('[data-action="font-increase"]')) {
         this.changeFontSize(0.05);
         return;
-        }
+    }
 
-        if (e.target.closest('[data-action="font-decrease"]')) {
+    if (e.target.closest('[data-action="font-decrease"]')) {
         this.changeFontSize(-0.05);
         return;
-        }
-    });
+    }
+
+    const versionBtn = e.target.closest('[data-version]');
+    if (versionBtn) {
+        this.currentVersion = versionBtn.getAttribute('data-version');
+        localStorage.setItem('current-version', this.currentVersion);
+
+        document.querySelectorAll('.version-btn').forEach(btn => {
+            btn.classList.toggle(
+                'active',
+                btn.getAttribute('data-version') === this.currentVersion
+            );
+        });
+
+        this.handleRoute();
+        return;
+    }
+});
 
    this.$content.addEventListener('click', (e) => {
        if (e.target.closest('.reading-text')) {
@@ -457,31 +480,37 @@ if (e.target.closest('[data-action="delete-note"]')) {
     },
 
     handleRoute: function () {
-        const hash = window.location.hash.substring(1) || 'home';
-        const parts = hash.split('/');
-        const view = parts[0];
-        const param = parts[1] || null;
+    const hash = window.location.hash.substring(1) || 'home';
+    const parts = hash.split('/');
+    const view = parts[0];
+    const param = parts[1] || null;
 
-        this.resetReadingMode();
+    this.resetReadingMode();
 
-        this.currentView = view;
-        this.updateNavUI();
+    this.currentView = view;
+    this.updateNavUI();
 
-        this.$content.classList.remove('fade-in');
-        // Trigger reflow
-        void this.$content.offsetWidth;
-        this.$content.classList.add('fade-in');
+    document.querySelectorAll('.version-btn').forEach(btn => {
+        btn.classList.toggle(
+            'active',
+            btn.getAttribute('data-version') === this.currentVersion
+        );
+    });
 
-        if (view === 'home') {
-            this.renderHome();
-        } else if (view === 'calendar') {
-            this.renderCalendar();
-        } else if (view === 'reading' && param) {
-            this.renderReading(param);
-        } else {
-            this.renderHome();
-        }
-    },
+    this.$content.classList.remove('fade-in');
+    void this.$content.offsetWidth;
+    this.$content.classList.add('fade-in');
+
+    if (view === 'home') {
+        this.renderHome();
+    } else if (view === 'calendar') {
+        this.renderCalendar();
+    } else if (view === 'reading' && param) {
+        this.renderReading(param);
+    } else {
+        this.renderHome();
+    }
+},
 
     updateNavUI: function () {
         this.$navHome.classList.toggle('active', this.currentView === 'home' || this.currentView === 'reading');
