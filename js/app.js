@@ -1,6 +1,7 @@
 /**
  * Su Voz a Diario - App de Meditación Bíblica
- * Versión mejorada con rachas, estadísticas, notificaciones y más
+ * Versión 2.1 con integración completa con Service Worker
+ * Funcionalidades: Rachas, Estadísticas, Notificaciones, PWA, Backup
  */
 
 const App = {
@@ -25,25 +26,34 @@ const App = {
     // Configuración
     settings: {
         reminderTime: '08:00',
-        notificationsEnabled: true
+        notificationsEnabled: true,
+        autoSaveNotes: true,
+        fontSize: 1.08
     },
     
     // Timeout para mensajes
     noteSavedTimeout: null,
+    renderScheduled: false,
     
     // ========================================
     // INICIALIZACIÓN
     // ========================================
     init: async function() {
+        console.log('[App] Inicializando...');
+        
         this.cacheDOM();
         this.loadSettings();
         this.loadStreak();
+        this.loadFontSize();
         this.initTheme();
         this.initNotifications();
+        this.setupSWCommunication();
         this.bindEvents();
         await this.loadData();
         this.handleRoute();
         this.updateStreakUI();
+        
+        console.log('[App] Inicialización completada');
     },
     
     cacheDOM: function() {
@@ -57,18 +67,77 @@ const App = {
     },
     
     // ========================================
-    // SISTEMA DE RACHAS
+    // COMUNICACIÓN CON SERVICE WORKER
+    // ========================================
+    setupSWCommunication: function() {
+        if (!('serviceWorker' in navigator)) return;
+        
+        // Escuchar mensajes del Service Worker
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            const { data } = event;
+            
+            switch (data.type) {
+                case 'CHECK_READ_STATUS':
+                    // El SW pregunta si ya se leyó hoy
+                    const todayStr = this.getTodayDateStr();
+                    if (event.ports && event.ports[0]) {
+                        event.ports[0].postMessage({ 
+                            isReadToday: this.isRead(todayStr) 
+                        });
+                    }
+                    break;
+                    
+                case 'NAVIGATE_TO':
+                    // Navegar a una ruta específica desde notificación
+                    if (data.url) {
+                        const path = data.url.replace('./', '').replace('#', '');
+                        this.navigate(path || 'home');
+                    }
+                    break;
+                    
+                case 'SYNC_COMPLETE':
+                    console.log('[App] Sincronización completada');
+                    this.showToast('Datos sincronizados correctamente');
+                    break;
+                    
+                default:
+                    console.log('[App] Mensaje del SW:', data);
+            }
+        });
+        
+        // Notificar al SW que la app está lista
+        this.sendToSW({ type: 'APP_READY' });
+    },
+    
+    sendToSW: function(message) {
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage(message);
+        }
+    },
+    
+    // ========================================
+    // SISTEMA DE RACHAS (MEJORADO)
     // ========================================
     loadStreak: function() {
         const saved = localStorage.getItem('su-voz-streak');
         if (saved) {
-            this.streak = JSON.parse(saved);
+            try {
+                this.streak = JSON.parse(saved);
+            } catch(e) {
+                console.error('Error cargando racha:', e);
+            }
         }
     },
     
     saveStreak: function() {
         localStorage.setItem('su-voz-streak', JSON.stringify(this.streak));
         this.updateStreakUI();
+        
+        // Notificar al SW sobre el cambio de racha
+        this.sendToSW({ 
+            type: 'STREAK_UPDATED', 
+            streak: this.streak.current 
+        });
     },
     
     updateStreak: function(dateStr) {
@@ -76,16 +145,41 @@ const App = {
         const today = dateStr;
         
         if (this.streak.lastReadDate === yesterday) {
+            // Día consecutivo
             this.streak.current++;
             if (this.streak.current > this.streak.longest) {
                 this.streak.longest = this.streak.current;
+                
+                // Celebrar hitos
+                if (this.streak.current === 7 || this.streak.current === 30 || this.streak.current === 100) {
+                    this.showCelebration(this.streak.current);
+                }
             }
         } else if (this.streak.lastReadDate !== today && this.streak.lastReadDate !== yesterday) {
+            // Racha rota
             this.streak.current = 1;
         }
+        // Si ya leyó hoy, no hacer nada
         
         this.streak.lastReadDate = today;
         this.saveStreak();
+    },
+    
+    showCelebration: function(days) {
+        const messages = {
+            7: '🎉 ¡Una semana completa! Sigue así.',
+            30: '🏆 ¡Un mes de constancia! Increíble.',
+            100: '🌟 ¡100 días! Eres un ejemplo de dedicación.'
+        };
+        
+        if (messages[days]) {
+            this.showToast(messages[days]);
+            
+            // Confeti sutil si está disponible
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+        }
     },
     
     getYesterdayDateStr: function() {
@@ -109,77 +203,104 @@ const App = {
     },
     
     // ========================================
-    // CONFIGURACIÓN
+    // CONFIGURACIÓN (MEJORADA CON SW)
     // ========================================
     loadSettings: function() {
         const saved = localStorage.getItem('su-voz-settings');
         if (saved) {
-            this.settings = JSON.parse(saved);
+            try {
+                this.settings = JSON.parse(saved);
+            } catch(e) {
+                console.error('Error cargando settings:', e);
+            }
         }
     },
     
     saveSettings: function() {
         localStorage.setItem('su-voz-settings', JSON.stringify(this.settings));
+        
+        // Notificar al SW sobre cambios en notificaciones
+        if (this.settings.notificationsEnabled) {
+            this.sendToSW({
+                type: 'SCHEDULE_NOTIFICATION',
+                time: this.settings.reminderTime
+            });
+        } else {
+            this.sendToSW({ type: 'CANCEL_NOTIFICATIONS' });
+        }
+    },
+    
+    loadFontSize: function() {
+        const saved = localStorage.getItem('reading-size');
+        if (saved) {
+            this.settings.fontSize = parseFloat(saved);
+            document.documentElement.style.setProperty('--reading-size', saved + 'rem');
+        } else {
+            document.documentElement.style.setProperty('--reading-size', this.settings.fontSize + 'rem');
+        }
     },
     
     // ========================================
-    // NOTIFICACIONES
+    // NOTIFICACIONES (MEJORADAS CON SW)
     // ========================================
     initNotifications: function() {
-        if (!('Notification' in window)) return;
+        if (!('Notification' in window)) {
+            console.log('[App] Notificaciones no soportadas');
+            return;
+        }
         
+        // Solicitar permiso si está habilitado
         if (this.settings.notificationsEnabled && Notification.permission === 'default') {
-            setTimeout(() => {
-                if (Notification.permission === 'default') {
-                    Notification.requestPermission();
-                }
-            }, 5000);
+            // Esperar interacción del usuario
+            const requestPermission = () => {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        this.sendToSW({
+                            type: 'SCHEDULE_NOTIFICATION',
+                            time: this.settings.reminderTime
+                        });
+                    }
+                });
+                document.removeEventListener('click', requestPermission);
+            };
+            
+            // Solicitar después de un tiempo o al hacer clic
+            setTimeout(requestPermission, 5000);
+            document.addEventListener('click', requestPermission);
+        } else if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
+            // Ya tiene permiso, programar notificaciones
+            this.sendToSW({
+                type: 'SCHEDULE_NOTIFICATION',
+                time: this.settings.reminderTime
+            });
         }
-        
-        this.scheduleNotification();
-    },
-    
-    scheduleNotification: function() {
-        if (!this.settings.notificationsEnabled) return;
-        
-        const [hour, minute] = this.settings.reminderTime.split(':');
-        const now = new Date();
-        const scheduled = new Date();
-        scheduled.setHours(parseInt(hour), parseInt(minute), 0);
-        
-        let delay = scheduled - now;
-        if (delay < 0) {
-            delay += 24 * 60 * 60 * 1000;
-        }
-        
-        setTimeout(() => {
-            this.showDailyReminder();
-            this.scheduleNotification();
-        }, delay);
     },
     
     showDailyReminder: function() {
-        const todayStr = this.getTodayDateStr();
-        if (!this.isRead(todayStr) && this.settings.notificationsEnabled) {
-            if (Notification.permission === 'granted') {
+        // Esta función ahora la maneja el SW
+        // Se mantiene por compatibilidad pero se prefiere la del SW
+        if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
+            const todayStr = this.getTodayDateStr();
+            if (!this.isRead(todayStr)) {
                 new Notification('📖 Su Voz a Diario', {
                     body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
                     icon: '/icons/icon-192.png',
-                    vibrate: [200, 100, 200]
+                    vibrate: [200, 100, 200],
+                    data: { url: '/#home' }
                 });
             }
         }
     },
     
     // ========================================
-    // ESTADÍSTICAS
+    // ESTADÍSTICAS (MEJORADAS)
     // ========================================
     getStats: function() {
         const readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
         const totalRead = readDates.length;
         const totalAvailable = this.data.length;
         
-        // Calcular días consecutivos actuales
+        // Calcular días consecutivos actuales (más preciso)
         let currentStreak = 0;
         let checkDate = new Date(this.today);
         
@@ -202,9 +323,19 @@ const App = {
             const key = localStorage.key(i);
             if (key && key.startsWith('su-voz-note-')) {
                 const note = JSON.parse(localStorage.getItem(key));
-                if (note.dios || note.aprendizaje || note.respuesta) {
+                if (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim()) {
                     totalNotes++;
                 }
+            }
+        }
+        
+        // Resaltados totales
+        let totalHighlights = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('su-voz-highlights-')) {
+                const highlights = JSON.parse(localStorage.getItem(key));
+                totalHighlights += highlights.length;
             }
         }
         
@@ -214,12 +345,13 @@ const App = {
             percentage,
             currentStreak,
             longestStreak: this.streak.longest,
-            totalNotes
+            totalNotes,
+            totalHighlights
         };
     },
     
     // ========================================
-    // FUNCIONES EXISTENTES (MANTENIDAS Y MEJORADAS)
+    // FUNCIONES PRINCIPALES
     // ========================================
     markAsRead: function(dateStr) {
         let readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
@@ -228,10 +360,18 @@ const App = {
             localStorage.setItem('su-voz-read-dates', JSON.stringify(readDates));
             this.updateStreak(dateStr);
             
-            // Feedback háptico si está disponible
+            // Feedback háptico
             if ('vibrate' in navigator) {
                 navigator.vibrate(50);
             }
+            
+            // Mostrar celebración si es el primer día
+            if (readDates.length === 1) {
+                this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
+            }
+            
+            // Notificar al SW
+            this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
         }
     },
     
@@ -254,6 +394,7 @@ const App = {
     
     saveHighlights: function(dateStr, highlights) {
         localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(highlights));
+        this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
     },
     
     getNoteKey: function(dateStr) {
@@ -270,17 +411,19 @@ const App = {
     
     hasNote: function(dateStr) {
         const note = this.getNote(dateStr);
-        return note.dios.trim().length > 0 ||
-               note.aprendizaje.trim().length > 0 ||
-               note.respuesta.trim().length > 0;
+        return (note.dios?.trim().length > 0) ||
+               (note.aprendizaje?.trim().length > 0) ||
+               (note.respuesta?.trim().length > 0);
     },
     
     saveNote: function(dateStr, noteObj) {
         localStorage.setItem(this.getNoteKey(dateStr), JSON.stringify(noteObj));
+        this.sendToSW({ type: 'NOTE_SAVED', date: dateStr });
     },
     
     deleteNote: function(dateStr) {
         localStorage.removeItem(this.getNoteKey(dateStr));
+        this.showToast('Reflexión eliminada');
     },
     
     toggleNote: function(dateStr) {
@@ -288,17 +431,49 @@ const App = {
     },
     
     changeFontSize: function(delta) {
-        let current = parseFloat(localStorage.getItem('reading-size')) || 1.08;
+        let current = this.settings.fontSize;
         current += delta;
         if (current < 0.9) current = 0.9;
         if (current > 1.6) current = 1.6;
+        
+        this.settings.fontSize = current;
         localStorage.setItem('reading-size', current);
         document.documentElement.style.setProperty('--reading-size', current + 'rem');
+        this.saveSettings();
         
-        // Re-renderizar si es necesario
+        // Re-renderizar
         if (this.currentView === 'reading' || this.currentView === 'home') {
-            this.handleRoute();
+            this.scheduleRender();
         }
+    },
+    
+    scheduleRender: function() {
+        if (this.renderScheduled) return;
+        this.renderScheduled = true;
+        requestAnimationFrame(() => {
+            this.handleRoute();
+            this.renderScheduled = false;
+        });
+    },
+    
+    showToast: function(message, duration = 3000) {
+        // Eliminar toast existente
+        const existing = document.querySelector('.toast-message');
+        if (existing) existing.remove();
+        
+        const toast = document.createElement('div');
+        toast.className = 'toast-message';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     },
     
     exportReflectionPDF: function(dateStr) {
@@ -360,6 +535,7 @@ const App = {
         doc.text(respuestaLines, marginLeft, y);
         
         doc.save(`reflexion-${dateStr}.pdf`);
+        this.showToast('PDF exportado correctamente');
     },
     
     resetReadingMode: function() {
@@ -373,7 +549,7 @@ const App = {
         this.noteSavedTimeout = setTimeout(() => {
             this.noteSavedMessageDate = null;
             if (this.currentView === 'reading' || this.currentView === 'home') {
-                this.handleRoute();
+                this.scheduleRender();
             }
         }, 1200);
     },
@@ -419,10 +595,11 @@ const App = {
             if (!highlights.includes(selectedText)) {
                 highlights.push(selectedText);
                 this.saveHighlights(dateStr, highlights);
+                this.showToast('Texto resaltado');
             }
             selection.removeAllRanges();
             this.removeHighlightButton();
-            this.handleRoute();
+            this.scheduleRender();
         });
         
         document.body.appendChild(btn);
@@ -434,11 +611,18 @@ const App = {
     loadData: async function() {
         try {
             const response = await fetch('data/readings.json');
+            if (!response.ok) throw new Error('Error al cargar lecturas');
             this.data = await response.json();
             this.data.sort((a, b) => new Date(a.date) - new Date(b.date));
         } catch (error) {
             console.error('Error loading data:', error);
-            this.$content.innerHTML = `<div class="empty-state">No se pudieron cargar las lecturas. Por favor, revisa tu conexión.</div>`;
+            this.$content.innerHTML = `
+                <div class="empty-state">
+                    <h3>⚠️ No se pudieron cargar las lecturas</h3>
+                    <p>Por favor, verifica tu conexión a internet.</p>
+                    <button class="btn-primary" onclick="location.reload()">Reintentar</button>
+                </div>
+            `;
         }
     },
     
@@ -544,23 +728,22 @@ const App = {
         if (!reading) {
             this.$content.innerHTML = `
                 <div class="empty-state">
-                    <h3>No hay lectura programada para este día.</h3>
+                    <h3>📖 No hay lectura programada para este día</h3>
                     <br>
-                    <button class="btn-primary" data-nav="calendar" style="width: auto; margin: auto;">Ver lecturas disponibles</button>
+                    <button class="btn-primary" data-nav="calendar">Ver calendario de lecturas</button>
                 </div>
             `;
             return;
         }
         
         const dateFormatted = this.formatDateEs(reading.date);
-        const badgeText = isHome ? (reading.date === todayStr ? 'HOY' : 'LECTURA') : dateFormatted;
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         
         this.$content.innerHTML = `
-            ${!isHome ? `<div class="reading-date-header">${dateFormatted.toUpperCase()}</div>` : ''}
+            ${!isHome ? `<div class="reading-date-header">📅 ${dateFormatted.toUpperCase()}</div>` : ''}
             
             <div class="reading-card">
-                <div class="section-title">Su voz ${isHome ? 'hoy' : 'este día'}</div>
+                <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
                 <h2 class="reading-reference">${reading.reference}</h2>
                 <div class="reading-text" data-reading-date="${reading.date}">
                     ${this.applyHighlightsToHtml(readingText, this.getHighlights(reading.date))}
@@ -569,7 +752,7 @@ const App = {
             
             <div class="main-action">
                 <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
-                    ${this.openNoteDate === reading.date ? 'Cerrar reflexión' : '📝 Mi reflexión'}
+                    ${this.openNoteDate === reading.date ? '📝 Cerrar reflexión' : '📝 Mi reflexión'}
                     ${this.hasNote(reading.date) ? ' ✓' : ''}
                 </button>
             </div>
@@ -628,7 +811,7 @@ const App = {
     
     renderCalendar: function() {
         if (this.data.length === 0) {
-            this.$content.innerHTML = `<div class="empty-state">No hay lecturas disponibles.</div>`;
+            this.$content.innerHTML = `<div class="empty-state">📅 No hay lecturas disponibles.</div>`;
             return;
         }
         
@@ -647,8 +830,9 @@ const App = {
                     <div class="cal-date">${dateStr}</div>
                     <div class="cal-ref">
                         ${item.reference}
-                        ${this.isRead(item.date) ? '<span class="read-badge">✓</span>' : ''}
-                        ${this.hasNote(item.date) ? '<span class="note-badge">📝</span>' : ''}
+                        ${this.isRead(item.date) ? '<span class="read-badge" title="Leído">✓</span>' : ''}
+                        ${this.hasNote(item.date) ? '<span class="note-badge" title="Tiene reflexión">📝</span>' : ''}
+                        ${this.hasHighlights(item.date) ? '<span class="highlight-badge" title="Tiene resaltados">✨</span>' : ''}
                     </div>
                     <div class="cal-arrow">→</div>
                 </div>
@@ -676,12 +860,17 @@ const App = {
                 <div class="stat-card">
                     <div class="stat-number">🔥 ${stats.currentStreak}</div>
                     <div class="stat-label">Días consecutivos</div>
-                    <div class="stat-note">Récord: ${stats.longestStreak} días</div>
+                    <div class="stat-note">🏆 Récord: ${stats.longestStreak} días</div>
                 </div>
                 
                 <div class="stat-card">
                     <div class="stat-number">📝 ${stats.totalNotes}</div>
                     <div class="stat-label">Reflexiones escritas</div>
+                </div>
+                
+                <div class="stat-card">
+                    <div class="stat-number">✨ ${stats.totalHighlights}</div>
+                    <div class="stat-label">Versículos resaltados</div>
                 </div>
                 
                 <div class="stat-card">
@@ -698,14 +887,14 @@ const App = {
                 <div class="setting-card">
                     <h3>🔔 Notificaciones</h3>
                     <div class="setting-item">
-                        <label>Recordatorio diario</label>
+                        <label>⏰ Recordatorio diario</label>
                         <div class="setting-control">
                             <input type="time" id="reminder-time" value="${this.settings.reminderTime}" class="time-input">
                             <button id="test-notification" class="btn-secondary">Probar</button>
                         </div>
                     </div>
                     <div class="setting-item">
-                        <label>Activar notificaciones</label>
+                        <label>📢 Activar notificaciones</label>
                         <label class="switch">
                             <input type="checkbox" id="notifications-toggle" ${this.settings.notificationsEnabled ? 'checked' : ''}>
                             <span class="slider"></span>
@@ -714,21 +903,30 @@ const App = {
                 </div>
                 
                 <div class="setting-card">
+                    <h3>🎨 Apariencia</h3>
+                    <div class="setting-item">
+                        <label>🌓 Tema oscuro</label>
+                        <button id="theme-toggle-settings" class="btn-secondary">Cambiar tema</button>
+                    </div>
+                </div>
+                
+                <div class="setting-card">
                     <h3>💾 Datos</h3>
                     <div class="setting-item">
-                        <button id="export-data" class="btn-secondary">Exportar mis datos</button>
-                        <button id="import-data" class="btn-secondary">Importar respaldo</button>
+                        <button id="export-data" class="btn-secondary">📤 Exportar mis datos</button>
+                        <button id="import-data" class="btn-secondary">📥 Importar respaldo</button>
                     </div>
                     <div class="setting-item">
-                        <button id="reset-data" class="btn-secondary danger">Reiniciar todo</button>
+                        <button id="reset-data" class="btn-secondary danger">⚠️ Reiniciar todo</button>
                     </div>
                     <input type="file" id="import-file" accept=".json" style="display: none;">
                 </div>
                 
                 <div class="setting-card">
                     <h3>ℹ️ Acerca de</h3>
-                    <p>Su Voz a Diario v2.0</p>
+                    <p><strong>Su Voz a Diario</strong> v2.1</p>
                     <p>Meditación bíblica diaria con reflexiones personales</p>
+                    <p>📖 Lecturas diarias para crecer espiritualmente</p>
                 </div>
             </div>
         `;
@@ -741,12 +939,13 @@ const App = {
         const importBtn = document.getElementById('import-data');
         const resetBtn = document.getElementById('reset-data');
         const importFile = document.getElementById('import-file');
+        const themeToggleSettings = document.getElementById('theme-toggle-settings');
         
         if (reminderTime) {
             reminderTime.addEventListener('change', (e) => {
                 this.settings.reminderTime = e.target.value;
                 this.saveSettings();
-                this.scheduleNotification();
+                this.showToast('Hora de recordatorio actualizada');
             });
         }
         
@@ -757,7 +956,7 @@ const App = {
                 if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
                     Notification.requestPermission();
                 }
-                this.scheduleNotification();
+                this.showToast(this.settings.notificationsEnabled ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
             });
         }
         
@@ -768,9 +967,21 @@ const App = {
                         body: '¡Las notificaciones funcionan correctamente!',
                         icon: '/icons/icon-192.png'
                     });
+                    this.showToast('Notificación de prueba enviada');
                 } else {
-                    Notification.requestPermission();
+                    Notification.requestPermission().then(perm => {
+                        if (perm === 'granted') {
+                            this.showToast('Permiso concedido. Prueba de nuevo.');
+                        }
+                    });
                 }
+            });
+        }
+        
+        if (themeToggleSettings) {
+            themeToggleSettings.addEventListener('click', () => {
+                const toggleBtn = document.getElementById('theme-toggle');
+                if (toggleBtn) toggleBtn.click();
             });
         }
         
@@ -788,7 +999,7 @@ const App = {
         
         if (resetBtn) {
             resetBtn.addEventListener('click', () => {
-                if (confirm('¿Estás seguro? Se borrarán todos tus datos (lecturas, notas, rachas).')) {
+                if (confirm('⚠️ ¿Estás seguro? Se borrarán TODOS tus datos:\n- Lecturas marcadas\n- Rachas\n- Reflexiones\n- Resaltados\n\nEsta acción no se puede deshacer.')) {
                     this.resetAllData();
                 }
             });
@@ -797,6 +1008,8 @@ const App = {
     
     exportAllData: function() {
         const allData = {
+            version: '2.1',
+            exportDate: new Date().toISOString(),
             readDates: JSON.parse(localStorage.getItem('su-voz-read-dates')) || [],
             streak: this.streak,
             settings: this.settings,
@@ -824,6 +1037,8 @@ const App = {
         a.download = `su-voz-backup-${this.getTodayDateStr()}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        
+        this.showToast('Datos exportados correctamente');
     },
     
     importData: function(file) {
@@ -841,8 +1056,11 @@ const App = {
                     this.saveStreak();
                 }
                 if (data.settings) {
-                    this.settings = data.settings;
+                    this.settings = { ...this.settings, ...data.settings };
                     this.saveSettings();
+                    // Recargar configuración visual
+                    this.initTheme();
+                    this.loadFontSize();
                 }
                 if (data.notes) {
                     Object.entries(data.notes).forEach(([date, note]) => {
@@ -855,10 +1073,11 @@ const App = {
                     });
                 }
                 
-                alert('Datos importados correctamente. La página se recargará.');
-                location.reload();
+                this.showToast('✅ Datos importados correctamente');
+                setTimeout(() => location.reload(), 1500);
             } catch (error) {
-                alert('Error al importar: archivo inválido');
+                console.error('Error importando:', error);
+                alert('Error al importar: archivo inválido o corrupto');
             }
         };
         reader.readAsText(file);
@@ -868,17 +1087,25 @@ const App = {
         const keys = [];
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('su-voz-')) {
+            if (key && (key.startsWith('su-voz-') || key === 'theme' || key === 'reading-size' || key === 'current-version')) {
                 keys.push(key);
             }
         }
         keys.forEach(key => localStorage.removeItem(key));
         
+        // Reiniciar estado
         this.streak = { current: 0, longest: 0, lastReadDate: null };
         this.saveStreak();
+        this.settings = {
+            reminderTime: '08:00',
+            notificationsEnabled: true,
+            autoSaveNotes: true,
+            fontSize: 1.08
+        };
+        this.saveSettings();
         
-        alert('Todos los datos han sido reiniciados.');
-        location.reload();
+        this.showToast('🗑️ Todos los datos han sido reiniciados');
+        setTimeout(() => location.reload(), 1000);
     },
     
     // ========================================
@@ -892,7 +1119,7 @@ const App = {
         if (this.$navSettings) this.$navSettings.addEventListener('click', () => this.navigate('settings'));
         window.addEventListener('popstate', () => this.handleRoute());
         
-        // Controles de fuente
+        // Controles de fuente y versión
         document.addEventListener('click', (e) => {
             if (e.target.closest('[data-action="font-increase"]')) {
                 this.changeFontSize(0.05);
@@ -901,7 +1128,6 @@ const App = {
                 this.changeFontSize(-0.05);
             }
             
-            // Cambio de versión
             const versionBtn = e.target.closest('[data-version]');
             if (versionBtn) {
                 this.currentVersion = versionBtn.getAttribute('data-version');
@@ -910,6 +1136,7 @@ const App = {
                     btn.classList.toggle('active', btn.getAttribute('data-version') === this.currentVersion);
                 });
                 this.handleRoute();
+                this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
             }
         });
         
@@ -950,11 +1177,12 @@ const App = {
                 const reading = this.data.find(r => r.date === date);
                 if (reading) {
                     const cleanText = (reading.versions?.[this.currentVersion] || reading.text || '').replace(/<[^>]+>/g, '');
-                    const shareText = `Su voz a diario\n\nPasaje de hoy:\n${reading.reference}\n\n${cleanText.substring(0, 500)}...\n\n— Compartido desde Su voz a diario`;
+                    const shareText = `📖 Su voz a diario\n\n${reading.reference}\n\n${cleanText.substring(0, 500)}${cleanText.length > 500 ? '...' : ''}\n\n— Compartido desde Su voz a diario`;
+                    
                     if (navigator.share) {
                         navigator.share({ title: 'Su voz a diario', text: shareText });
                     } else if (navigator.clipboard) {
-                        navigator.clipboard.writeText(shareText).then(() => alert('Lectura copiada'));
+                        navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
                     }
                 }
                 return;
@@ -975,6 +1203,7 @@ const App = {
                 localStorage.removeItem(this.getHighlightsKey(date));
                 this.removeHighlightButton();
                 this.renderReading(date);
+                this.showToast('Resaltados eliminados');
                 return;
             }
             
@@ -1049,32 +1278,33 @@ const App = {
         const savedTheme = localStorage.getItem('theme');
         const toggleBtn = document.getElementById('theme-toggle');
         
+        const applyTheme = (isDark) => {
+            if (isDark) {
+                document.body.classList.add('dark-mode');
+                document.body.classList.remove('light-mode');
+                if (toggleBtn) toggleBtn.textContent = '☀️';
+            } else {
+                document.body.classList.remove('dark-mode');
+                document.body.classList.add('light-mode');
+                if (toggleBtn) toggleBtn.textContent = '🌙';
+            }
+        };
+        
         if (savedTheme === 'dark') {
-            document.body.classList.add('dark-mode');
-            if (toggleBtn) toggleBtn.textContent = '☀️';
+            applyTheme(true);
         } else if (savedTheme === 'light') {
-            document.body.classList.add('light-mode');
-            if (toggleBtn) toggleBtn.textContent = '🌙';
+            applyTheme(false);
         } else {
             const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            if (systemDark) document.body.classList.add('dark-mode');
-            if (toggleBtn) toggleBtn.textContent = systemDark ? '☀️' : '🌙';
+            applyTheme(systemDark);
         }
         
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
                 const isDark = document.body.classList.contains('dark-mode');
-                if (isDark) {
-                    document.body.classList.remove('dark-mode');
-                    document.body.classList.add('light-mode');
-                    localStorage.setItem('theme', 'light');
-                    toggleBtn.textContent = '🌙';
-                } else {
-                    document.body.classList.remove('light-mode');
-                    document.body.classList.add('dark-mode');
-                    localStorage.setItem('theme', 'dark');
-                    toggleBtn.textContent = '☀️';
-                }
+                applyTheme(!isDark);
+                localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+                this.showToast(!isDark ? 'Modo oscuro activado' : 'Modo claro activado');
             });
         }
     }
