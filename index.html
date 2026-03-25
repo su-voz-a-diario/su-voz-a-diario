@@ -3,21 +3,62 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#fcfcfc">
-    <meta name="description" content="Lectura bíblica del día, sencilla y accesible.">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- Meta tags básicos -->
+    <meta name="theme-color" content="#3182ce">
+    <meta name="description" content="Lectura bíblica del día con reflexiones personales. Medita la Palabra de Dios cada día y crece espiritualmente.">
+    <meta name="keywords" content="biblia, lectura bíblica, meditación, devocional, reflexión, espiritual">
+    <meta name="author" content="Su Voz a Diario">
+    <meta name="robots" content="index, follow">
+    
+    <!-- PWA Meta tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Su voz a diario</title>
+    <meta name="apple-mobile-web-app-title" content="Su Voz">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="application-name" content="Su Voz a Diario">
+    
+    <!-- iOS Splash Screens - Diferentes tamaños para diferentes dispositivos -->
+    <link rel="apple-touch-startup-image" href="splash/iphone5.png" media="(device-width: 320px) and (device-height: 568px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/iphone6.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/iphoneplus.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="splash/iphonex.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="splash/iphonexr.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/iphonexsmax.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)">
+    <link rel="apple-touch-startup-image" href="splash/ipad.png" media="(device-width: 768px) and (device-height: 1024px) and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="splash/ipadpro.png" media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)">
+    
+    <!-- Título y favicons -->
+    <title>Su Voz a Diario - Lectura Bíblica Diaria</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icons/icon-180.png">
-    <link rel="icon" type="image/png" href="icons/icon-192.png">
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/icon-16.png">
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="mask-icon" href="icons/icon.svg" color="#3182ce">
+    
+    <!-- Preconexión para fuentes -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    
+    <!-- Fuentes premium -->
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
         rel="stylesheet">
+    
+    <!-- CSS principal -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Preload de recursos críticos -->
+    <link rel="preload" href="js/app.js" as="script">
+    <link rel="preload" href="data/readings.json" as="fetch" crossorigin="anonymous">
+    
+    <!-- Seguridad: CSP básico -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self';">
 </head>
 
 <body>
@@ -28,43 +69,48 @@
         </div>
 
         <div class="header-bottom">
-            <!-- Indicador de racha (nuevo) -->
+            <!-- Indicador de racha -->
             <div class="streak-indicator" id="streak-indicator" style="display: none;">
                 <span class="streak-icon">🔥</span>
                 <span class="streak-count" id="streak-count">0</span>
                 <span class="streak-label">días</span>
             </div>
 
-            <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">🌙</button>
+            <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">
+                <span aria-hidden="true">🌙</span>
+            </button>
 
             <div class="font-controls" aria-label="Tamaño de letra">
-                <button class="font-btn" data-action="font-decrease" aria-label="Reducir letra">A−</button>
-                <button class="font-btn" data-action="font-increase" aria-label="Aumentar letra">A+</button>
+                <button class="font-btn" data-action="font-decrease" aria-label="Reducir tamaño de letra">A−</button>
+                <button class="font-btn" data-action="font-increase" aria-label="Aumentar tamaño de letra">A+</button>
             </div>
 
-            <div class="version-controls">
-                <button class="version-btn active" data-version="rvr60">RVR60</button>
-                <button class="version-btn" data-version="ntv">NTV</button>
+            <div class="version-controls" aria-label="Versión de la Biblia">
+                <button class="version-btn active" data-version="rvr60" aria-label="Reina Valera 1960">RVR60</button>
+                <button class="version-btn" data-version="ntv" aria-label="Nueva Traducción Viviente">NTV</button>
             </div>
         </div>
     </header>
 
     <main id="app-content" class="container fade-in">
-        <div class="loading">Cargando la lectura de hoy...</div>
+        <div class="loading" aria-live="polite">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Cargando la lectura de hoy...</p>
+        </div>
     </main>
 
-    <nav class="bottom-nav">
-        <button id="nav-home" class="nav-btn active">
+    <nav class="bottom-nav" aria-label="Navegación principal">
+        <button id="nav-home" class="nav-btn active" aria-label="Ir a inicio">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
             <span>Inicio</span>
         </button>
-        <button id="nav-calendar" class="nav-btn">
+        <button id="nav-calendar" class="nav-btn" aria-label="Ver calendario de lecturas">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
                 <line x1="16" x2="16" y1="2" y2="6" />
                 <line x1="8" x2="8" y1="2" y2="6" />
@@ -78,18 +124,18 @@
             </svg>
             <span>Calendario</span>
         </button>
-        <button id="nav-stats" class="nav-btn">
+        <button id="nav-stats" class="nav-btn" aria-label="Ver estadísticas">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="18" x2="18" y1="20" y2="10" />
                 <line x1="12" x2="12" y1="20" y2="4" />
                 <line x1="6" x2="6" y1="20" y2="14" />
             </svg>
             <span>Estadísticas</span>
         </button>
-        <button id="nav-settings" class="nav-btn">
+        <button id="nav-settings" class="nav-btn" aria-label="Ajustes y configuración">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
                 <circle cx="12" cy="12" r="3" />
             </svg>
@@ -97,18 +143,84 @@
         </button>
     </nav>
     
+    <!-- Librerías -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Script principal -->
     <script src="js/app.js"></script>
+    
+    <!-- Service Worker Registration con mejora de rendimiento -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    console.log('ServiceWorker registration successful');
-                }).catch(err => {
-                    console.error('ServiceWorker registration failed: ', err);
-                });
+                // Registrar SW con estrategia de actualización
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => {
+                        console.log('✅ ServiceWorker registrado exitosamente');
+                        
+                        // Escuchar actualizaciones
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            console.log('🔄 Nueva versión del ServiceWorker encontrada');
+                            
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('📦 Nueva versión disponible. Recarga para actualizar.');
+                                    // Mostrar notificación de actualización
+                                    if (window.App && App.showToast) {
+                                        App.showToast('🔄 Nueva versión disponible. Recarga para actualizar.');
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(err => {
+                        console.error('❌ ServiceWorker registration failed: ', err);
+                    });
             });
         }
+        
+        // Detectar si la app está instalada como PWA
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('📱 App ejecutándose en modo standalone (instalada)');
+            document.documentElement.classList.add('pwa-installed');
+        }
+        
+        // Manejar errores de red globales
+        window.addEventListener('online', () => {
+            console.log('🟢 Conexión recuperada');
+            if (window.App && App.showToast) {
+                App.showToast('🟢 Conexión recuperada', 2000);
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('🔴 Sin conexión');
+            if (window.App && App.showToast) {
+                App.showToast('🔴 Sin conexión a internet', 3000);
+            }
+        });
+    </script>
+    
+    <!-- Esquema JSON-LD para SEO -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Su Voz a Diario",
+        "description": "Aplicación de meditación bíblica diaria con reflexiones personales",
+        "applicationCategory": "Lifestyle",
+        "operatingSystem": "All",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Organization",
+            "name": "Su Voz a Diario"
+        }
+    }
     </script>
 </body>
 
