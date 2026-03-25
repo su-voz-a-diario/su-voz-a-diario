@@ -595,17 +595,6 @@ checkReminderOnOpen: function() {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
     
-    applyHighlightsToHtml: function(html, highlights) {
-        let result = html;
-        highlights.forEach(text => {
-            if (!text || !text.trim()) return;
-            const escaped = this.escapeRegExp(text.trim());
-            const regex = new RegExp(`(${escaped})(?![^<]*>|[^<>]*<\\/mark>)`, 'gi');
-            result = result.replace(regex, '<mark class="user-highlight">$1</mark>');
-        });
-        return result;
-    },
-    
     removeHighlightButton: function() {
         const existing = document.getElementById('highlight-btn');
         if (existing) existing.remove();
