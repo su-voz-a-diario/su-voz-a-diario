@@ -537,7 +537,10 @@ if (e.target.closest('[data-action="delete-note"]')) {
     <div class="section-title">Su voz ${isHome ? 'hoy' : 'este día'}</div>
     <h2 class="reading-reference">${reading.reference}</h2>
     <div class="reading-text" data-reading-date="${reading.date}">
-        ${this.applyHighlightsToHtml(reading.text, this.getHighlights(reading.date))}
+        ${this.applyHighlightsToHtml(
+            reading.versions?.[this.currentVersion] || reading.text || '',
+            this.getHighlights(reading.date)
+        )}
     </div>
 </div>
 
