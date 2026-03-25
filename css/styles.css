@@ -672,3 +672,597 @@ body.dark-mode .toast-message {
 .streak-indicator.highlight {
     animation: heartbeat 0.5s ease;
 }
+
+/* ========================================
+   ESTILOS PARA LOGROS Y MEDALLAS
+   ======================================== */
+
+/* Grid de logros */
+.achievements-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
+}
+
+/* Tarjeta de cada logro */
+.achievement-card {
+    background: var(--surface-color);
+    border-radius: 16px;
+    padding: 16px;
+    text-align: center;
+    border-left: 4px solid #ccc;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.achievement-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.achievement-card.unlocked {
+    border-left-color: var(--accent);
+    opacity: 1;
+}
+
+.achievement-card.ready {
+    animation: achievementPulse 1s infinite;
+    border-left-color: var(--warning);
+}
+
+@keyframes achievementPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(243, 156, 18, 0.4);
+    }
+    70% {
+        transform: scale(1.02);
+        box-shadow: 0 0 0 8px rgba(243, 156, 18, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(243, 156, 18, 0);
+    }
+}
+
+/* Icono grande del logro */
+.achievement-icon-large {
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    margin: 0 auto 12px;
+    background: var(--bg-color);
+    transition: transform 0.2s ease;
+}
+
+.achievement-card:hover .achievement-icon-large {
+    transform: scale(1.1);
+}
+
+/* Nombre y descripción del logro */
+.achievement-name {
+    font-weight: 700;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+}
+
+.achievement-desc {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    line-height: 1.3;
+}
+
+/* Badge de estado del logro */
+.achievement-badge {
+    font-size: 0.65rem;
+    padding: 4px 8px;
+    border-radius: 20px;
+    display: inline-block;
+    font-weight: 600;
+}
+
+.achievement-badge.ready {
+    background: var(--warning);
+    color: white;
+    animation: badgeGlow 0.5s ease infinite alternate;
+}
+
+@keyframes badgeGlow {
+    from {
+        box-shadow: 0 0 2px var(--warning);
+    }
+    to {
+        box-shadow: 0 0 8px var(--warning);
+    }
+}
+
+.achievement-badge.locked {
+    background: var(--border-color);
+    color: var(--text-muted);
+}
+
+.achievement-badge:not(.locked):not(.ready) {
+    background: var(--success);
+    color: white;
+}
+
+/* Header de logros en estadísticas */
+.achievements-header {
+    text-align: center;
+    background: linear-gradient(135deg, var(--surface-color), var(--bg-color));
+}
+
+.achievements-header h3 {
+    font-size: 1.2rem;
+    margin-bottom: 8px;
+    color: var(--accent);
+}
+
+.achievements-header p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+/* ========================================
+   ESTILOS PARA MODAL DE LOGROS
+   ======================================== */
+
+/* Overlay del modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+/* Contenido del modal */
+.modal-content {
+    background: var(--surface-color);
+    border-radius: 24px;
+    padding: 24px;
+    max-width: 90%;
+    width: 400px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: scaleIn 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-content h2 {
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+    color: var(--accent);
+}
+
+/* Cada logro dentro del modal */
+.achievement-unlock {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px;
+    margin: 12px 0;
+    background: var(--bg-color);
+    border-radius: 16px;
+    border-left: 4px solid;
+    animation: slideInRight 0.3s ease;
+}
+
+.achievement-icon {
+    font-size: 48px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.achievement-info {
+    text-align: left;
+}
+
+.achievement-info .achievement-name {
+    font-size: 1rem;
+    margin-bottom: 4px;
+}
+
+.achievement-info .achievement-desc {
+    font-size: 0.75rem;
+    margin-bottom: 0;
+}
+
+.modal-content .btn-primary {
+    margin-top: 20px;
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ========================================
+   ESTILOS PARA SELECTOR DE TEMAS
+   ======================================== */
+
+/* Grid de temas */
+.themes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+/* Tarjeta de cada tema */
+.theme-card {
+    cursor: pointer;
+    text-align: center;
+    padding: 12px 8px;
+    border-radius: 16px;
+    transition: all 0.2s ease;
+    background: var(--bg-color);
+}
+
+.theme-card:hover {
+    transform: translateY(-2px);
+    background: var(--surface-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.theme-card.active {
+    background: var(--accent);
+    color: white;
+}
+
+/* Vista previa del color del tema */
+.theme-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 16px;
+    margin: 0 auto 8px;
+    border: 2px solid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease;
+}
+
+.theme-card:hover .theme-preview {
+    transform: scale(1.05);
+}
+
+.theme-preview-accent {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+}
+
+.theme-preview-text {
+    font-size: 28px;
+    font-weight: bold;
+    font-family: var(--font-serif);
+}
+
+/* Nombre del tema */
+.theme-name {
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.theme-active-badge {
+    font-size: 0.65rem;
+    margin-top: 4px;
+    color: var(--accent);
+    font-weight: 600;
+}
+
+.theme-card.active .theme-name {
+    color: white;
+}
+
+.theme-card.active .theme-active-badge {
+    color: white;
+}
+
+/* ========================================
+   ESTILOS PARA BOTÓN DE AUDIO
+   ======================================== */
+
+/* Botón de audio con animación */
+.audio-btn {
+    transition: all 0.2s ease;
+}
+
+.audio-btn.playing {
+    background: var(--accent);
+    color: white;
+    animation: audioPulse 1s infinite;
+}
+
+@keyframes audioPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 8px rgba(49, 130, 206, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(49, 130, 206, 0);
+    }
+}
+
+/* ========================================
+   ESTILOS PARA COMPARTIR IMAGEN
+   ======================================== */
+
+/* Indicador de generación de imagen */
+.share-image-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.share-image-loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* ========================================
+   ESTILOS MEJORADOS PARA BOTONES
+   ======================================== */
+
+/* Efecto hover mejorado para botones secundarios */
+.btn-secondary {
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-secondary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s ease;
+}
+
+.btn-secondary:hover::before {
+    left: 100%;
+}
+
+/* Botón de peligro */
+.btn-secondary.danger {
+    border-color: var(--danger);
+    color: var(--danger);
+}
+
+.btn-secondary.danger:hover {
+    background-color: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+/* ========================================
+   MEJORAS EN TOAST MESSAGES
+   ======================================== */
+
+.toast-message {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 40px;
+    font-size: 0.875rem;
+    z-index: 10000;
+    transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+    pointer-events: none;
+    max-width: 90vw;
+    text-align: center;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.toast-message.show {
+    transform: translateX(-50%) translateY(0);
+}
+
+body.dark-mode .toast-message {
+    background: rgba(30, 41, 59, 0.95);
+    color: #f8fafc;
+}
+
+/* Toast con diferentes tipos */
+.toast-message.success {
+    background: var(--success);
+    color: white;
+}
+
+.toast-message.warning {
+    background: var(--warning);
+    color: white;
+}
+
+.toast-message.error {
+    background: var(--danger);
+    color: white;
+}
+
+/* ========================================
+   MEJORAS EN SCROLLBAR PARA MODALES
+   ======================================== */
+
+.modal-content::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: var(--accent);
+    border-radius: 3px;
+}
+
+/* ========================================
+   ANIMACIONES ADICIONALES
+   ======================================== */
+
+/* Animación para el indicador de racha cuando aumenta */
+.streak-indicator.highlight {
+    animation: streakPop 0.5s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+}
+
+@keyframes streakPop {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.2);
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Animación para cuando se marca como leído */
+.mark-read-feedback {
+    animation: pulse 0.3s ease;
+}
+
+/* ========================================
+   RESPONSIVE PARA LOGROS Y TEMAS
+   ======================================== */
+
+@media (max-width: 480px) {
+    .achievements-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 12px;
+    }
+    
+    .achievement-card {
+        padding: 12px;
+    }
+    
+    .achievement-icon-large {
+        width: 50px;
+        height: 50px;
+        font-size: 28px;
+    }
+    
+    .themes-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 8px;
+    }
+    
+    .theme-preview {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .theme-preview-text {
+        font-size: 22px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .achievement-unlock {
+        padding: 12px;
+        gap: 12px;
+    }
+    
+    .achievement-icon {
+        font-size: 36px;
+        min-width: 50px;
+    }
+}
+
+@media (min-width: 768px) {
+    .achievements-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    .themes-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+/* ========================================
+   PREFERENCIA DE MOVIMIENTO REDUCIDO
+   ======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+    .achievement-card,
+    .theme-card,
+    .btn-secondary,
+    .toast-message,
+    .modal-content,
+    .achievement-unlock {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+    }
+    
+    @keyframes achievementPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+    }
+    
+    .audio-btn.playing {
+        animation: none;
+    }
+}
