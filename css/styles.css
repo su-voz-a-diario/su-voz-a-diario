@@ -806,3 +806,7 @@ body.reading-mode .reading-card {
 .note-textarea:not(:placeholder-shown) {
     border-color: rgba(77, 166, 255, 0.6);
 }
+
+.note-actions .btn-secondary[data-action="export-pdf"] {
+    border-color: rgba(77, 166, 255, 0.45);
+}
