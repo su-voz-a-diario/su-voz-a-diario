@@ -2,6 +2,7 @@ const App = {
     data: [],
     currentView: 'home',
     today: new Date(),
+    currentVersion: 'rvr60',
     openNoteDate: null,
     noteSavedMessageDate: null,
     readingMode: false,
