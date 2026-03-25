@@ -38,23 +38,24 @@ const App = {
     // ========================================
     // INICIALIZACIÓN
     // ========================================
-    init: async function() {
-        console.log('[App] Inicializando...');
-        
-        this.cacheDOM();
-        this.loadSettings();
-        this.loadStreak();
-        this.loadFontSize();
-        this.initTheme();
-        this.initNotifications();
-        this.setupSWCommunication();
-        this.bindEvents();
-        await this.loadData();
-        this.handleRoute();
-        this.updateStreakUI();
-        
-        console.log('[App] Inicialización completada');
-    },
+   init: async function() {
+    console.log('[App] Inicializando...');
+    
+    this.cacheDOM();
+    this.loadSettings();
+    this.loadStreak();
+    this.loadFontSize();
+    this.initTheme();
+    this.initNotifications();
+    this.setupSWCommunication();
+    this.bindEvents();
+    await this.loadData();
+    this.checkReminderOnOpen();
+    this.handleRoute();
+    this.updateStreakUI();
+    
+    console.log('[App] Inicialización completada');
+},
     
     cacheDOM: function() {
         this.$content = document.getElementById('app-content');
@@ -277,20 +278,48 @@ const App = {
     },
     
     showDailyReminder: function() {
-        // Esta función ahora la maneja el SW
-        // Se mantiene por compatibilidad pero se prefiere la del SW
-        if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-            const todayStr = this.getTodayDateStr();
-            if (!this.isRead(todayStr)) {
-                new Notification('📖 Su Voz a Diario', {
-                    body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
-                    icon: '/icons/icon-192.png',
-                    vibrate: [200, 100, 200],
-                    data: { url: '/#home' }
-                });
-            }
+    // Esta función ahora la maneja el SW
+    // Se mantiene por compatibilidad pero se prefiere la del SW
+    if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
+        const todayStr = this.getTodayDateStr();
+        if (!this.isRead(todayStr)) {
+            new Notification('📖 Su Voz a Diario', {
+                body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
+                icon: '/icons/icon-192.png',
+                vibrate: [200, 100, 200],
+                data: { url: '/#home' }
+            });
         }
-    },
+    }
+},
+
+checkReminderOnOpen: function() {
+    if (!this.settings.notificationsEnabled) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') return;
+
+    const todayStr = this.getTodayDateStr();
+
+    if (this.isRead(todayStr)) return;
+
+    const alreadyShown = localStorage.getItem('su-voz-last-reminder-date');
+    if (alreadyShown === todayStr) return;
+
+    const [hour, minute] = (this.settings.reminderTime || '08:00').split(':').map(Number);
+
+    const now = new Date();
+    const reminderTime = new Date();
+    reminderTime.setHours(hour, minute, 0, 0);
+
+    if (now >= reminderTime) {
+        new Notification('📖 Su Voz a Diario', {
+            body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
+            icon: './icons/icon-192.png'
+        });
+
+        localStorage.setItem('su-voz-last-reminder-date', todayStr);
+    }
+},
     
     // ========================================
     // ESTADÍSTICAS (MEJORADAS)
