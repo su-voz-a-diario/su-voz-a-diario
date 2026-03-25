@@ -1,5 +1,5 @@
 /**
- * Su Voz a Diario - App de Meditación Bíblica
+ * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
  * Funcionalidades: Rachas, Estadísticas, Notificaciones, PWA, Backup
  */
@@ -543,16 +543,24 @@ const App = {
         document.body.classList.remove('reading-mode');
     },
     
-    showNoteSavedMessage: function(dateStr) {
-        this.noteSavedMessageDate = dateStr;
-        clearTimeout(this.noteSavedTimeout);
-        this.noteSavedTimeout = setTimeout(() => {
-            this.noteSavedMessageDate = null;
-            if (this.currentView === 'reading' || this.currentView === 'home') {
-                this.scheduleRender();
-            }
-        }, 1200);
-    },
+   showNoteSavedMessage: function(dateStr) {
+    this.noteSavedMessageDate = dateStr;
+    clearTimeout(this.noteSavedTimeout);
+
+    const msg = document.querySelector('.note-saved-message');
+    if (msg) {
+        msg.style.display = 'block';
+    }
+
+    this.noteSavedTimeout = setTimeout(() => {
+        this.noteSavedMessageDate = null;
+
+        const msg = document.querySelector('.note-saved-message');
+        if (msg) {
+            msg.style.display = 'none';
+        }
+    }, 1200);
+},
     
     escapeRegExp: function(string) {
         return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -772,7 +780,7 @@ const App = {
                         <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
                     ${this.noteSavedMessageDate === reading.date ? `
-                        <div class="note-saved-message">✓ Guardado automáticamente</div>
+                        <div class="note-saved-message" style="display: none;">✓ Guardado automáticamente</div>
                     ` : ''}
                     <div class="note-actions">
                         <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
@@ -1142,9 +1150,15 @@ const App = {
         
         // Eventos del contenido
         this.$content.addEventListener('click', (e) => {
-            // Modo lectura
-            if (e.target.closest('.reading-text')) {
-                const readingEl = e.target.closest('.reading-text');
+            // Activar modo lectura solo si se hace clic directo en el bloque,
+            // no cuando se está seleccionando texto
+            const readingEl = e.target.closest('.reading-text');
+            if (readingEl) {
+                const selection = window.getSelection();
+                if (selection && selection.toString().trim()) {
+                    return;
+                }
+
                 const date = readingEl.getAttribute('data-reading-date');
                 this.readingMode = !this.readingMode;
                 document.body.classList.toggle('reading-mode', this.readingMode);
