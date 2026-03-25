@@ -20,22 +20,28 @@
 
 <body>
     <header class="app-header">
-        <div class="header-content">
-            <h1 class="main-title">Su voz a diario</h1>
-            <p class="subtitle">Lectura bíblica del día</p>
+    <div class="header-content">
+        <h1 class="main-title">Su voz a diario</h1>
+        <p class="subtitle">Lectura bíblica del día</p>
+    </div>
+
+    <div class="header-tools">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">
+            🌙
+        </button>
+
+        <div class="font-controls" aria-label="Tamaño de letra">
+            <button class="font-btn" data-action="font-decrease" aria-label="Reducir letra">A−</button>
+            <button class="font-btn" data-action="font-increase" aria-label="Aumentar letra">A+</button>
         </div>
 
-       <div class="header-tools">
-            <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">
-                🌙
-            </button>
-
-            <div class="font-controls" aria-label="Tamaño de letra">
-                <button class="font-btn" data-action="font-decrease" aria-label="Reducir letra">A−</button>
-                <button class="font-btn" data-action="font-increase" aria-label="Aumentar letra">A+</button>
-            </div>
+        <div class="version-controls">
+            <button class="version-btn active" data-version="rvr60">RVR60</button>
+            <button class="version-btn" data-version="ntv">NTV</button>
         </div>
- </header>
+
+    </div>
+</header>
 
     <main id="app-content" class="container fade-in">
         <!-- Content gets injected here by app.js -->
