@@ -50,38 +50,45 @@ body {
 
 .app-header {
     background-color: var(--surface-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
     z-index: 10;
-    padding: 16px 20px 12px;
-
+    padding: 18px 20px 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
 }
 
 .theme-toggle {
     background: none;
     border: none;
     color: var(--text-main);
-    font-size: 1.2rem;
+    font-size: 1.35rem;
     cursor: pointer;
-    padding: 8px;
+    padding: 6px 4px;
+    line-height: 1;
+    margin: 0;
 }
 
 .main-title {
-    font-size: 1.25rem;
+    font-size: 1.9rem;
     font-weight: 700;
     color: var(--primary);
+    line-height: 1.1;
+    margin: 0;
+    text-align: center;
 }
 
 .subtitle {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
     font-weight: 500;
+    margin-top: 6px;
+    margin-bottom: 0;
+    text-align: center;
 }
 
 .container {
@@ -723,53 +730,6 @@ body.reading-mode .reading-card {
     transform: translateY(-6px);
 }
 
-/* ===== Controles del header (tema + tamaño de letra) ===== */
-
-.header-tools {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.font-controls {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border-color);
-    border-radius: 999px;
-    padding: 4px;
-}
-
-.font-btn {
-    border: none;
-    background: transparent;
-    color: var(--text-main);
-    font-family: var(--font-ui);
-    font-size: 0.78rem;
-    font-weight: 700;
-    padding: 6px 10px;
-    border-radius: 999px;
-    cursor: pointer;
-    -webkit-appearance: none;
-    appearance: none;
-    transition: background-color 0.15s ease, transform 0.1s ease;
-    line-height: 1;
-}
-
-.font-btn:hover {
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.font-btn:active {
-    transform: scale(0.96);
-}
-
-.theme-toggle {
-    align-self: center;
-    margin: 0;
-}
-
 .note-section {
     margin-bottom: 18px;
 }
@@ -802,4 +762,65 @@ body.reading-mode .reading-card {
 
 .note-actions .btn-secondary[data-action="export-pdf"] {
     border-color: rgba(77, 166, 255, 0.45);
+}
+
+.header-top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    text-align: center;
+    width: 100%;
+}
+
+.header-bottom {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.font-controls,
+.version-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 4px;
+}
+
+.font-btn,
+.version-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    line-height: 1;
+}
+
+.font-btn:hover,
+.version-btn:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.font-btn:active,
+.version-btn:active {
+    transform: scale(0.96);
+}
+
+.version-btn.active {
+    background-color: var(--accent);
+    color: white;
 }
