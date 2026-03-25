@@ -599,6 +599,73 @@ checkReminderOnOpen: function() {
         const existing = document.getElementById('highlight-btn');
         if (existing) existing.remove();
     },
+
+    restoreHighlightsInDOM: function(dateStr) {
+    const container = document.querySelector('.reading-text');
+    if (!container) return;
+
+    const highlights = this.getHighlights(dateStr);
+    if (!highlights.length) return;
+
+    highlights.forEach(text => {
+        this.highlightTextInElement(container, text);
+    });
+},
+
+highlightTextInElement: function(container, text) {
+    if (!text || !text.trim()) return;
+
+    const searchText = text.trim().toLowerCase();
+    const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(node) {
+                if (!node.nodeValue || !node.nodeValue.trim()) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                if (node.parentNode && node.parentNode.closest('mark.user-highlight')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) {
+        textNodes.push(node);
+    }
+
+    for (const textNode of textNodes) {
+        const original = textNode.nodeValue;
+        const lower = original.toLowerCase();
+        const index = lower.indexOf(searchText);
+
+        if (index !== -1) {
+            const before = original.slice(0, index);
+            const match = original.slice(index, index + text.length);
+            const after = original.slice(index + text.length);
+
+            const fragment = document.createDocumentFragment();
+
+            if (before) fragment.appendChild(document.createTextNode(before));
+
+            const mark = document.createElement('mark');
+            mark.className = 'user-highlight';
+            mark.textContent = match;
+            fragment.appendChild(mark);
+
+            if (after) fragment.appendChild(document.createTextNode(after));
+
+            textNode.parentNode.replaceChild(fragment, textNode);
+            break;
+        }
+    }
+},
     
     showHighlightButton: function(selection, dateStr) {
         this.removeHighlightButton();
@@ -772,7 +839,7 @@ checkReminderOnOpen: function() {
                 <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
                 <h2 class="reading-reference">${reading.reference}</h2>
                 <div class="reading-text" data-reading-date="${reading.date}">
-                    ${this.applyHighlightsToHtml(readingText, this.getHighlights(reading.date))}
+                    ${readingText}
                 </div>
             </div>
             
@@ -798,7 +865,7 @@ checkReminderOnOpen: function() {
                         <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
                     ${this.noteSavedMessageDate === reading.date ? `
-                        <div class="note-saved-message" style="display: none;">✓ Guardado automáticamente</div>
+                        <div class="note-saved-message">✓ Guardado automáticamente</div>
                     ` : ''}
                     <div class="note-actions">
                         <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
@@ -826,6 +893,7 @@ checkReminderOnOpen: function() {
                 <button class="exit-reading-btn" data-action="exit-reading-mode">✕ Salir del modo lectura</button>
             ` : ''}
         `;
+            this.restoreHighlightsInDOM(reading.date);
     },
     
     escapeHtml: function(text) {
