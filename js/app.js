@@ -499,7 +499,8 @@ ${this.openNoteDate === reading.date ? `
             <div class="note-saved-message">Guardado automáticamente</div>
         ` : ''}
 
-        <div class="note-actions">
+       <div class="note-actions">
+            <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">Exportar como PDF</button>
             <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">Borrar reflexión</button>
         </div>
     </div>
@@ -516,8 +517,6 @@ ${this.openNoteDate === reading.date ? `
 
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">Compartir lectura</button>
     
-    <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">Exportar PDF</button>
-
    ${this.hasHighlights(reading.date)
         ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">Quitar resaltados</button>`
         : ''
