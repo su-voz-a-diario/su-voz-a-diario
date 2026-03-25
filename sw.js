@@ -15,6 +15,7 @@ const DYNAMIC_CACHE = 'su-voz-dynamic-v1';
 const STATIC_ASSETS = [
   './',
   './index.html',
+  './offline.html',       
   './css/styles.css',
   './js/app.js',
   './manifest.json',
