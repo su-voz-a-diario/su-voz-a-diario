@@ -38,13 +38,17 @@ const App = {
     // ========================================
     // INICIALIZACIÓN
     // ========================================
-    init: async function() {
+        init: async function() {
         console.log('[App] Inicializando...');
         
         this.cacheDOM();
         this.loadSettings();
         this.loadStreak();
         this.loadFontSize();
+        this.themes.loadTheme();
+        this.achievements.init();
+        this.audioPlayer.init();
+        this.audioPlayer.setSpanishVoice();
         this.initTheme();
         this.initNotifications();
         this.setupSWCommunication();
@@ -52,6 +56,11 @@ const App = {
         await this.loadData();
         this.handleRoute();
         this.updateStreakUI();
+        
+        setTimeout(() => {
+            const stats = this.getStats();
+            this.achievements.check(stats);
+        }, 1000);
         
         console.log('[App] Inicialización completada');
     },
@@ -201,6 +210,201 @@ const App = {
             }
         }
     },
+
+        // ========================================
+    // SISTEMA DE LOGROS Y MEDALLAS
+    // ========================================
+    achievements: {
+        list: {
+            first_read: {
+                id: 'first_read',
+                name: '🌟 Primer paso',
+                description: 'Completaste tu primera lectura',
+                icon: '🌟',
+                condition: (stats) => stats.totalRead >= 1,
+                color: '#f39c12'
+            },
+            week_streak: {
+                id: 'week_streak',
+                name: '🔥 Semana completa',
+                description: '7 días consecutivos de lectura',
+                icon: '🔥',
+                condition: (stats) => stats.longestStreak >= 7,
+                color: '#e67e22'
+            },
+            month_streak: {
+                id: 'month_streak',
+                name: '🏆 Mes de constancia',
+                description: '30 días consecutivos de lectura',
+                icon: '🏆',
+                condition: (stats) => stats.longestStreak >= 30,
+                color: '#f1c40f'
+            },
+            ten_notes: {
+                id: 'ten_notes',
+                name: '📝 Reflexivo',
+                description: '10 reflexiones escritas',
+                icon: '📝',
+                condition: (stats) => stats.totalNotes >= 10,
+                color: '#27ae60'
+            },
+            fifty_reads: {
+                id: 'fifty_reads',
+                name: '📚 Devoto',
+                description: '50 lecturas completadas',
+                icon: '📚',
+                condition: (stats) => stats.totalRead >= 50,
+                color: '#2980b9'
+            },
+            all_highlights: {
+                id: 'all_highlights',
+                name: '✨ Resaltador',
+                description: '20 versículos resaltados',
+                icon: '✨',
+                condition: (stats) => stats.totalHighlights >= 20,
+                color: '#9b59b6'
+            },
+            perfect_week: {
+                id: 'perfect_week',
+                name: '⭐ Semana perfecta',
+                description: 'Leíste todos los días de una semana',
+                icon: '⭐',
+                condition: (stats) => stats.currentStreak >= 7,
+                color: '#e91e63'
+            },
+            early_bird: {
+                id: 'early_bird',
+                name: '🌅 Madrugador',
+                description: 'Leíste antes de las 8:00 AM',
+                icon: '🌅',
+                condition: () => {
+                    const hour = new Date().getHours();
+                    return hour < 8;
+                },
+                color: '#3498db'
+            }
+        },
+        
+        unlocked: [],
+        
+        init: function() {
+            const saved = localStorage.getItem('su-voz-achievements');
+            if (saved) {
+                try {
+                    this.unlocked = JSON.parse(saved);
+                } catch(e) {
+                    console.error('Error cargando logros:', e);
+                }
+            }
+        },
+        
+        check: function(stats) {
+            const newlyUnlocked = [];
+            
+            Object.values(this.list).forEach(achievement => {
+                if (!this.unlocked.includes(achievement.id) && achievement.condition(stats)) {
+                    this.unlocked.push(achievement.id);
+                    newlyUnlocked.push(achievement);
+                    
+                    // Mostrar notificación de logro
+                    App.showToast(`🏆 ¡Logro desbloqueado! ${achievement.name} ${achievement.icon}`, 4000);
+                    
+                    // Efecto de confeti
+                    if (typeof confetti === 'function') {
+                        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                    }
+                    
+                    // Reproducir sonido sutil
+                    App.playAchievementSound();
+                }
+            });
+            
+            if (newlyUnlocked.length > 0) {
+                this.save();
+                this.showModal(newlyUnlocked);
+            }
+            
+            return newlyUnlocked;
+        },
+        
+        save: function() {
+            localStorage.setItem('su-voz-achievements', JSON.stringify(this.unlocked));
+        },
+        
+        showModal: function(achievements) {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content achievements-modal">
+                    <h2>🎉 ¡Nuevos Logros!</h2>
+                    ${achievements.map(a => `
+                        <div class="achievement-unlock" style="border-left-color: ${a.color}">
+                            <div class="achievement-icon">${a.icon}</div>
+                            <div class="achievement-info">
+                                <div class="achievement-name">${a.name}</div>
+                                <div class="achievement-desc">${a.description}</div>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <button class="btn-primary" onclick="this.closest('.modal-overlay').remove()">¡Increíble!</button>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Cerrar al hacer clic fuera
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+        },
+        
+        renderAchievementsList: function() {
+            const stats = App.getStats();
+            let html = '<div class="achievements-grid">';
+            
+            Object.values(this.list).forEach(achievement => {
+                const isUnlocked = this.unlocked.includes(achievement.id);
+                const isConditionMet = achievement.condition(stats);
+                
+                html += `
+                    <div class="achievement-card ${isUnlocked ? 'unlocked' : ''} ${isConditionMet && !isUnlocked ? 'ready' : ''}" 
+                         style="border-color: ${isUnlocked ? achievement.color : '#ddd'}">
+                        <div class="achievement-icon-large" style="background: ${isUnlocked ? achievement.color : '#ccc'}">
+                            ${achievement.icon}
+                        </div>
+                        <div class="achievement-name">${achievement.name}</div>
+                        <div class="achievement-desc">${achievement.description}</div>
+                        ${isUnlocked ? '<div class="achievement-badge">✓ Desbloqueado</div>' : 
+                          isConditionMet ? '<div class="achievement-badge ready">🏆 Listo para desbloquear</div>' : 
+                          '<div class="achievement-badge locked">🔒 Bloqueado</div>'}
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            return html;
+        }
+    },
+    
+    playAchievementSound: function() {
+        // Crear un sonido sutil con Web Audio API
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 880;
+            gainNode.gain.value = 0.2;
+            
+            oscillator.start();
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioContext.currentTime + 0.5);
+            oscillator.stop(audioContext.currentTime + 0.5);
+        } catch(e) {
+            // Fallback silencioso si no soporta audio
+        }
+    },
     
     // ========================================
     // CONFIGURACIÓN (MEJORADA CON SW)
@@ -291,6 +495,349 @@ const App = {
             }
         }
     },
+
+        // ========================================
+    // AUDIO BIBLIA - TEXTO A VOZ
+    // ========================================
+    audioPlayer: {
+        isPlaying: false,
+        currentUtterance: null,
+        speed: 1,
+        voice: null,
+        
+        init: function() {
+            if (!window.speechSynthesis) {
+                console.log('Text-to-speech no soportado');
+                return false;
+            }
+            return true;
+        },
+        
+        getVoices: function() {
+            return window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('es'));
+        },
+        
+        setSpanishVoice: function() {
+            const voices = this.getVoices();
+            this.voice = voices.find(v => v.lang === 'es-ES' || v.lang === 'es-MX') || voices[0];
+        },
+        
+        speak: function(text, onEnd = null) {
+            if (!this.init()) {
+                App.showToast('Tu dispositivo no soporta audio');
+                return false;
+            }
+            
+            this.stop();
+            
+            const cleanText = text.replace(/<[^>]+>/g, '');
+            
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'es-ES';
+            utterance.rate = this.speed;
+            utterance.pitch = 1;
+            
+            if (this.voice) utterance.voice = this.voice;
+            
+            utterance.onend = () => {
+                this.isPlaying = false;
+                App.updateAudioButton();
+                if (onEnd) onEnd();
+            };
+            
+            utterance.onerror = () => {
+                this.isPlaying = false;
+                App.updateAudioButton();
+                App.showToast('Error al reproducir audio');
+            };
+            
+            this.currentUtterance = utterance;
+            window.speechSynthesis.speak(utterance);
+            this.isPlaying = true;
+            
+            App.updateAudioButton();
+            return true;
+        },
+        
+        stop: function() {
+            if (window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                this.isPlaying = false;
+                App.updateAudioButton();
+            }
+        },
+        
+        toggle: function(text) {
+            if (this.isPlaying) {
+                this.stop();
+                App.showToast('Audio detenido');
+            } else {
+                this.speak(text);
+                App.showToast('🎧 Reproduciendo lectura...');
+            }
+        },
+        
+        setSpeed: function(speed) {
+            this.speed = Math.max(0.5, Math.min(2, speed));
+            if (this.isPlaying) {
+                const currentText = this.currentUtterance?.text;
+                if (currentText) {
+                    this.stop();
+                    this.speak(currentText);
+                }
+            }
+            App.showToast(`Velocidad: ${this.speed}x`);
+        }
+    },
+
+    updateAudioButton: function() {
+        const audioBtn = document.querySelector('.audio-btn');
+        if (audioBtn) {
+            if (App.audioPlayer.isPlaying) {
+                audioBtn.innerHTML = '⏸️ Pausar audio';
+                audioBtn.classList.add('playing');
+            } else {
+                audioBtn.innerHTML = '🔊 Escuchar lectura';
+                audioBtn.classList.remove('playing');
+            }
+        }
+    },
+
+        // ========================================
+    // GENERACIÓN DE IMÁGENES PARA COMPARTIR
+    // ========================================
+    shareImage: {
+        canvas: null,
+        
+        generate: async function(reading, dateStr) {
+            return new Promise((resolve) => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1080;
+                const ctx = canvas.getContext('2d');
+                
+                // Fondo degradado elegante
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, '#667eea');
+                gradient.addColorStop(1, '#764ba2');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Patrón de fondo sutil
+                ctx.fillStyle = 'rgba(255,255,255,0.05)';
+                for(let i = 0; i < 100; i++) {
+                    ctx.beginPath();
+                    ctx.arc(Math.random() * canvas.width, Math.random() * canvas.height, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                // Título
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 56px "Cormorant Garamond", Georgia, serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Su Voz a Diario', canvas.width/2, 120);
+                
+                // Línea decorativa
+                ctx.beginPath();
+                ctx.moveTo(canvas.width/2 - 100, 160);
+                ctx.lineTo(canvas.width/2 + 100, 160);
+                ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Referencia del pasaje
+                ctx.font = '500 48px "Cormorant Garamond", Georgia, serif';
+                const refLines = App.wrapText(ctx, reading.reference, canvas.width - 100);
+                let yOffset = 280;
+                refLines.forEach(line => {
+                    ctx.fillText(line, canvas.width/2, yOffset);
+                    yOffset += 60;
+                });
+                
+                // Texto del versículo (primeros 200 caracteres)
+                const cleanText = (reading.versions?.[App.currentVersion] || reading.text || '').replace(/<[^>]+>/g, '');
+                const shortText = cleanText.length > 200 ? cleanText.substring(0, 200) + '...' : cleanText;
+                
+                ctx.font = '32px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                const textLines = App.wrapText(ctx, shortText, canvas.width - 120);
+                yOffset += 60;
+                textLines.forEach(line => {
+                    ctx.fillText(line, canvas.width/2, yOffset);
+                    yOffset += 50;
+                });
+                
+                // Fecha
+                ctx.font = '24px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                ctx.fillText(App.formatDateEs(dateStr), canvas.width/2, canvas.height - 100);
+                
+                // Logo o marca de agua
+                ctx.font = '20px "Inter", sans-serif';
+                ctx.fillStyle = 'rgba(255,255,255,0.5)';
+                ctx.fillText('Su Voz a Diario', canvas.width/2, canvas.height - 50);
+                
+                canvas.toBlob(blob => resolve(blob), 'image/png');
+            });
+        },
+        
+        share: async function(reading, dateStr) {
+            try {
+                const blob = await this.generate(reading, dateStr);
+                const file = new File([blob], `su-voz-${dateStr}.png`, { type: 'image/png' });
+                
+                if (navigator.share && navigator.canShare({ files: [file] })) {
+                    await navigator.share({
+                        title: 'Su Voz a Diario',
+                        text: reading.reference,
+                        files: [file]
+                    });
+                    App.showToast('Imagen compartida');
+                } else {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `su-voz-${dateStr}.png`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    App.showToast('Imagen descargada');
+                }
+            } catch (error) {
+                console.error('Error compartiendo imagen:', error);
+                App.showToast('No se pudo generar la imagen');
+            }
+        }
+    },
+
+    wrapText: function(ctx, text, maxWidth) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = words[0];
+        
+        for (let i = 1; i < words.length; i++) {
+            const testLine = currentLine + ' ' + words[i];
+            const metrics = ctx.measureText(testLine);
+            if (metrics.width > maxWidth) {
+                lines.push(currentLine);
+                currentLine = words[i];
+            } else {
+                currentLine = testLine;
+            }
+        }
+        lines.push(currentLine);
+        return lines;
+    },
+
+        // ========================================
+    // TEMAS PERSONALIZABLES
+    // ========================================
+    themes: {
+        default: {
+            name: 'Clásico',
+            primary: '#3182ce',
+            background: '#f7fafc',
+            accent: '#3182ce'
+        },
+        sepia: {
+            name: 'Sepia',
+            primary: '#b45309',
+            background: '#fef3c7',
+            accent: '#d97706'
+        },
+        forest: {
+            name: 'Bosque',
+            primary: '#2f855a',
+            background: '#f0fdf4',
+            accent: '#27ae60'
+        },
+        midnight: {
+            name: 'Medianoche',
+            primary: '#9f7aea',
+            background: '#1a202c',
+            accent: '#9f7aea'
+        },
+        ocean: {
+            name: 'Océano',
+            primary: '#0ea5e9',
+            background: '#e6f7ff',
+            accent: '#0284c7'
+        },
+        rose: {
+            name: 'Rosa',
+            primary: '#ec489a',
+            background: '#fdf2f8',
+            accent: '#db2777'
+        },
+        dark: {
+            name: 'Oscuro',
+            primary: '#63b3ed',
+            background: '#0f172a',
+            accent: '#3b82f6'
+        }
+    },
+    
+    currentTheme: 'default',
+    
+    applyTheme: function(themeName) {
+        const theme = this.themes[themeName];
+        if (!theme) return;
+        
+        this.currentTheme = themeName;
+        
+        // Aplicar colores a variables CSS
+        document.documentElement.style.setProperty('--accent', theme.accent);
+        document.documentElement.style.setProperty('--bg-color', theme.background);
+        document.documentElement.style.setProperty('--accent-hover', theme.primary);
+        
+        // Guardar preferencia
+        localStorage.setItem('selected-theme', themeName);
+        
+        // Si el tema es oscuro, ajustar body
+        if (themeName === 'dark') {
+            document.body.classList.add('dark-mode');
+            document.body.classList.remove('light-mode');
+        } else if (themeName === 'default') {
+            const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            if (systemDark) {
+                document.body.classList.add('dark-mode');
+            } else {
+                document.body.classList.remove('dark-mode');
+            }
+        } else {
+            document.body.classList.remove('dark-mode');
+            document.body.classList.add('light-mode');
+        }
+        
+        App.showToast(`Tema "${theme.name}" aplicado`);
+    },
+    
+    loadTheme: function() {
+        const saved = localStorage.getItem('selected-theme');
+        if (saved && this.themes[saved]) {
+            this.applyTheme(saved);
+        }
+    },
+    
+    renderThemeSelector: function() {
+        let html = '<div class="themes-grid">';
+        
+        Object.entries(this.themes).forEach(([key, theme]) => {
+            const isActive = this.currentTheme === key;
+            html += `
+                <div class="theme-card ${isActive ? 'active' : ''}" data-theme="${key}">
+                    <div class="theme-preview" style="background: ${theme.background}; border-color: ${theme.accent}">
+                        <div class="theme-preview-accent" style="background: ${theme.accent}"></div>
+                        <div class="theme-preview-text" style="color: ${theme.primary}">Aa</div>
+                    </div>
+                    <div class="theme-name">${theme.name}</div>
+                    ${isActive ? '<div class="theme-active-badge">✓ Activo</div>' : ''}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    },
     
     // ========================================
     // ESTADÍSTICAS (MEJORADAS)
@@ -360,17 +907,19 @@ const App = {
             localStorage.setItem('su-voz-read-dates', JSON.stringify(readDates));
             this.updateStreak(dateStr);
             
-            // Feedback háptico
             if ('vibrate' in navigator) {
                 navigator.vibrate(50);
             }
             
-            // Mostrar celebración si es el primer día
             if (readDates.length === 1) {
                 this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
             }
             
-            // Notificar al SW
+            // 👇👇👇 NUEVO: Verificar logros después de marcar como leído 👇👇👇
+            const stats = this.getStats();
+            this.achievements.check(stats);
+            // 👆👆👆 NUEVO 👆👆👆
+            
             this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
         }
     },
@@ -790,10 +1339,15 @@ const App = {
             
             <div class="action-group">
                 <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">📤 Compartir lectura</button>
+                <button class="btn-secondary" data-action="share-image" data-date="${reading.date}">🖼️ Compartir imagen</button>
                 ${this.hasHighlights(reading.date)
                     ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">✨ Quitar resaltados</button>`
                     : ''
                 }
+            </div>
+            
+            <div class="main-action">
+                <button class="btn-secondary audio-btn" data-action="play-audio" data-date="${reading.date}">🔊 Escuchar lectura</button>
             </div>
             
             ${this.readingMode ? `
@@ -878,6 +1432,15 @@ const App = {
                     <div class="stat-label">Lecturas disponibles</div>
                 </div>
             </div>
+            
+            <!-- 👇👇👇 NUEVO: Sección de logros 👇👇👇 -->
+            <div class="stats-container" style="margin-top: 24px;">
+                <div class="stat-card achievements-header">
+                    <h3>🏆 Mis Logros</h3>
+                    <p>Completa desafíos para desbloquear medallas</p>
+                </div>
+                ${this.achievements.renderAchievementsList()}
+            </div>
         `;
     },
     
@@ -905,7 +1468,13 @@ const App = {
                 <div class="setting-card">
                     <h3>🎨 Apariencia</h3>
                     <div class="setting-item">
-                        <label>🌓 Tema oscuro</label>
+                        <label>🎨 Tema de la app</label>
+                        <div id="theme-selector-container">
+                            ${this.themes.renderThemeSelector()}
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>🌓 Modo oscuro manual</label>
                         <button id="theme-toggle-settings" class="btn-secondary">Cambiar tema</button>
                     </div>
                 </div>
@@ -1003,7 +1572,17 @@ const App = {
                     this.resetAllData();
                 }
             });
-        }
+        } 
+        
+        // 👇👇👇 Selector de temas 👇👇👇
+        const themeCards = document.querySelectorAll('.theme-card');
+        themeCards.forEach(card => {
+            card.addEventListener('click', () => {
+                const themeName = card.getAttribute('data-theme');
+                this.themes.applyTheme(themeName);
+                this.renderSettings();
+            });
+        });
     },
     
     exportAllData: function() {
@@ -1184,6 +1763,46 @@ const App = {
                     } else if (navigator.clipboard) {
                         navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
                     }
+                }
+                return;
+            }
+
+            // Compartir imagen
+            const shareImageBtn = e.target.closest('[data-action="share-image"]');
+            if (shareImageBtn) {
+                const date = shareImageBtn.getAttribute('data-date');
+                const reading = this.data.find(r => r.date === date);
+                if (reading) {
+                    this.shareImage.generate(reading, date).then(blob => {
+                        const file = new File([blob], `su-voz-${date}.png`, { type: 'image/png' });
+                        if (navigator.share && navigator.canShare({ files: [file] })) {
+                            navigator.share({
+                                title: 'Su Voz a Diario',
+                                text: reading.reference,
+                                files: [file]
+                            });
+                        } else {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = `su-voz-${date}.png`;
+                            a.click();
+                            URL.revokeObjectURL(url);
+                            this.showToast('Imagen descargada');
+                        }
+                    });
+                }
+                return;
+            }
+            
+            // Reproducir audio
+            const audioBtn = e.target.closest('[data-action="play-audio"]');
+            if (audioBtn) {
+                const date = audioBtn.getAttribute('data-date');
+                const reading = this.data.find(r => r.date === date);
+                if (reading) {
+                    const text = reading.versions?.[this.currentVersion] || reading.text || '';
+                    this.audioPlayer.toggle(text);
                 }
                 return;
             }
