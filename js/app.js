@@ -505,67 +505,84 @@ checkReminderOnOpen: function() {
         }, duration);
     },
     
-    exportReflectionPDF: function(dateStr) {
-        const reading = this.data.find(r => r.date === dateStr);
-        if (!reading) return;
-        
-        const note = this.getNote(dateStr);
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        
-        const marginLeft = 20;
-        let y = 20;
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const usableWidth = pageWidth - marginLeft * 2;
-        
+   exportReflectionPDF: function(dateStr) {
+    const reading = this.data.find(r => r.date === dateStr);
+    if (!reading) return;
+
+    const note = this.getNote(dateStr);
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    const marginLeft = 20;
+    const marginTop = 20;
+    const marginBottom = 20;
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const usableWidth = pageWidth - marginLeft * 2;
+
+    let y = marginTop;
+
+    const ensureSpace = (needed = 12) => {
+        if (y + needed > pageHeight - marginBottom) {
+            doc.addPage();
+            y = marginTop;
+        }
+    };
+
+    const addSectionTitle = (title) => {
+        ensureSpace(12);
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(18);
-        doc.text('Su voz a diario', marginLeft, y);
-        
-        y += 10;
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`Fecha: ${this.formatDateEs(dateStr)}`, marginLeft, y);
-        
-        y += 8;
-        doc.setFont('helvetica', 'bold');
-        doc.text(`Pasaje: ${reading.reference}`, marginLeft, y);
-        
-        y += 14;
-        doc.setFontSize(14);
-        doc.text('Mi reflexión', marginLeft, y);
-        
-        y += 10;
         doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('Lo que veo de Dios', marginLeft, y);
-        
+        doc.text(title, marginLeft, y);
         y += 6;
+    };
+
+    const addParagraph = (text) => {
+        const content = (text && text.trim()) ? text : 'Sin contenido.';
         doc.setFont('helvetica', 'normal');
-        const diosLines = doc.splitTextToSize(note.dios || 'Sin contenido.', usableWidth);
-        doc.text(diosLines, marginLeft, y);
-        y += diosLines.length * 6 + 8;
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text('Lo que aprendo del pasaje', marginLeft, y);
-        
-        y += 6;
-        doc.setFont('helvetica', 'normal');
-        const aprendizajeLines = doc.splitTextToSize(note.aprendizaje || 'Sin contenido.', usableWidth);
-        doc.text(aprendizajeLines, marginLeft, y);
-        y += aprendizajeLines.length * 6 + 8;
-        
-        doc.setFont('helvetica', 'bold');
-        doc.text('Mi respuesta hoy', marginLeft, y);
-        
-        y += 6;
-        doc.setFont('helvetica', 'normal');
-        const respuestaLines = doc.splitTextToSize(note.respuesta || 'Sin contenido.', usableWidth);
-        doc.text(respuestaLines, marginLeft, y);
-        
-        doc.save(`reflexion-${dateStr}.pdf`);
-        this.showToast('PDF exportado correctamente');
-    },
+        doc.setFontSize(11);
+
+        const lines = doc.splitTextToSize(content, usableWidth);
+
+        lines.forEach(line => {
+            ensureSpace(6);
+            doc.text(line, marginLeft, y);
+            y += 6;
+        });
+
+        y += 4;
+    };
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.text('Su voz a diario', marginLeft, y);
+
+    y += 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(12);
+    doc.text(`Fecha: ${this.formatDateEs(dateStr)}`, marginLeft, y);
+
+    y += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Pasaje: ${reading.reference}`, marginLeft, y);
+
+    y += 14;
+    doc.setFontSize(14);
+    doc.text('Mi reflexión', marginLeft, y);
+    y += 10;
+
+    addSectionTitle('Lo que veo de Dios');
+    addParagraph(note.dios);
+
+    addSectionTitle('Lo que aprendo del pasaje');
+    addParagraph(note.aprendizaje);
+
+    addSectionTitle('Mi respuesta hoy');
+    addParagraph(note.respuesta);
+
+    doc.save(`reflexion-${dateStr}.pdf`);
+    this.showToast('PDF exportado correctamente');
+},
     
     resetReadingMode: function() {
         this.readingMode = false;
