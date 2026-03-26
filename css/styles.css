@@ -967,7 +967,7 @@ body.reading-mode .reading-text {
     }
 
     .floating-controls {
-        top: 40px;
+        top: 35px;
         left: 6px;
         gap: 6px;
     }
