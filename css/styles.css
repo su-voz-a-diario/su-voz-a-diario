@@ -93,20 +93,20 @@ body {
 
 .compact-header {
     text-align: center;
-    padding: 18px 16px 8px;
+    padding: 14px 16px 6px;
 }
 
 .compact-header h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.8rem;
     font-weight: 700;
     line-height: 1.1;
     color: var(--primary);
 }
 
 .compact-header p {
-    margin: 10px 0 0;
-    font-size: 0.95rem;
+    margin: 6px 0 0;
+    font-size: 0.82rem;
     color: var(--text-muted);
     letter-spacing: 1px;
     font-weight: 500;
@@ -115,24 +115,28 @@ body {
 
 .floating-controls {
     position: fixed;
-    top: 118px;
-    left: 10px;
+    top: 92px;
+    left: 12px;
+    right: 12px;
     z-index: 1200;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .floating-btn,
 .floating-streak {
-    min-width: 56px;
-    min-height: 42px;
-    padding: 8px 10px;
-    border-radius: 12px;
+    min-width: 46px;
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 10px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     background: rgba(22, 33, 53, 0.92);
     color: #fff;
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -169,8 +173,7 @@ body {
    CONTENIDO PRINCIPAL
    ======================================== */
 .container {
-    padding: 24px 20px;
-    padding-left: 78px;
+    padding: 88px 14px 24px;
     max-width: 600px;
     margin: 0 auto;
 }
@@ -191,7 +194,7 @@ body {
 .reading-card {
     background: var(--surface-color);
     border-radius: var(--border-radius);
-    padding: 32px 24px;
+    padding: 24px 18px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
     margin-bottom: 24px;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -940,19 +943,46 @@ body.reading-mode .reading-text {
 
 @media (max-width: 480px) {
     .container {
-    padding: 16px 12px 16px 74px;
+        padding: 82px 10px 16px;
     }
     
     .reading-card {
-        padding: 20px 16px;
+        padding: 20px 14px;
     }
     
     .reading-reference {
-        font-size: 1.5rem;
+        font-size: 1.45rem;
     }
 
-   .compact-header {
-    padding: 18px 16px 8px;
+    .compact-header {
+        padding: 12px 12px 4px;
+    }
+
+    .compact-header h1 {
+        font-size: 1.7rem;
+    }
+
+    .compact-header p {
+        font-size: 0.78rem;
+        margin-top: 4px;
+    }
+
+    .floating-controls {
+        top: 78px;
+        left: 8px;
+        right: 8px;
+        gap: 6px;
+        justify-content: center;
+    }
+
+    .floating-btn,
+    .floating-streak {
+        min-width: 42px;
+        min-height: 34px;
+        padding: 6px 8px;
+        font-size: 0.76rem;
+        border-radius: 10px;
+    }
 }
 
     .compact-header h1 {
