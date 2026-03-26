@@ -428,8 +428,14 @@ checkReminderOnOpen: function() {
     },
     
     saveHighlights: function(dateStr, highlights) {
-        localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(highlights));
-        this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
+        const normalized = [...new Set(
+            highlights
+                .map(h => (h || '').trim())
+                .filter(Boolean)
+        )];
+
+    localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(normalized));
+    this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
     },
     
     getNoteKey: function(dateStr) {
@@ -718,9 +724,11 @@ highlightTextInElement: function(container, text) {
         btn.style.left = `${window.scrollX + rect.left}px`;
         
         btn.addEventListener('click', () => {
-            if (selectedText.length < 3) {
-            this.showToast('Selecciona un texto un poco más largo');
-            return;
+             if (selectedText.length < 3) {
+                this.showToast('Selecciona un texto un poco más largo');
+                selection.removeAllRanges();
+                this.removeHighlightButton();
+                return;
             }
             
             const highlights = this.getHighlights(dateStr);
