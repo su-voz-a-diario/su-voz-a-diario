@@ -34,6 +34,7 @@ const App = {
     // Timeout para mensajes
     noteSavedTimeout: null,
     renderScheduled: false,
+    controlsCollapsed: false,
     
     // ========================================
     // INICIALIZACIÓN
@@ -45,6 +46,7 @@ const App = {
     this.loadSettings();
     this.loadStreak();
     this.loadFontSize();
+    this.loadControlsState();
 
     const savedVersion = localStorage.getItem('current-version');
     if (savedVersion) {
@@ -55,6 +57,7 @@ const App = {
     this.initNotifications();
     this.setupSWCommunication();
     this.bindEvents();
+    this.bindFloatingToggle();
     await this.loadData();
     this.checkReminderOnOpen();
     this.handleRoute();
@@ -63,15 +66,17 @@ const App = {
     console.log('[App] Inicialización completada');
 },
     
-    cacheDOM: function() {
-        this.$content = document.getElementById('app-content');
-        this.$navHome = document.getElementById('nav-home');
-        this.$navCalendar = document.getElementById('nav-calendar');
-        this.$navStats = document.getElementById('nav-stats');
-        this.$navSettings = document.getElementById('nav-settings');
-        this.$streakIndicator = document.getElementById('streak-indicator');
-        this.$streakCount = document.getElementById('streak-count');
-    },
+cacheDOM: function() {
+    this.$content = document.getElementById('app-content');
+    this.$navHome = document.getElementById('nav-home');
+    this.$navCalendar = document.getElementById('nav-calendar');
+    this.$navStats = document.getElementById('nav-stats');
+    this.$navSettings = document.getElementById('nav-settings');
+    this.$streakIndicator = document.getElementById('streak-indicator');
+    this.$streakCount = document.getElementById('streak-count');
+    this.$floatingControls = document.getElementById('floating-controls');
+    this.$floatingToggle = document.getElementById('floating-toggle');
+},
     
     // ========================================
     // COMUNICACIÓN CON SERVICE WORKER
@@ -246,6 +251,40 @@ const App = {
             document.documentElement.style.setProperty('--reading-size', this.settings.fontSize + 'rem');
         }
     },
+
+    loadControlsState: function() {
+    const saved = localStorage.getItem('su-voz-controls-collapsed');
+    this.controlsCollapsed = saved === 'true';
+
+    if (this.$floatingControls) {
+        this.$floatingControls.classList.toggle('collapsed', this.controlsCollapsed);
+    }
+
+    if (this.$floatingToggle) {
+        this.$floatingToggle.textContent = this.controlsCollapsed ? '☰' : '◀';
+    }
+},
+
+toggleFloatingControls: function() {
+    this.controlsCollapsed = !this.controlsCollapsed;
+    localStorage.setItem('su-voz-controls-collapsed', this.controlsCollapsed);
+
+    if (this.$floatingControls) {
+        this.$floatingControls.classList.toggle('collapsed', this.controlsCollapsed);
+    }
+
+    if (this.$floatingToggle) {
+        this.$floatingToggle.textContent = this.controlsCollapsed ? '☰' : '◀';
+    }
+},
+
+bindFloatingToggle: function() {
+    if (this.$floatingToggle) {
+        this.$floatingToggle.addEventListener('click', () => {
+            this.toggleFloatingControls();
+        });
+    }
+},
     
     // ========================================
     // NOTIFICACIONES (MEJORADAS CON SW)
