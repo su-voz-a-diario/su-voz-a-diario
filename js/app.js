@@ -45,6 +45,12 @@ const App = {
     this.loadSettings();
     this.loadStreak();
     this.loadFontSize();
+
+    const savedVersion = localStorage.getItem('current-version');
+    if (savedVersion) {
+    this.currentVersion = savedVersion;
+    }
+       
     this.initTheme();
     this.initNotifications();
     this.setupSWCommunication();
@@ -183,13 +189,13 @@ const App = {
         }
     },
     
-    getYesterdayDateStr: function() {
-        const yesterday = new Date(this.today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const year = yesterday.getFullYear();
-        const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-        const day = String(yesterday.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+   getYesterdayDateStr: function() {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const year = yesterday.getFullYear();
+    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
+    const day = String(yesterday.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
     },
     
     updateStreakUI: function() {
@@ -284,7 +290,7 @@ const App = {
         const todayStr = this.getTodayDateStr();
         if (!this.isRead(todayStr)) {
             new Notification('📖 Su Voz a Diario', {
-                body: '¿Ya meditaste la lectura de hoy? Tómate un momento con Dios.',
+                body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
                 icon: '/icons/icon-192.png',
                 vibrate: [200, 100, 200],
                 data: { url: '/#home' }
@@ -331,7 +337,7 @@ checkReminderOnOpen: function() {
         
         // Calcular días consecutivos actuales (más preciso)
         let currentStreak = 0;
-        let checkDate = new Date(this.today);
+        let checkDate = new Date();
         
         while (true) {
             const dateStr = this.formatDateForCompare(checkDate);
@@ -700,6 +706,11 @@ highlightTextInElement: function(container, text) {
         btn.style.left = `${window.scrollX + rect.left}px`;
         
         btn.addEventListener('click', () => {
+            if (selectedText.length < 3) {
+            this.showToast('Selecciona un texto un poco más largo');
+            return;
+            }
+            
             const highlights = this.getHighlights(dateStr);
             if (!highlights.includes(selectedText)) {
                 highlights.push(selectedText);
@@ -813,11 +824,12 @@ highlightTextInElement: function(container, text) {
         return `${year}-${month}-${day}`;
     },
     
-    getTodayDateStr: function() {
-        const year = this.today.getFullYear();
-        const month = String(this.today.getMonth() + 1).padStart(2, '0');
-        const day = String(this.today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+   getTodayDateStr: function() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
     },
     
     renderHome: function() {
@@ -832,7 +844,6 @@ highlightTextInElement: function(container, text) {
     },
     
     renderViewContent: function(reading, isHome = false) {
-        const todayStr = this.getTodayDateStr();
         
         if (!reading) {
             this.$content.innerHTML = `
@@ -880,9 +891,7 @@ highlightTextInElement: function(container, text) {
                         <div class="note-title">🙏 Mi respuesta hoy</div>
                         <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
-                    ${this.noteSavedMessageDate === reading.date ? `
-                        <div class="note-saved-message">✓ Guardado automáticamente</div>
-                    ` : ''}
+                    <div class="note-saved-message" style="display: none;">✓ Guardado automáticamente</div>
                     <div class="note-actions">
                         <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
                         <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
@@ -1312,9 +1321,10 @@ ${cleanText}
 ━━━━━━━━━━
 Compartido desde Su voz a diario`;
 
-        if (navigator.share) {
-            navigator.share({ title: 'Su voz a diario', text: shareText });
-        } else if (navigator.clipboard) {
+       if (navigator.share) {
+           navigator.share({ title: 'Su voz a diario', text: shareText })
+                .catch(() => {});
+       } else if (navigator.clipboard) {
             navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
         }
     }
