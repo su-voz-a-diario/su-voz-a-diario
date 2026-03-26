@@ -1293,7 +1293,13 @@ highlightTextInElement: function(container, text) {
                 const reading = this.data.find(r => r.date === date);
                 if (reading) {
                     const cleanText = (reading.versions?.[this.currentVersion] || reading.text || '').replace(/<[^>]+>/g, '');
-                    const shareText = `📖 Su voz a diario\n\n${reading.reference}\n\n${cleanText.substring(0, 500)}${cleanText.length > 500 ? '...' : ''}\n\n— Compartido desde Su voz a diario`;
+                    const shareText = `📖 Su voz a diario
+
+            ${reading.reference}
+
+            ${cleanText}
+
+            — Compartido desde Su voz a diario`;
                     
                     if (navigator.share) {
                         navigator.share({ title: 'Su voz a diario', text: shareText });
