@@ -1287,43 +1287,39 @@ highlightTextInElement: function(container, text) {
             }
             
             // Compartir
-            const shareBtn = e.target.closest('[data-action="share-reading"]');
-            if (shareBtn) {
-                const date = shareBtn.getAttribute('data-date');
-                const reading = this.data.find(r => r.date === date);
-                if (reading) {
-                    const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
+          const shareBtn = e.target.closest('[data-action="share-reading"]');
+if (shareBtn) {
+    const date = shareBtn.getAttribute('data-date');
+    const reading = this.data.find(r => r.date === date);
 
-                    const cleanText = rawHtml
-                        .replace(/<\/p>\s*<p>/g, '\n\n')
-                        .replace(/<br\s*\/?>/g, '\n')
-                        .replace(/<[^>]+>/g, '')
-                        .trim();
+    if (reading) {
+        const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
 
-                    const shareText = `📖 SU VOZ A DIARIO
-            ━━━━━━━━━━
-            Pasaje: ${reading.reference}
-            Versión: ${this.currentVersion.toUpperCase()}
-            ━━━━━━━━━━
+        const cleanText = rawHtml
+            .replace(/<\/p>\s*<p>/g, '\n\n')
+            .replace(/<br\s*\/?>/g, '\n')
+            .replace(/<[^>]+>/g, '')
+            .trim();
 
-            ${cleanText}
+        const shareText = `📖 SU VOZ A DIARIO
+━━━━━━━━━━
+Pasaje: ${reading.reference}
+Versión: ${this.currentVersion.toUpperCase()}
+━━━━━━━━━━
 
-            ━━━━━━━━━━
-            Compartido desde Su voz a diario`;
-            ${reading.reference}
+${cleanText}
 
-            ${cleanText}
+━━━━━━━━━━
+Compartido desde Su voz a diario`;
 
-            — Compartido desde Su voz a diario`;
-                    
-                    if (navigator.share) {
-                        navigator.share({ title: 'Su voz a diario', text: shareText });
-                    } else if (navigator.clipboard) {
-                        navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
-                    }
-                }
-                return;
-            }
+        if (navigator.share) {
+            navigator.share({ title: 'Su voz a diario', text: shareText });
+        } else if (navigator.clipboard) {
+            navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
+        }
+    }
+    return;
+}
             
             // Exportar PDF
             const pdfBtn = e.target.closest('[data-action="export-pdf"]');
