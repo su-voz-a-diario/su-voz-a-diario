@@ -21,33 +21,34 @@
 </head>
 
 <body>
-    <header class="app-header">
-        <div class="header-top">
-            <h1 class="main-title">Su voz a diario</h1>
-            <p class="subtitle">Lectura bíblica del día</p>
-        </div>
+   <header class="app-header compact-header">
+    <h1>Su voz a diario</h1>
+    <p>LECTURA BÍBLICA DEL DÍA</p>
+</header>
 
-        <div class="header-bottom">
-            <!-- Indicador de racha (nuevo) -->
-            <div class="streak-indicator" id="streak-indicator" style="display: none;">
-                <span class="streak-icon">🔥</span>
-                <span class="streak-count" id="streak-count">0</span>
-                <span class="streak-label">días</span>
-            </div>
+    <div class="floating-controls">
+    <div id="streak-indicator" class="floating-streak">
+        🔥 <span id="streak-count">0</span>
+    </div>
 
-            <button id="theme-toggle" class="theme-toggle" aria-label="Cambiar tema">🌙</button>
+    <button id="theme-toggle" class="floating-btn" title="Cambiar tema">☀️</button>
 
-            <div class="font-controls" aria-label="Tamaño de letra">
-                <button class="font-btn" data-action="font-decrease" aria-label="Reducir letra">A−</button>
-                <button class="font-btn" data-action="font-increase" aria-label="Aumentar letra">A+</button>
-            </div>
+    <button class="floating-btn" data-action="font-decrease" title="Reducir tamaño">
+        A−
+    </button>
 
-            <div class="version-controls">
-                <button class="version-btn active" data-version="rvr60">RVR60</button>
-                <button class="version-btn" data-version="ntv">NTV</button>
-            </div>
-        </div>
-    </header>
+    <button class="floating-btn" data-action="font-increase" title="Aumentar tamaño">
+        A+
+    </button>
+
+    <button class="floating-btn version-btn" data-version="rvr60">
+        RVR60
+    </button>
+
+    <button class="floating-btn version-btn" data-version="ntv">
+        NTV
+    </button>
+</div>
 
     <main id="app-content" class="container fade-in">
         <div class="loading">Cargando la lectura de hoy...</div>
