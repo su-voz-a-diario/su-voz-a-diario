@@ -93,7 +93,7 @@ body {
 
 .compact-header {
     text-align: center;
-    padding: 22px 16px 10px;
+    padding: 18px 16px 8px;
 }
 
 .compact-header h1 {
@@ -165,16 +165,12 @@ body {
     border-color: var(--accent);
 }
 
-.version-btn.active {
-    background-color: var(--accent);
-    color: white;
-}
-
 /* ========================================
    CONTENIDO PRINCIPAL
    ======================================== */
 .container {
-    padding: 24px 20px 24px 78px;
+    padding: 24px 20px;
+    padding-left: 78px;
     max-width: 600px;
     margin: 0 auto;
 }
@@ -944,7 +940,7 @@ body.reading-mode .reading-text {
 
 @media (max-width: 480px) {
     .container {
-        padding: 16px 16px 16px 78px;
+    padding: 16px 12px 16px 74px;
     }
     
     .reading-card {
@@ -955,9 +951,9 @@ body.reading-mode .reading-text {
         font-size: 1.5rem;
     }
 
-    .compact-header {
-        padding: 20px 16px 10px;
-    }
+   .compact-header {
+    padding: 18px 16px 8px;
+}
 
     .compact-header h1 {
         font-size: 1.85rem;
