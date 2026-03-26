@@ -662,7 +662,6 @@ highlightTextInElement: function(container, text) {
             if (after) fragment.appendChild(document.createTextNode(after));
 
             textNode.parentNode.replaceChild(fragment, textNode);
-            break;
         }
     }
 },
