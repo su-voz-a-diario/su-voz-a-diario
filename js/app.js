@@ -1292,9 +1292,24 @@ highlightTextInElement: function(container, text) {
                 const date = shareBtn.getAttribute('data-date');
                 const reading = this.data.find(r => r.date === date);
                 if (reading) {
-                    const cleanText = (reading.versions?.[this.currentVersion] || reading.text || '').replace(/<[^>]+>/g, '');
-                    const shareText = `📖 Su voz a diario
+                    const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
 
+                    const cleanText = rawHtml
+                        .replace(/<\/p>\s*<p>/g, '\n\n')
+                        .replace(/<br\s*\/?>/g, '\n')
+                        .replace(/<[^>]+>/g, '')
+                        .trim();
+
+                    const shareText = `📖 SU VOZ A DIARIO
+            ━━━━━━━━━━
+            Pasaje: ${reading.reference}
+            Versión: ${this.currentVersion.toUpperCase()}
+            ━━━━━━━━━━
+
+            ${cleanText}
+
+            ━━━━━━━━━━
+            Compartido desde Su voz a diario`;
             ${reading.reference}
 
             ${cleanText}
