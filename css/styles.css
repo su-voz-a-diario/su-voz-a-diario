@@ -115,7 +115,7 @@ body {
 
 .floating-controls {
     position: fixed;
-    top: 92px;
+    top: 48px;
     left: 6px;
     z-index: 1200;
     display: flex;
@@ -967,7 +967,7 @@ body.reading-mode .reading-text {
     }
 
     .floating-controls {
-        top: 86px;
+        top: 46px;
         left: 6px;
         gap: 6px;
     }
@@ -981,31 +981,14 @@ body.reading-mode .reading-text {
         font-size: 0.74rem;
         border-radius: 10px;
     }
-}
 
-    .compact-header h1 {
-        font-size: 1.85rem;
-    }
-
-    .compact-header p {
-        font-size: 0.88rem;
-    }
-
-    .floating-controls {
-        top: 112px;
-        left: 10px;
-        gap: 8px;
-    }
-
-    .floating-btn,
-    .floating-streak {
-        min-width: 52px;
-        min-height: 40px;
-        padding: 8px 8px;
-        font-size: 0.82rem;
-        border-radius: 12px;
+    .floating-btn.version-btn {
+        width: 50px;
+        min-width: 50px;
+        font-size: 0.7rem;
     }
 }
+
 /* ========================================
    ANIMACIONES ADICIONALES
    ======================================== */
