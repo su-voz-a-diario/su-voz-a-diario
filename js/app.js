@@ -657,35 +657,47 @@ highlightTextInElement: function(container, text) {
         }
     );
 
-    const textNodes = [];
+    const matches = [];
     let node;
+
     while ((node = walker.nextNode())) {
-        textNodes.push(node);
+        const original = node.nodeValue;
+        const lower = original.toLowerCase();
+        let startIndex = 0;
+        let index;
+
+        while ((index = lower.indexOf(searchText, startIndex)) !== -1) {
+            matches.push({
+                node,
+                index,
+                length: text.length
+            });
+            startIndex = index + text.length;
+        }
     }
 
-    for (const textNode of textNodes) {
-        const original = textNode.nodeValue;
-        const lower = original.toLowerCase();
-        const index = lower.indexOf(searchText);
+    for (let i = matches.length - 1; i >= 0; i--) {
+        const { node, index, length } = matches[i];
 
-        if (index !== -1) {
-            const before = original.slice(0, index);
-            const match = original.slice(index, index + text.length);
-            const after = original.slice(index + text.length);
+        if (!node.parentNode) continue;
 
-            const fragment = document.createDocumentFragment();
+        const original = node.nodeValue;
+        const before = original.slice(0, index);
+        const match = original.slice(index, index + length);
+        const after = original.slice(index + length);
 
-            if (before) fragment.appendChild(document.createTextNode(before));
+        const fragment = document.createDocumentFragment();
 
-            const mark = document.createElement('mark');
-            mark.className = 'user-highlight';
-            mark.textContent = match;
-            fragment.appendChild(mark);
+        if (before) fragment.appendChild(document.createTextNode(before));
 
-            if (after) fragment.appendChild(document.createTextNode(after));
+        const mark = document.createElement('mark');
+        mark.className = 'user-highlight';
+        mark.textContent = match;
+        fragment.appendChild(mark);
 
-            textNode.parentNode.replaceChild(fragment, textNode);
-        }
+        if (after) fragment.appendChild(document.createTextNode(after));
+
+        node.parentNode.replaceChild(fragment, node);
     }
 },
     
@@ -1069,12 +1081,22 @@ highlightTextInElement: function(container, text) {
         }
         
         if (notificationsToggle) {
-            notificationsToggle.addEventListener('change', (e) => {
-                this.settings.notificationsEnabled = e.target.checked;
+            notificationsToggle.addEventListener('change', async (e) => {
+            this.settings.notificationsEnabled = e.target.checked;
+
+        if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+
+            if (permission !== 'granted') {
+                this.settings.notificationsEnabled = false;
+                e.target.checked = false;
                 this.saveSettings();
-                if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
-                    Notification.requestPermission();
+                this.showToast('No se concedió permiso para notificaciones');
+                return;
+                    }
                 }
+
+                this.saveSettings();
                 this.showToast(this.settings.notificationsEnabled ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
             });
         }
