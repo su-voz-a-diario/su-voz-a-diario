@@ -115,7 +115,7 @@ body {
 
 .floating-controls {
     position: fixed;
-    top: 86px;
+    top: 65px;
     left: 6px;
     z-index: 1200;
     display: flex;
