@@ -1109,9 +1109,10 @@ highlightTextInElement: function(container, text) {
         <span class="about-version">v2.1</span>
     </div>
 
-    <p class="about-description">
-        Su Voz a Diario es una aplicación diseñada para ayudarte a mantener una lectura constante de la Palabra de Dios, guiándote a reflexionar y responder personalmente a cada pasaje.
-    </p>
+   <p class="about-description">
+    Su Voz a Diario es una herramienta para fomentar una vida constante en la Palabra de Dios.
+    A través de lecturas diarias y espacios de reflexión, busca ayudarte a escuchar, entender y responder a la voz de Dios en tu vida.
+</p>
 
     <div class="about-features">
         <div class="about-feature">📖 Plan de lectura diaria</div>
@@ -1128,7 +1129,7 @@ highlightTextInElement: function(container, text) {
     </p>
 
     <div class="about-actions">
-        <button class="btn-secondary">💙 Apoyar proyecto</button>
+        <button class="btn-secondary">Apoyar proyecto</button>
         <button class="btn-secondary">✉️ Contactar</button>
     </div>
 </div>
