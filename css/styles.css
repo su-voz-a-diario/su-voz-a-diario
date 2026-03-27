@@ -1099,3 +1099,89 @@ body.dark-mode .floating-streak {
 
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
+
+/* ========================================
+   ABOUT CARD (PROFESIONAL)
+   ======================================== */
+.about-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.about-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.about-header h3 {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.about-version {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: rgba(0,0,0,0.05);
+    padding: 4px 10px;
+    border-radius: 999px;
+}
+
+body.dark-mode .about-version {
+    background: rgba(255,255,255,0.08);
+}
+
+.about-description {
+    font-size: 0.92rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+}
+
+/* FEATURES */
+.about-features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.about-feature {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.03);
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+body.dark-mode .about-feature {
+    background: rgba(255,255,255,0.05);
+}
+
+/* DIVIDER */
+.about-divider {
+    height: 1px;
+    background: var(--border-color);
+    margin: 6px 0;
+}
+
+/* SUPPORT TEXT */
+.about-support-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+/* BUTTONS */
+.about-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.about-actions .btn-secondary {
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 12px;
+}
