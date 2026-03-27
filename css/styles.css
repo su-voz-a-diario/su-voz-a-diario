@@ -298,19 +298,31 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
+    gap: 6px;
+
     background: linear-gradient(135deg, #4da3ff, #6ec1ff);
     color: #ffffff;
-    padding: 8px 18px;
+
+    padding: 7px 16px;
     border-radius: 999px;
-    font-size: 0.95rem;
+
+    font-size: 0.9rem;
     font-weight: 700;
     letter-spacing: 0.5px;
+
     margin: 6px auto 16px auto;
-    box-shadow: 0 4px 12px rgba(77, 163, 255, 0.28);
+
+    box-shadow: 0 4px 10px rgba(77, 163, 255, 0.25);
+
     width: fit-content;
     max-width: calc(100% - 24px);
+
     text-align: center;
+}
+
+.reading-date-header::before {
+    content: "📅";
+    font-size: 0.95rem;
 }
 
 /* ========================================
