@@ -35,6 +35,8 @@ const App = {
     noteSavedTimeout: null,
     renderScheduled: false,
     controlsCollapsed: false,
+    lastReadingTap: 0,
+    readingTapDelay: 400,
     
     // ========================================
     // INICIALIZACIÓN
@@ -633,11 +635,12 @@ checkReminderOnOpen: function() {
 
     doc.save(`reflexion-${dateStr}.pdf`);
     this.showToast('PDF exportado correctamente');
-},
+    },
     
     resetReadingMode: function() {
-        this.readingMode = false;
-        document.body.classList.remove('reading-mode');
+    this.readingMode = false;
+    this.lastReadingTap = 0;
+    document.body.classList.remove('reading-mode');
     },
     
    showNoteSavedMessage: function(dateStr) {
@@ -1336,13 +1339,24 @@ highlightTextInElement: function(container, text) {
             if (readingEl) {
                 const selection = window.getSelection();
                 if (selection && selection.toString().trim()) {
-                    return;
+                return;
                 }
 
+                const now = Date.now();
                 const date = readingEl.getAttribute('data-reading-date');
+
+                if (now - this.lastReadingTap < this.readingTapDelay) {
                 this.readingMode = !this.readingMode;
                 document.body.classList.toggle('reading-mode', this.readingMode);
-                if (date) this.renderReading(date);
+                this.lastReadingTap = 0;
+
+                    if (date) {
+                        this.renderReading(date);
+                    }
+                } else {
+                    this.lastReadingTap = now;
+                }
+
                 return;
             }
             
