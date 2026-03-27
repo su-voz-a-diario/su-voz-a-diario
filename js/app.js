@@ -30,6 +30,36 @@ const App = {
         autoSaveNotes: true,
         fontSize: 1.08
     },
+
+    storage: {
+    get(key, fallback = null) {
+        try {
+            const raw = localStorage.getItem(key);
+            return raw ? JSON.parse(raw) : fallback;
+        } catch (error) {
+            console.error(`[Storage] Error leyendo ${key}:`, error);
+            return fallback;
+        }
+    },
+
+    set(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.error(`[Storage] Error guardando ${key}:`, error);
+            return false;
+        }
+    },
+
+    remove(key) {
+        try {
+            localStorage.removeItem(key);
+        } catch (error) {
+            console.error(`[Storage] Error eliminando ${key}:`, error);
+        }
+    }
+},
     
     // Timeout para mensajes
     noteSavedTimeout: null,
@@ -133,51 +163,49 @@ cacheDOM: function() {
     // SISTEMA DE RACHAS (MEJORADO)
     // ========================================
     loadStreak: function() {
-        const saved = localStorage.getItem('su-voz-streak');
-        if (saved) {
-            try {
-                this.streak = JSON.parse(saved);
-            } catch(e) {
-                console.error('Error cargando racha:', e);
-            }
-        }
+        const defaultStreak = {
+            current: 0,
+            longest: 0,
+            lastReadDate: null
+        };
+
+        const savedStreak = this.storage.get('su-voz-streak', {});
+        this.streak = { ...defaultStreak, ...savedStreak };
     },
     
-    saveStreak: function() {
-        localStorage.setItem('su-voz-streak', JSON.stringify(this.streak));
-        this.updateStreakUI();
-        
-        // Notificar al SW sobre el cambio de racha
-        this.sendToSW({ 
-            type: 'STREAK_UPDATED', 
-            streak: this.streak.current 
-        });
-    },
+   saveStreak: function() {
+    this.storage.set('su-voz-streak', this.streak);
+    this.updateStreakUI();
+
+    this.sendToSW({
+        type: 'STREAK_UPDATED',
+        streak: this.streak.current
+    });
+},
     
     updateStreak: function(dateStr) {
-        const yesterday = this.getYesterdayDateStr();
-        const today = dateStr;
-        
-        if (this.streak.lastReadDate === yesterday) {
-            // Día consecutivo
-            this.streak.current++;
-            if (this.streak.current > this.streak.longest) {
-                this.streak.longest = this.streak.current;
-                
-                // Celebrar hitos
-                if (this.streak.current === 7 || this.streak.current === 30 || this.streak.current === 100) {
-                    this.showCelebration(this.streak.current);
-                }
-            }
-        } else if (this.streak.lastReadDate !== today && this.streak.lastReadDate !== yesterday) {
-            // Racha rota
-            this.streak.current = 1;
-        }
-        // Si ya leyó hoy, no hacer nada
-        
-        this.streak.lastReadDate = today;
-        this.saveStreak();
-    },
+    const yesterday = this.getYesterdayDateStr();
+    const today = dateStr;
+
+    if (this.streak.lastReadDate === today) {
+        return;
+    }
+
+    if (this.streak.lastReadDate === yesterday) {
+        this.streak.current += 1;
+    } else {
+        this.streak.current = 1;
+    }
+
+    this.streak.lastReadDate = today;
+    this.streak.longest = Math.max(this.streak.longest, this.streak.current);
+
+    if ([7, 30, 100].includes(this.streak.current)) {
+        this.showCelebration(this.streak.current);
+    }
+
+    this.saveStreak();
+},
     
     showCelebration: function(days) {
         const messages = {
@@ -220,35 +248,37 @@ cacheDOM: function() {
     // CONFIGURACIÓN (MEJORADA CON SW)
     // ========================================
     loadSettings: function() {
-        const saved = localStorage.getItem('su-voz-settings');
-        if (saved) {
-            try {
-                this.settings = JSON.parse(saved);
-            } catch(e) {
-                console.error('Error cargando settings:', e);
-            }
-        }
+        const defaultSettings = {
+            reminderTime: '08:00',
+            notificationsEnabled: true,
+            autoSaveNotes: true,
+            fontSize: 1.08
+        };
+
+        const savedSettings = this.storage.get('su-voz-settings', {});
+        this.settings = { ...defaultSettings, ...savedSettings };
     },
     
     saveSettings: function() {
-        localStorage.setItem('su-voz-settings', JSON.stringify(this.settings));
-        
-        // Notificar al SW sobre cambios en notificaciones
-        if (this.settings.notificationsEnabled) {
-            this.sendToSW({
-                type: 'SCHEDULE_NOTIFICATION',
-                time: this.settings.reminderTime
-            });
-        } else {
-            this.sendToSW({ type: 'CANCEL_NOTIFICATIONS' });
-        }
-    },
+    this.storage.set('su-voz-settings', this.settings);
+
+    if (this.settings.notificationsEnabled) {
+        this.sendToSW({
+            type: 'SCHEDULE_NOTIFICATION',
+            time: this.settings.reminderTime
+        });
+    } else {
+        this.sendToSW({ type: 'CANCEL_NOTIFICATIONS' });
+    }
+},
     
     loadFontSize: function() {
         const saved = localStorage.getItem('reading-size');
-        if (saved) {
-            this.settings.fontSize = parseFloat(saved);
-            document.documentElement.style.setProperty('--reading-size', saved + 'rem');
+        const parsed = parseFloat(saved);
+
+        if (saved && !Number.isNaN(parsed)) {
+            this.settings.fontSize = parsed;
+            document.documentElement.style.setProperty('--reading-size', parsed + 'rem');
         } else {
             document.documentElement.style.setProperty('--reading-size', this.settings.fontSize + 'rem');
         }
@@ -269,7 +299,7 @@ cacheDOM: function() {
 
 toggleFloatingControls: function() {
     this.controlsCollapsed = !this.controlsCollapsed;
-    localStorage.setItem('su-voz-controls-collapsed', this.controlsCollapsed);
+    localStorage.setItem('su-voz-controls-collapsed', String(this.controlsCollapsed));
 
     if (this.$floatingControls) {
         this.$floatingControls.classList.toggle('collapsed', this.controlsCollapsed);
@@ -292,53 +322,34 @@ bindFloatingToggle: function() {
     // NOTIFICACIONES (MEJORADAS CON SW)
     // ========================================
     initNotifications: function() {
-        if (!('Notification' in window)) {
-            console.log('[App] Notificaciones no soportadas');
-            return;
-        }
-        
-        // Solicitar permiso si está habilitado
-        if (this.settings.notificationsEnabled && Notification.permission === 'default') {
-            // Esperar interacción del usuario
-            const requestPermission = () => {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        this.sendToSW({
-                            type: 'SCHEDULE_NOTIFICATION',
-                            time: this.settings.reminderTime
-                        });
-                    }
-                });
-                document.removeEventListener('click', requestPermission);
-            };
-            
-            // Solicitar después de un tiempo o al hacer clic
-            setTimeout(requestPermission, 5000);
-            document.addEventListener('click', requestPermission);
-        } else if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-            // Ya tiene permiso, programar notificaciones
-            this.sendToSW({
-                type: 'SCHEDULE_NOTIFICATION',
-                time: this.settings.reminderTime
-            });
-        }
-    },
-    
-    showDailyReminder: function() {
-    // Esta función ahora la maneja el SW
-    // Se mantiene por compatibilidad pero se prefiere la del SW
+    if (!('Notification' in window)) {
+        console.log('[App] Notificaciones no soportadas');
+        return;
+    }
+
     if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-        const todayStr = this.getTodayDateStr();
-        if (!this.isRead(todayStr)) {
-            new Notification('📖 Su Voz a Diario', {
-                body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-                icon: '/icons/icon-192.png',
-                vibrate: [200, 100, 200],
-                data: { url: '/#home' }
-            });
-        }
+        this.sendToSW({
+            type: 'SCHEDULE_NOTIFICATION',
+            time: this.settings.reminderTime
+        });
     }
 },
+    
+    showDailyReminder: function() {
+        if (!('Notification' in window)) return;
+
+        if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
+            const todayStr = this.getTodayDateStr();
+            if (!this.isRead(todayStr)) {
+                new Notification('📖 Su Voz a Diario', {
+                    body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
+                    icon: '/icons/icon-192.png',
+                    vibrate: [200, 100, 200],
+                    data: { url: '/#home' }
+                });
+            }
+        }
+    },
 
 checkReminderOnOpen: function() {
     if (!this.settings.notificationsEnabled) return;
@@ -372,7 +383,7 @@ checkReminderOnOpen: function() {
     // ESTADÍSTICAS (MEJORADAS)
     // ========================================
     getStats: function() {
-        const readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
+        const readDates = this.getReadDates();
         const totalRead = readDates.length;
         const totalAvailable = this.data.length;
         
@@ -398,8 +409,8 @@ checkReminderOnOpen: function() {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith('su-voz-note-')) {
-                const note = JSON.parse(localStorage.getItem(key));
-                if (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim()) {
+                const note = this.storage.get(key, null);
+                if (note && (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim())) {
                     totalNotes++;
                 }
             }
@@ -410,7 +421,7 @@ checkReminderOnOpen: function() {
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && key.startsWith('su-voz-highlights-')) {
-                const highlights = JSON.parse(localStorage.getItem(key));
+                const highlights = this.storage.get(key, []);
                 totalHighlights += highlights.length;
             }
         }
@@ -430,38 +441,47 @@ checkReminderOnOpen: function() {
     // FUNCIONES PRINCIPALES
     // ========================================
     markAsRead: function(dateStr) {
-        let readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
-        if (!readDates.includes(dateStr)) {
-            readDates.push(dateStr);
-            localStorage.setItem('su-voz-read-dates', JSON.stringify(readDates));
-            this.updateStreak(dateStr);
-            
-            // Feedback háptico
-            if ('vibrate' in navigator) {
-                navigator.vibrate(50);
-            }
-            
-            // Mostrar celebración si es el primer día
-            if (readDates.length === 1) {
-                this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
-            }
-            
-            // Notificar al SW
-            this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
-        }
+    const readDates = this.getReadDates();
+
+    if (readDates.includes(dateStr)) return;
+
+    readDates.push(dateStr);
+    this.setReadDates(readDates);
+    this.updateStreak(dateStr);
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(50);
+    }
+
+    if (readDates.length === 1) {
+        this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
+    }
+
+    this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
+},
+
+    getReadDates: function() {
+    return this.storage.get('su-voz-read-dates', []);
+    },
+
+    setReadDates: function(readDates) {
+    this.storage.set('su-voz-read-dates', readDates);
     },
     
     isRead: function(dateStr) {
-        let readDates = JSON.parse(localStorage.getItem('su-voz-read-dates')) || [];
-        return readDates.includes(dateStr);
+    return this.getReadDates().includes(dateStr);
     },
     
     getHighlightsKey: function(dateStr) {
         return `su-voz-highlights-${dateStr}`;
     },
+
+    getNoteKey: function(dateStr) {
+    return `su-voz-note-${dateStr}`;
+    },
     
-    getHighlights: function(dateStr) {
-        return JSON.parse(localStorage.getItem(this.getHighlightsKey(dateStr))) || [];
+   getHighlights: function(dateStr) {
+    return this.storage.get(this.getHighlightsKey(dateStr), []);
     },
     
     hasHighlights: function(dateStr) {
@@ -469,27 +489,23 @@ checkReminderOnOpen: function() {
     },
     
     saveHighlights: function(dateStr, highlights) {
-        const normalized = [...new Set(
-            highlights
-                .map(h => (h || '').trim())
-                .filter(Boolean)
-        )];
+    const normalized = [...new Set(
+        highlights
+            .map(h => (h || '').trim())
+            .filter(h => h && h.length >= 3)
+    )];
 
-    localStorage.setItem(this.getHighlightsKey(dateStr), JSON.stringify(normalized));
+    this.storage.set(this.getHighlightsKey(dateStr), normalized);
     this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
     },
     
-    getNoteKey: function(dateStr) {
-        return `su-voz-note-${dateStr}`;
-    },
-    
     getNote: function(dateStr) {
-        return JSON.parse(localStorage.getItem(this.getNoteKey(dateStr))) || {
-            dios: '',
-            aprendizaje: '',
-            respuesta: ''
-        };
-    },
+    return this.storage.get(this.getNoteKey(dateStr), {
+        dios: '',
+        aprendizaje: '',
+        respuesta: ''
+    });
+},
     
     hasNote: function(dateStr) {
         const note = this.getNote(dateStr);
@@ -499,13 +515,13 @@ checkReminderOnOpen: function() {
     },
     
     saveNote: function(dateStr, noteObj) {
-        localStorage.setItem(this.getNoteKey(dateStr), JSON.stringify(noteObj));
-        this.sendToSW({ type: 'NOTE_SAVED', date: dateStr });
+    this.storage.set(this.getNoteKey(dateStr), noteObj);
+    this.sendToSW({ type: 'NOTE_SAVED', date: dateStr });
     },
     
-    deleteNote: function(dateStr) {
-        localStorage.removeItem(this.getNoteKey(dateStr));
-        this.showToast('Reflexión eliminada');
+   deleteNote: function(dateStr) {
+    this.storage.remove(this.getNoteKey(dateStr));
+    this.showToast('Reflexión eliminada');
     },
     
     toggleNote: function(dateStr) {
@@ -514,19 +530,16 @@ checkReminderOnOpen: function() {
     
     changeFontSize: function(delta) {
         let current = this.settings.fontSize;
-        current += delta;
+         current += delta;
+
         if (current < 0.9) current = 0.9;
         if (current > 1.6) current = 1.6;
-        
+
         this.settings.fontSize = current;
         localStorage.setItem('reading-size', current);
         document.documentElement.style.setProperty('--reading-size', current + 'rem');
-        this.saveSettings();
-        
-        // Re-renderizar
-        if (this.currentView === 'reading' || this.currentView === 'home') {
-            this.scheduleRender();
-        }
+
+        this.storage.set('su-voz-settings', this.settings);
     },
     
     scheduleRender: function() {
@@ -561,6 +574,11 @@ checkReminderOnOpen: function() {
    exportReflectionPDF: function(dateStr) {
     const reading = this.data.find(r => r.date === dateStr);
     if (!reading) return;
+
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        this.showToast('No se pudo generar el PDF');
+        return;
+    }
 
     const note = this.getNote(dateStr);
     const { jsPDF } = window.jspdf;
@@ -1155,35 +1173,50 @@ highlightTextInElement: function(container, text) {
         
         if (notificationsToggle) {
             notificationsToggle.addEventListener('change', async (e) => {
-            this.settings.notificationsEnabled = e.target.checked;
 
-        if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
-            const permission = await Notification.requestPermission();
-
-            if (permission !== 'granted') {
-                this.settings.notificationsEnabled = false;
-                e.target.checked = false;
-                this.saveSettings();
-                this.showToast('No se concedió permiso para notificaciones');
-                return;
-                    }
+             // ✅ Validar soporte primero
+                if (!('Notification' in window)) {
+                    this.settings.notificationsEnabled = false;
+                    e.target.checked = false;
+                    this.saveSettings();
+                    this.showToast('Este dispositivo no soporta notificaciones');
+                    return;
                 }
 
-                this.saveSettings();
-                this.showToast(this.settings.notificationsEnabled ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
-            });
-        }
+            this.settings.notificationsEnabled = e.target.checked;
+
+            if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
+            const permission = await Notification.requestPermission();
+
+                if (permission !== 'granted') {
+                    this.settings.notificationsEnabled = false;
+                    e.target.checked = false;
+                    this.saveSettings();
+                    this.showToast('No se concedió permiso para notificaciones');
+                    return;
+                }
+            }
+
+            this.saveSettings();
+            this.showToast(this.settings.notificationsEnabled ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
+        });
+    }
         
         if (testNotification) {
             testNotification.addEventListener('click', () => {
+                if (!('Notification' in window)) {
+                    this.showToast('Este dispositivo no soporta notificaciones');
+                    return;
+                }
+
                 if (Notification.permission === 'granted') {
                     new Notification('Su Voz a Diario', {
                         body: '¡Las notificaciones funcionan correctamente!',
                         icon: '/icons/icon-192.png'
-                    });
-                    this.showToast('Notificación de prueba enviada');
-                } else {
-                    Notification.requestPermission().then(perm => {
+                   });
+                   this.showToast('Notificación de prueba enviada');
+               } else {
+                   Notification.requestPermission().then(perm => {
                         if (perm === 'granted') {
                             this.showToast('Permiso concedido. Prueba de nuevo.');
                         }
@@ -1224,7 +1257,7 @@ highlightTextInElement: function(container, text) {
         const allData = {
             version: '2.1',
             exportDate: new Date().toISOString(),
-            readDates: JSON.parse(localStorage.getItem('su-voz-read-dates')) || [],
+            readDates: this.getReadDates(),
             streak: this.streak,
             settings: this.settings,
             notes: {},
@@ -1234,13 +1267,19 @@ highlightTextInElement: function(container, text) {
         // Recopilar notas
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
+
             if (key && key.startsWith('su-voz-note-')) {
                 const date = key.replace('su-voz-note-', '');
-                allData.notes[date] = JSON.parse(localStorage.getItem(key));
+                allData.notes[date] = this.storage.get(key, {
+                    dios: '',
+                    aprendizaje: '',
+                    respuesta: ''
+                });
             }
+
             if (key && key.startsWith('su-voz-highlights-')) {
                 const date = key.replace('su-voz-highlights-', '');
-                allData.highlights[date] = JSON.parse(localStorage.getItem(key));
+                allData.highlights[date] = this.storage.get(key, []);
             }
         }
         
@@ -1263,7 +1302,7 @@ highlightTextInElement: function(container, text) {
                 const data = JSON.parse(e.target.result);
                 
                 if (data.readDates) {
-                    localStorage.setItem('su-voz-read-dates', JSON.stringify(data.readDates));
+                   this.storage.set('su-voz-read-dates', data.readDates);
                 }
                 if (data.streak) {
                     this.streak = data.streak;
@@ -1278,12 +1317,13 @@ highlightTextInElement: function(container, text) {
                 }
                 if (data.notes) {
                     Object.entries(data.notes).forEach(([date, note]) => {
-                        localStorage.setItem(`su-voz-note-${date}`, JSON.stringify(note));
+                        this.storage.set(this.getNoteKey(date), note);
                     });
                 }
+
                 if (data.highlights) {
                     Object.entries(data.highlights).forEach(([date, highlights]) => {
-                        localStorage.setItem(`su-voz-highlights-${date}`, JSON.stringify(highlights));
+                        this.storage.set(this.getHighlightsKey(date), highlights);
                     });
                 }
                 
@@ -1305,19 +1345,17 @@ highlightTextInElement: function(container, text) {
                 keys.push(key);
             }
         }
-        keys.forEach(key => localStorage.removeItem(key));
-        
-        // Reiniciar estado
+
+        keys.forEach(key => this.storage.remove(key));
+
         this.streak = { current: 0, longest: 0, lastReadDate: null };
-        this.saveStreak();
         this.settings = {
             reminderTime: '08:00',
             notificationsEnabled: true,
             autoSaveNotes: true,
             fontSize: 1.08
         };
-        this.saveSettings();
-        
+
         this.showToast('🗑️ Todos los datos han sido reiniciados');
         setTimeout(() => location.reload(), 1000);
     },
@@ -1449,7 +1487,7 @@ Compartido desde Su voz a diario`;
             const clearBtn = e.target.closest('[data-action="clear-highlights"]');
             if (clearBtn) {
                 const date = clearBtn.getAttribute('data-date');
-                localStorage.removeItem(this.getHighlightsKey(date));
+                this.storage.remove(this.getHighlightsKey(date));
                 this.removeHighlightButton();
                 this.renderReading(date);
                 this.showToast('Resaltados eliminados');
