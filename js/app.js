@@ -918,16 +918,16 @@ highlightTextInElement: function(container, text) {
         const dateFormatted = this.formatDateEs(reading.date);
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         
-        this.$content.innerHTML = `
-            ${!isHome ? `<div class="reading-date-header">${dateFormatted.toUpperCase()}</div>` : ''}
-            
-            <div class="reading-card">
-                <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
-                <h2 class="reading-reference">${reading.reference}</h2>
-                <div class="reading-text" data-reading-date="${reading.date}">
-                    ${readingText}
-                </div>
-            </div>
+           this.$content.innerHTML = `
+                <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+    
+                <div class="reading-card">
+                    <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
+                    <h2 class="reading-reference">${reading.reference}</h2>
+                    <div class="reading-text" data-reading-date="${reading.date}">
+                        ${readingText}
+                    </div>
+               </div>
             
             <div class="main-action">
                 <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
