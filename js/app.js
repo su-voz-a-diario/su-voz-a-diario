@@ -634,7 +634,7 @@ checkReminderOnOpen: function() {
     addParagraph(note.respuesta);
 
     doc.save(`reflexion-${dateStr}.pdf`);
-    this.showToast('PDF exportado correctamente');
+    this.showToast('Se abrió el PDF para descargar');
     },
     
     resetReadingMode: function() {
