@@ -1083,3 +1083,19 @@ body.reading-mode .reading-text {
 .mark-read-feedback {
     animation: pulse 0.3s ease;
 }
+
+/* ========================================
+   MEJORA BOTÓN FLOTANTE EN MODO OSCURO
+   ======================================== */
+body.dark-mode .floating-toggle-btn,
+body.dark-mode .floating-btn,
+body.dark-mode .floating-streak {
+    background: rgba(99, 179, 237, 0.15);
+    border: 1px solid rgba(99, 179, 237, 0.25);
+    color: #ffffff;
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
