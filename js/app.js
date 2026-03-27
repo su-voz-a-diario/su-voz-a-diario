@@ -1103,13 +1103,35 @@ highlightTextInElement: function(container, text) {
                     <input type="file" id="import-file" accept=".json" style="display: none;">
                 </div>
                 
-                <div class="setting-card">
-                    <h3>ℹ️ Acerca de</h3>
-                    <p><strong>Su Voz a Diario</strong> v2.1</p>
-                    <p>Meditación bíblica diaria con reflexiones personales</p>
-                    <p>📖 Lecturas diarias para crecer espiritualmente</p>
-                </div>
-            </div>
+               <div class="setting-card about-card">
+    <div class="about-header">
+        <h3>Su Voz a Diario</h3>
+        <span class="about-version">v2.1</span>
+    </div>
+
+    <p class="about-description">
+        Su Voz a Diario es una aplicación diseñada para ayudarte a mantener una lectura constante de la Palabra de Dios, guiándote a reflexionar y responder personalmente a cada pasaje.
+    </p>
+
+    <div class="about-features">
+        <div class="about-feature">📖 Plan de lectura diaria</div>
+        <div class="about-feature">📝 Reflexiones personales</div>
+        <div class="about-feature">🔥 Sistema de rachas</div>
+        <div class="about-feature">✨ Resaltado de textos</div>
+        <div class="about-feature">📄 Exportación de notas</div>
+    </div>
+
+    <div class="about-divider"></div>
+
+    <p class="about-support-text">
+        Si esta aplicación ha sido de bendición para ti, puedes apoyar su desarrollo.
+    </p>
+
+    <div class="about-actions">
+        <button class="btn-secondary">💙 Apoyar proyecto</button>
+        <button class="btn-secondary">✉️ Contactar</button>
+    </div>
+</div>
         `;
         
         // Bindear eventos de configuración
