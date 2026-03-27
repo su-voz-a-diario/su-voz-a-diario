@@ -295,12 +295,22 @@ body {
 }
 
 .reading-date-header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #4da3ff, #6ec1ff);
+    color: #ffffff;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 6px auto 16px auto;
+    box-shadow: 0 4px 12px rgba(77, 163, 255, 0.28);
+    width: fit-content;
+    max-width: calc(100% - 24px);
     text-align: center;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--accent);
-    margin-bottom: 16px;
-    letter-spacing: 1px;
 }
 
 /* ========================================
@@ -1041,6 +1051,12 @@ body.reading-mode .reading-text {
         width: 50px;
         min-width: 50px;
         font-size: 0.7rem;
+    }
+
+    .reading-date-header {
+    font-size: 0.9rem;
+    padding: 7px 16px;
+    margin: 6px auto 14px auto;
     }
 }
 
