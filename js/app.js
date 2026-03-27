@@ -919,7 +919,7 @@ highlightTextInElement: function(container, text) {
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         
         this.$content.innerHTML = `
-            ${!isHome ? `<div class="reading-date-header">📅 ${dateFormatted.toUpperCase()}</div>` : ''}
+            ${!isHome ? `<div class="reading-date-header">${dateFormatted.toUpperCase()}</div>` : ''}
             
             <div class="reading-card">
                 <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
