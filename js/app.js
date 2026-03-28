@@ -13,7 +13,6 @@ const App = {
     today: new Date(),
     currentVersion: 'rvr60',
     openNoteDate: null,
-    noteSavedMessageDate: null,
     readingMode: false,
     
     // Sistema de rachas
@@ -62,7 +61,6 @@ const App = {
 },
     
     // Timeout para mensajes
-    noteSavedTimeout: null,
     renderScheduled: false,
     controlsCollapsed: false,
     lastReadingTap: 0,
@@ -971,7 +969,6 @@ highlightTextInElement: function(container, text) {
                         <div class="note-title">🙏 Mi respuesta hoy</div>
                         <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
-                    <div class="note-saved-message" style="display: none;">✓ Guardado automáticamente</div>
                     <div class="note-actions">
                         <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
                         <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
@@ -1523,7 +1520,7 @@ Compartido desde Su voz a diario`;
         });
         
         // Auto-guardado de notas
-        this.$content.addEventListener('input', (e) => {
+       this.$content.addEventListener('input', (e) => {
             if (e.target.matches('.note-textarea')) {
                 const date = e.target.getAttribute('data-note-date');
                 const field = e.target.getAttribute('data-field');
@@ -1531,7 +1528,6 @@ Compartido desde Su voz a diario`;
                     const note = this.getNote(date);
                     note[field] = e.target.value;
                     this.saveNote(date, note);
-                    this.showNoteSavedMessage(date);
                 }
             }
         });
