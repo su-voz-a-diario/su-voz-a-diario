@@ -958,36 +958,21 @@ highlightTextInElement: function(container, text) {
                 </button>
             </div>
             
-            ${this.openNoteDate === reading.date ? `
+           ${this.openNoteDate === reading.date ? `
     <div class="note-box">
         <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
             <div class="note-title">👑 Lo que veo de Dios</div>
-            <textarea 
-                class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" 
-                data-field="dios" 
-                data-note-date="${reading.date}" 
-                placeholder="¿Qué revela este texto acerca de Dios?"
-            >${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
         </div>
 
         <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
             <div class="note-title">📖 Lo que aprendo del pasaje</div>
-            <textarea 
-                class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" 
-                data-field="aprendizaje" 
-                data-note-date="${reading.date}" 
-                placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?"
-            >${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
         </div>
 
         <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
             <div class="note-title">🙏 Mi respuesta hoy</div>
-            <textarea 
-                class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" 
-                data-field="respuesta" 
-                data-note-date="${reading.date}" 
-                placeholder="¿Qué debo hacer, cambiar o recordar hoy?"
-            >${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
         </div>
 
         <div class="note-actions">
