@@ -549,6 +549,9 @@ body {
     padding: 16px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
     animation: fadeNote 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 @keyframes fadeNote {
@@ -563,14 +566,38 @@ body {
 }
 
 .note-section {
-    margin-bottom: 18px;
+    margin-bottom: 0;
+    padding: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    opacity: 0.9;
+    transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, opacity 0.22s ease, background 0.22s ease;
+}
+
+body.dark-mode .note-section {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.note-section.active {
+    transform: scale(1.02);
+    border-color: rgba(99, 179, 237, 0.45);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+    opacity: 1;
+    background: rgba(49, 130, 206, 0.05);
+}
+
+body.dark-mode .note-section.active {
+    border-color: rgba(99, 179, 237, 0.5);
+    background: rgba(99, 179, 237, 0.08);
 }
 
 .note-title {
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     font-weight: 700;
     color: var(--text-main);
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
 .note-textarea {
@@ -585,13 +612,19 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     margin-bottom: 0;
-    line-height: 1.5;
-    transition: border-color 0.2s;
+    line-height: 1.6;
+    transition: min-height 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease, background-color 0.22s ease;
 }
 
 .note-textarea:focus {
     outline: none;
     border-color: var(--accent);
+}
+
+.note-textarea.active {
+    min-height: 170px;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.12);
 }
 
 .note-textarea:not(:placeholder-shown) {
@@ -602,26 +635,8 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin-top: 16px;
+    margin-top: 6px;
 }
-
-.note-saved-message {
-    margin: 6px 0 12px 0;
-    font-size: 0.85rem;
-    color: var(--success);
-    font-weight: 600;
-    text-align: right;
-    opacity: 0.9;
-    animation: fadeOut 1.2s ease forwards;
-}
-
-@keyframes fadeOut {
-    0% { opacity: 0; transform: translateY(-5px); }
-    20% { opacity: 1; transform: translateY(0); }
-    80% { opacity: 1; transform: translateY(0); }
-    100% { opacity: 0; transform: translateY(-5px); }
-}
-
 /* ========================================
    ESTADÍSTICAS
    ======================================== */
