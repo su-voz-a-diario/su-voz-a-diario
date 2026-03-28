@@ -13,6 +13,7 @@ const App = {
     today: new Date(),
     currentVersion: 'rvr60',
     openNoteDate: null,
+    activeNoteField: null,
     readingMode: false,
     
     // Sistema de rachas
@@ -523,7 +524,9 @@ checkReminderOnOpen: function() {
     },
     
     toggleNote: function(dateStr) {
-        this.openNoteDate = this.openNoteDate === dateStr ? null : dateStr;
+        const isClosing = this.openNoteDate === dateStr;
+        this.openNoteDate = isClosing ? null : dateStr;
+        this.activeNoteField = null;
     },
     
     changeFontSize: function(delta) {
@@ -956,25 +959,43 @@ highlightTextInElement: function(container, text) {
             </div>
             
             ${this.openNoteDate === reading.date ? `
-                <div class="note-box">
-                    <div class="note-section">
-                        <div class="note-title">👑 Lo que veo de Dios</div>
-                        <textarea class="note-textarea" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
-                    </div>
-                    <div class="note-section">
-                        <div class="note-title">📖 Lo que aprendo del pasaje</div>
-                        <textarea class="note-textarea" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
-                    </div>
-                    <div class="note-section">
-                        <div class="note-title">🙏 Mi respuesta hoy</div>
-                        <textarea class="note-textarea" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
-                    </div>
-                    <div class="note-actions">
-                        <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
-                        <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
-                    </div>
-                </div>
-            ` : ''}
+    <div class="note-box">
+        <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
+            <div class="note-title">👑 Lo que veo de Dios</div>
+            <textarea 
+                class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" 
+                data-field="dios" 
+                data-note-date="${reading.date}" 
+                placeholder="¿Qué revela este texto acerca de Dios?"
+            >${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
+        </div>
+
+        <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
+            <div class="note-title">📖 Lo que aprendo del pasaje</div>
+            <textarea 
+                class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" 
+                data-field="aprendizaje" 
+                data-note-date="${reading.date}" 
+                placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?"
+            >${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
+        </div>
+
+        <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
+            <div class="note-title">🙏 Mi respuesta hoy</div>
+            <textarea 
+                class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" 
+                data-field="respuesta" 
+                data-note-date="${reading.date}" 
+                placeholder="¿Qué debo hacer, cambiar o recordar hoy?"
+            >${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
+        </div>
+
+        <div class="note-actions">
+            <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
+            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
+        </div>
+    </div>
+` : ''}
             
             <div class="main-action">
                 ${this.isRead(reading.date)
@@ -1531,6 +1552,25 @@ Compartido desde Su voz a diario`;
                 }
             }
         });
+
+        // Detectar campo activo de reflexión
+this.$content.addEventListener('focusin', (e) => {
+    const textarea = e.target.closest('.note-textarea');
+    if (!textarea) return;
+
+    const field = textarea.getAttribute('data-field');
+    if (!field) return;
+
+    if (this.activeNoteField !== field) {
+        this.activeNoteField = field;
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate(20);
+        }
+
+        this.scheduleRender();
+    }
+});
         
         // Resaltado de texto
         document.addEventListener('selectionchange', () => {
