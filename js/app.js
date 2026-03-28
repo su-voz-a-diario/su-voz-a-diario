@@ -1149,10 +1149,12 @@ highlightTextInElement: function(container, text) {
         Si esta aplicación ha sido de bendición para ti, puedes apoyar su desarrollo.
     </p>
 
-    <div class="about-actions">
-        <button class="btn-secondary">Apoyar proyecto</button>
-        <button class="btn-secondary">✉️ Contactar</button>
-    </div>
+   <div class="about-actions">
+    <button class="btn-secondary">Apoyar proyecto</button>
+    
+    <a href="mailto:tu_correo@dominio.com" class="btn-secondary">
+        ✉️ Contactar
+    </a>
 </div>
         `;
         
