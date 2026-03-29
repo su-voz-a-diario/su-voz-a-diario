@@ -61,7 +61,7 @@ const App = {
     }
 },
     
-    // Timeout para mensajes
+    // Estado de render y controles
     renderScheduled: false,
     controlsCollapsed: false,
     lastReadingTap: 0,
@@ -103,6 +103,7 @@ cacheDOM: function() {
     this.$navCalendar = document.getElementById('nav-calendar');
     this.$navStats = document.getElementById('nav-stats');
     this.$navSettings = document.getElementById('nav-settings');
+    this.$navCommunity = document.getElementById('nav-community');
     this.$streakIndicator = document.getElementById('streak-indicator');
     this.$streakCount = document.getElementById('streak-count');
     this.$floatingControls = document.getElementById('floating-controls');
@@ -661,28 +662,9 @@ checkReminderOnOpen: function() {
     this.lastReadingTap = 0;
     document.body.classList.remove('reading-mode');
     },
-    
-   showNoteSavedMessage: function(dateStr) {
-    this.noteSavedMessageDate = dateStr;
-    clearTimeout(this.noteSavedTimeout);
 
-    const msg = document.querySelector('.note-saved-message');
-    if (msg) {
-        msg.style.display = 'block';
-    }
-
-    this.noteSavedTimeout = setTimeout(() => {
-        this.noteSavedMessageDate = null;
-
-        const msg = document.querySelector('.note-saved-message');
-        if (msg) {
-            msg.style.display = 'none';
-        }
-    }, 1200);
-},
-    
     escapeRegExp: function(string) {
-        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
     
     removeHighlightButton: function() {
@@ -835,62 +817,62 @@ highlightTextInElement: function(container, text) {
     },
     
     handleRoute: function() {
-        const hash = window.location.hash.substring(1) || 'home';
-        const parts = hash.split('/');
-        const view = parts[0];
-        const param = parts[1] || null;
-        
-        this.resetReadingMode();
-        this.currentView = view;
-        this.updateNavUI();
-        
-        // Actualizar botones de versión
-        document.querySelectorAll('.version-btn').forEach(btn => {
-            btn.classList.toggle(
-                'active',
-                btn.getAttribute('data-version') === this.currentVersion
-            );
-        });
-        
-        // Animación fade
-        this.$content.classList.remove('fade-in');
-        void this.$content.offsetWidth;
-        this.$content.classList.add('fade-in');
-        
-        // Renderizar vista
-        if (view === 'home') {
-            this.renderHome();
-        } else if (view === 'calendar') {
-            this.renderCalendar();
-        } else if (view === 'stats') {
-            this.renderStats();
-        } else if (view === 'settings') {
-            this.renderSettings();
-        } else if (view === 'reading' && param) {
-            this.renderReading(param);
-        } else {
-            this.renderHome();
-        }
-    },
+    const hash = window.location.hash.substring(1) || 'home';
+    const parts = hash.split('/');
+    const view = parts[0];
+    const param = parts[1] || null;
     
-    updateNavUI: function() {
-        const navBtns = [
-            { btn: this.$navHome, views: ['home', 'reading'] },
-            { btn: this.$navCalendar, views: ['calendar'] },
-            { btn: this.$navStats, views: ['stats'] },
-            { btn: this.$navSettings, views: ['settings'] }
-        ];
-        
-        navBtns.forEach(({ btn, views }) => {
-            if (btn) {
-                if (views.includes(this.currentView)) {
-                    btn.classList.add('active');
-                } else {
-                    btn.classList.remove('active');
-                }
+    this.resetReadingMode();
+    this.currentView = view;
+    this.updateNavUI();
+    
+    document.querySelectorAll('.version-btn').forEach(btn => {
+        btn.classList.toggle(
+            'active',
+            btn.getAttribute('data-version') === this.currentVersion
+        );
+    });
+    
+    this.$content.classList.remove('fade-in');
+    void this.$content.offsetWidth;
+    this.$content.classList.add('fade-in');
+    
+    if (view === 'home') {
+        this.renderHome();
+    } else if (view === 'calendar') {
+        this.renderCalendar();
+    } else if (view === 'community') {
+        this.renderCommunity();
+    } else if (view === 'stats') {
+        this.renderStats();
+    } else if (view === 'settings') {
+        this.renderSettings();
+    } else if (view === 'reading' && param) {
+        this.renderReading(param);
+    } else {
+        this.renderHome();
+    }
+},
+    
+   updateNavUI: function() {
+    const navBtns = [
+        { btn: this.$navHome, views: ['home', 'reading'] },
+        { btn: this.$navCalendar, views: ['calendar'] },
+        { btn: this.$navCommunity, views: ['community'] },
+        { btn: this.$navStats, views: ['stats'] },
+        { btn: this.$navSettings, views: ['settings'] }
+    ];
+    
+    navBtns.forEach(({ btn, views }) => {
+        if (btn) {
+            if (views.includes(this.currentView)) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
             }
-        });
-    },
+        }
+    });
+},
     
     formatDateEs: function(dateStr) {
         const date = new Date(dateStr + 'T12:00:00');
@@ -1044,6 +1026,61 @@ highlightTextInElement: function(container, text) {
         html += '</div>';
         this.$content.innerHTML = html;
     },
+
+    renderCommunity: function() {
+    this.$content.innerHTML = `
+        <div class="community-container">
+            <div class="community-header">
+                <div class="community-title">Compartamos Su Voz</div>
+                <div class="community-subtitle">
+                    Un espacio para compartir lo que Dios ha hablado a través de su Palabra.
+                </div>
+            </div>
+
+            <div class="community-intro-card">
+                <div class="community-intro-title">Antes de compartir</div>
+                <div class="community-intro-text">
+                    Este espacio existe para compartir reflexiones edificantes basadas en la lectura del día.
+                    Publica con respeto, claridad y sencillez. Evita discusiones, ataques personales,
+                    lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
+                </div>
+            </div>
+
+            <div class="main-action">
+                <button class="btn-primary" data-action="share-community-reflection">
+                    📝 Compartir mi reflexión
+                </button>
+            </div>
+
+            <div class="community-feed">
+                <div class="community-card">
+                    <div class="community-ref">Deuteronomio 1:1–18</div>
+                    <div class="community-meta">Anónimo · Hoy</div>
+                    <div class="community-text">
+                        “Dios me recordó que muchas veces el problema no es que Él no haya hablado, sino que nosotros tardamos en obedecer.”
+                    </div>
+                </div>
+
+                <div class="community-card">
+                    <div class="community-ref">Deuteronomio 1:1–18</div>
+                    <div class="community-meta">María · Hoy</div>
+                    <div class="community-text">
+                        “Aprendí que Dios también guía a su pueblo por medio del orden y del liderazgo.”
+                    </div>
+                </div>
+
+                <div class="community-card">
+                    <div class="community-ref">Deuteronomio 1:1–18</div>
+                    <div class="community-meta">Anónimo · Ayer</div>
+                    <div class="community-text">
+                        “Mi respuesta hoy es confiar más en lo que Dios ya dijo y no detenerme por temor.”
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+},
+
     
     renderStats: function() {
         const stats = this.getStats();
@@ -1130,10 +1167,10 @@ highlightTextInElement: function(container, text) {
         <span class="about-version">v2.1</span>
     </div>
 
-   <p class="about-description">
-    Su Voz a Diario es una herramienta para fomentar una vida constante en la Palabra de Dios.
-    A través de lecturas diarias y espacios de reflexión, busca ayudarte a escuchar, entender y responder a la voz de Dios en tu vida.
-</p>
+    <p class="about-description">
+        Su Voz a Diario es una herramienta para fomentar una vida constante en la Palabra de Dios.
+        A través de lecturas diarias y espacios de reflexión, busca ayudarte a escuchar, entender y responder a la voz de Dios en tu vida.
+    </p>
 
     <div class="about-features">
         <div class="about-feature">📖 Plan de lectura diaria</div>
@@ -1149,12 +1186,12 @@ highlightTextInElement: function(container, text) {
         Si esta aplicación ha sido de bendición para ti, puedes apoyar su desarrollo.
     </p>
 
-   <div class="about-actions">
-    <button class="btn-secondary">Apoyar proyecto</button>
-    
-    <a href="mailto:tu_correo@dominio.com" class="btn-secondary">
-        ✉️ Contactar
-    </a>
+    <div class="about-actions">
+        <button class="btn-secondary">Apoyar proyecto</button>
+        <a href="mailto:appsuvoz@gmail.com" class="btn-secondary">
+            ✉️ Contactar
+        </a>
+    </div>
 </div>
         `;
         
@@ -1374,6 +1411,7 @@ highlightTextInElement: function(container, text) {
         if (this.$navCalendar) this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
         if (this.$navStats) this.$navStats.addEventListener('click', () => this.navigate('stats'));
         if (this.$navSettings) this.$navSettings.addEventListener('click', () => this.navigate('settings'));
+        if (this.$navCommunity) this.$navCommunity.addEventListener('click', () => this.navigate('community'));
         window.addEventListener('popstate', () => this.handleRoute());
         
         // Controles de fuente y versión
@@ -1479,6 +1517,15 @@ Compartido desde Su voz a diario`;
     }
     return;
 }
+
+            const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
+            if (shareCommunityBtn) {
+                if ('vibrate' in navigator) {
+                navigator.vibrate(25);
+                }
+                this.showToast('Próximamente podrás compartir tu reflexión aquí');
+                return;
+            }
             
             // Exportar PDF
             const pdfBtn = e.target.closest('[data-action="export-pdf"]');
