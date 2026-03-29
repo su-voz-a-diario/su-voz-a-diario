@@ -480,6 +480,19 @@ checkReminderOnOpen: function() {
     getNoteKey: function(dateStr) {
     return `su-voz-note-${dateStr}`;
     },
+
+    getCommunityPosts: function() {
+    return this.storage.get('su-voz-community-posts', []);
+    },
+
+    saveCommunityPosts: function(posts) {
+    this.storage.set('su-voz-community-posts', posts);
+    },
+
+    deleteCommunityPost: function(postId) {
+    const posts = this.getCommunityPosts().filter(post => post.id !== postId);
+    this.saveCommunityPosts(posts);
+    },
     
    getHighlights: function(dateStr) {
     return this.storage.get(this.getHighlightsKey(dateStr), []);
@@ -887,6 +900,20 @@ highlightTextInElement: function(container, text) {
         const day = String(date.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     },
+
+    formatCommunityDateLabel: function(dateStr) {
+    const today = this.getTodayDateStr();
+    const yesterday = this.getYesterdayDateStr();
+
+    if (dateStr === today) return 'Hoy';
+    if (dateStr === yesterday) return 'Ayer';
+
+    const date = new Date(dateStr + 'T12:00:00');
+    return date.toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'short'
+    });
+},
     
    getTodayDateStr: function() {
     const now = new Date();
@@ -1032,6 +1059,7 @@ highlightTextInElement: function(container, text) {
     const todayStr = this.getTodayDateStr();
     const todayReading = this.data.find(r => r.date === todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
+    const posts = this.getCommunityPosts();
 
     this.$content.innerHTML = `
         <div class="community-container">
@@ -1109,29 +1137,20 @@ highlightTextInElement: function(container, text) {
             ` : ''}
 
             <div class="community-feed">
-                <div class="community-card">
-                    <div class="community-ref">Deuteronomio 1:1–18</div>
-                    <div class="community-meta">Anónimo · Hoy</div>
-                    <div class="community-text">
-                        “Dios me recordó que muchas veces el problema no es que Él no haya hablado, sino que nosotros tardamos en obedecer.”
+                ${posts.length ? posts.map(post => `
+                    <div class="community-card">
+                        <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+                        <div class="community-meta">${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}</div>
+                        <div class="community-text">“${this.escapeHtml(post.text)}”</div>
                     </div>
-                </div>
-
-                <div class="community-card">
-                    <div class="community-ref">Deuteronomio 1:1–18</div>
-                    <div class="community-meta">María · Hoy</div>
-                    <div class="community-text">
-                        “Aprendí que Dios también guía a su pueblo por medio del orden y del liderazgo.”
+                `).join('') : `
+                    <div class="community-intro-card">
+                        <div class="community-intro-title">Aún no hay publicaciones</div>
+                        <div class="community-intro-text">
+                            Sé la primera persona en compartir una reflexión basada en la lectura del día.
+                        </div>
                     </div>
-                </div>
-
-                <div class="community-card">
-                    <div class="community-ref">Deuteronomio 1:1–18</div>
-                    <div class="community-meta">Anónimo · Ayer</div>
-                    <div class="community-text">
-                        “Mi respuesta hoy es confiar más en lo que Dios ya dijo y no detenerme por temor.”
-                    </div>
-                </div>
+                `}
             </div>
         </div>
     `;
@@ -1574,7 +1593,7 @@ Compartido desde Su voz a diario`;
     return;
 }
 
-           const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
+          const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
 if (shareCommunityBtn) {
     this.communityFormOpen = !this.communityFormOpen;
 
@@ -1614,18 +1633,32 @@ if (publishCommunityBtn) {
         return;
     }
 
+    const todayStr = this.getTodayDateStr();
+    const todayReading = this.data.find(r => r.date === todayStr);
     const displayName = isAnonymous ? 'Anónimo' : (typedName || 'Anónimo');
+
+   const newPost = {
+    id: Date.now(),
+    reference: todayReading ? todayReading.reference : 'Lectura del día',
+    name: displayName,
+    text: reflectionText,
+    date: todayStr
+    };
+
+    const savedPosts = this.getCommunityPosts();
+    savedPosts.unshift(newPost);
+    this.saveCommunityPosts(savedPosts);
 
     if ('vibrate' in navigator) {
         navigator.vibrate(30);
     }
 
     this.communityFormOpen = false;
-    this.showToast(`Reflexión lista para publicar como ${displayName}`);
+    this.showToast('Reflexión publicada correctamente');
     this.handleRoute();
     return;
 }
-            
+
 // Exportar PDF
 const pdfBtn = e.target.closest('[data-action="export-pdf"]');
 if (pdfBtn) {
@@ -1633,45 +1666,45 @@ if (pdfBtn) {
     this.exportReflectionPDF(date);
     return;
 }
-            
-            // Quitar resaltados
-            const clearBtn = e.target.closest('[data-action="clear-highlights"]');
-            if (clearBtn) {
-                const date = clearBtn.getAttribute('data-date');
-                this.storage.remove(this.getHighlightsKey(date));
-                this.removeHighlightButton();
-                this.renderReading(date);
-                this.showToast('Resaltados eliminados');
-                return;
-            }
-            
-            // Notas
-            const noteBtn = e.target.closest('[data-action="toggle-note"]');
-            if (noteBtn) {
-                const date = noteBtn.getAttribute('data-date');
-                this.toggleNote(date);
-                this.renderReading(date);
-                return;
-            }
-            
-            const deleteNoteBtn = e.target.closest('[data-action="delete-note"]');
-            if (deleteNoteBtn) {
-                const date = deleteNoteBtn.getAttribute('data-date');
-                this.deleteNote(date);
-                this.renderReading(date);
-                return;
-            }
-            
-            // Navegación desde calendario
-            const navItem = e.target.closest('[data-nav]');
-            if (navItem) {
-                const targetView = navItem.getAttribute('data-nav');
-                const param = navItem.getAttribute('data-param');
-                if (targetView === 'reading' && param) {
-                    this.navigate('reading', param);
-                }
-            }
-        });
+
+// Quitar resaltados
+const clearBtn = e.target.closest('[data-action="clear-highlights"]');
+if (clearBtn) {
+    const date = clearBtn.getAttribute('data-date');
+    this.storage.remove(this.getHighlightsKey(date));
+    this.removeHighlightButton();
+    this.renderReading(date);
+    this.showToast('Resaltados eliminados');
+    return;
+}
+
+// Notas
+const noteBtn = e.target.closest('[data-action="toggle-note"]');
+if (noteBtn) {
+    const date = noteBtn.getAttribute('data-date');
+    this.toggleNote(date);
+    this.renderReading(date);
+    return;
+}
+
+const deleteNoteBtn = e.target.closest('[data-action="delete-note"]');
+if (deleteNoteBtn) {
+    const date = deleteNoteBtn.getAttribute('data-date');
+    this.deleteNote(date);
+    this.renderReading(date);
+    return;
+}
+
+// Navegación desde calendario
+const navItem = e.target.closest('[data-nav]');
+if (navItem) {
+    const targetView = navItem.getAttribute('data-nav');
+    const param = navItem.getAttribute('data-param');
+    if (targetView === 'reading' && param) {
+        this.navigate('reading', param);
+        }
+}
+});
         
         // Auto-guardado de notas
        this.$content.addEventListener('input', (e) => {
