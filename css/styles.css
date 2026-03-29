@@ -742,6 +742,93 @@ body.dark-mode .note-section.active {
     font-style: italic;
 }
 
+.community-form-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 18px 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: fadeNote 0.22s ease;
+}
+
+.community-form-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--primary);
+    margin-bottom: 2px;
+}
+
+.community-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.community-label {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.community-input,
+.community-textarea {
+    width: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px 14px;
+    font-size: 0.95rem;
+    font-family: var(--font-ui);
+    background: var(--bg-color);
+    color: var(--text-main);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.community-input:focus,
+.community-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.12);
+}
+
+.community-input[readonly] {
+    opacity: 0.9;
+    font-weight: 600;
+}
+
+.community-textarea {
+    min-height: 150px;
+    resize: vertical;
+    line-height: 1.6;
+}
+
+.community-check-group {
+    padding-top: 2px;
+}
+
+.community-check-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.community-check-label input[type="checkbox"] {
+    transform: scale(1.05);
+    accent-color: var(--accent);
+}
+
+.community-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+}
+
 /* ========================================
    ESTADÍSTICAS
    ======================================== */
