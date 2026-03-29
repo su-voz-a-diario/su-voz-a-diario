@@ -1574,7 +1574,7 @@ Compartido desde Su voz a diario`;
     return;
 }
 
-            const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
+           const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
 if (shareCommunityBtn) {
     this.communityFormOpen = !this.communityFormOpen;
 
@@ -1585,14 +1585,54 @@ if (shareCommunityBtn) {
     this.handleRoute();
     return;
 }
+
+const cancelCommunityBtn = e.target.closest('[data-action="cancel-community-form"]');
+if (cancelCommunityBtn) {
+    this.communityFormOpen = false;
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(20);
+    }
+
+    this.handleRoute();
+    return;
+}
+
+const publishCommunityBtn = e.target.closest('[data-action="publish-community-reflection"]');
+if (publishCommunityBtn) {
+    const nameInput = document.getElementById('community-name');
+    const anonymousInput = document.getElementById('community-anonymous');
+    const reflectionInput = document.getElementById('community-reflection');
+
+    const reflectionText = reflectionInput ? reflectionInput.value.trim() : '';
+    const typedName = nameInput ? nameInput.value.trim() : '';
+    const isAnonymous = anonymousInput ? anonymousInput.checked : true;
+
+    if (!reflectionText) {
+        this.showToast('Escribe primero tu reflexión');
+        if (reflectionInput) reflectionInput.focus();
+        return;
+    }
+
+    const displayName = isAnonymous ? 'Anónimo' : (typedName || 'Anónimo');
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(30);
+    }
+
+    this.communityFormOpen = false;
+    this.showToast(`Reflexión lista para publicar como ${displayName}`);
+    this.handleRoute();
+    return;
+}
             
-            // Exportar PDF
-            const pdfBtn = e.target.closest('[data-action="export-pdf"]');
-            if (pdfBtn) {
-                const date = pdfBtn.getAttribute('data-date');
-                this.exportReflectionPDF(date);
-                return;
-            }
+// Exportar PDF
+const pdfBtn = e.target.closest('[data-action="export-pdf"]');
+if (pdfBtn) {
+    const date = pdfBtn.getAttribute('data-date');
+    this.exportReflectionPDF(date);
+    return;
+}
             
             // Quitar resaltados
             const clearBtn = e.target.closest('[data-action="clear-highlights"]');
