@@ -15,6 +15,7 @@ const App = {
     openNoteDate: null,
     activeNoteField: null,
     readingMode: false,
+    communityFormOpen: false,
     
     // Sistema de rachas
     streak: {
@@ -1028,6 +1029,10 @@ highlightTextInElement: function(container, text) {
     },
 
     renderCommunity: function() {
+    const todayStr = this.getTodayDateStr();
+    const todayReading = this.data.find(r => r.date === todayStr);
+    const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
+
     this.$content.innerHTML = `
         <div class="community-container">
             <div class="community-header">
@@ -1048,9 +1053,60 @@ highlightTextInElement: function(container, text) {
 
             <div class="main-action">
                 <button class="btn-primary" data-action="share-community-reflection">
-                    📝 Compartir mi reflexión
+                    ${this.communityFormOpen ? 'Cerrar formulario' : '📝 Compartir mi reflexión'}
                 </button>
             </div>
+
+            ${this.communityFormOpen ? `
+                <div class="community-form-card">
+                    <div class="community-form-title">Compartir reflexión</div>
+
+                    <div class="community-form-group">
+                        <label class="community-label">Pasaje</label>
+                        <input 
+                            type="text" 
+                            class="community-input" 
+                            value="${todayReference}" 
+                            readonly
+                        >
+                    </div>
+
+                    <div class="community-form-group">
+                        <label class="community-label">Nombre</label>
+                        <input 
+                            type="text" 
+                            class="community-input" 
+                            id="community-name" 
+                            placeholder="Escribe tu nombre o deja Anónimo"
+                        >
+                    </div>
+
+                    <div class="community-form-group community-check-group">
+                        <label class="community-check-label">
+                            <input type="checkbox" id="community-anonymous" checked>
+                            Publicar como Anónimo
+                        </label>
+                    </div>
+
+                    <div class="community-form-group">
+                        <label class="community-label">Tu reflexión</label>
+                        <textarea 
+                            class="community-textarea" 
+                            id="community-reflection" 
+                            placeholder="Escribe aquí lo que Dios te habló a través de este pasaje..."
+                        ></textarea>
+                    </div>
+
+                    <div class="community-form-actions">
+                        <button class="btn-secondary" data-action="cancel-community-form">
+                            Cancelar
+                        </button>
+                        <button class="btn-primary" data-action="publish-community-reflection">
+                            Publicar
+                        </button>
+                    </div>
+                </div>
+            ` : ''}
 
             <div class="community-feed">
                 <div class="community-card">
@@ -1519,13 +1575,16 @@ Compartido desde Su voz a diario`;
 }
 
             const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
-            if (shareCommunityBtn) {
-                if ('vibrate' in navigator) {
-                navigator.vibrate(25);
-                }
-                this.showToast('Próximamente podrás compartir tu reflexión aquí');
-                return;
-            }
+if (shareCommunityBtn) {
+    this.communityFormOpen = !this.communityFormOpen;
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(25);
+    }
+
+    this.handleRoute();
+    return;
+}
             
             // Exportar PDF
             const pdfBtn = e.target.closest('[data-action="export-pdf"]');
