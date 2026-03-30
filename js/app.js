@@ -442,8 +442,9 @@ checkReminderOnOpen: function() {
         let totalHighlights = 0;
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.startsWith('su-voz-highlights-')) {
-                const highlights = this.storage.get(key, []);
+           if (key && key.startsWith('su-voz-highlights-')) {
+                const date = key.replace('su-voz-highlights-', '');
+                const highlights = this.getHighlights(date);
                 totalHighlights += highlights.length;
             }
         }
@@ -541,23 +542,46 @@ async deleteCommunityPost(postId) {
 },
     
    getHighlights: function(dateStr) {
-    return this.storage.get(this.getHighlightsKey(dateStr), []);
-    },
+    const saved = this.storage.get(this.getHighlightsKey(dateStr), []);
+
+    if (!Array.isArray(saved)) return [];
+
+    return saved.map(item => {
+        if (typeof item === 'string') {
+            return { text: item, color: 'yellow' };
+        }
+
+        return {
+            text: (item.text || '').trim(),
+            color: item.color || 'yellow'
+        };
+    }).filter(item => item.text.length >= 3);
+},
     
     hasHighlights: function(dateStr) {
         return this.getHighlights(dateStr).length > 0;
     },
     
     saveHighlights: function(dateStr, highlights) {
-    const normalized = [...new Set(
-        highlights
-            .map(h => (h || '').trim())
-            .filter(h => h && h.length >= 3)
-    )];
+    const normalizedMap = new Map();
+
+    highlights.forEach(item => {
+        if (!item || !item.text) return;
+
+        const text = item.text.trim();
+        const color = item.color || 'yellow';
+
+        if (text.length < 3) return;
+
+        const key = `${text}__${color}`;
+        normalizedMap.set(key, { text, color });
+    });
+
+    const normalized = Array.from(normalizedMap.values());
 
     this.storage.set(this.getHighlightsKey(dateStr), normalized);
     this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
-    },
+},
     
     getNote: function(dateStr) {
     return this.storage.get(this.getNoteKey(dateStr), {
@@ -739,15 +763,16 @@ async deleteCommunityPost(postId) {
     const highlights = this.getHighlights(dateStr);
     if (!highlights.length) return;
 
-    highlights.forEach(text => {
-        this.highlightTextInElement(container, text);
+    highlights.forEach(item => {
+        this.highlightTextInElement(container, item.text, item.color);
     });
 },
 
-highlightTextInElement: function(container, text) {
+highlightTextInElement: function(container, text, color = 'yellow') {
     if (!text || !text.trim()) return;
 
     const searchText = text.trim().toLowerCase();
+
     const walker = document.createTreeWalker(
         container,
         NodeFilter.SHOW_TEXT,
@@ -800,7 +825,7 @@ highlightTextInElement: function(container, text) {
         if (before) fragment.appendChild(document.createTextNode(before));
 
         const mark = document.createElement('mark');
-        mark.className = 'user-highlight';
+        mark.className = `user-highlight user-highlight-${color}`;
         mark.textContent = match;
         fragment.appendChild(mark);
 
@@ -810,43 +835,74 @@ highlightTextInElement: function(container, text) {
     }
 },
     
-    showHighlightButton: function(selection, dateStr) {
-        this.removeHighlightButton();
-        const selectedText = selection.toString().trim();
-        if (!selectedText) return;
-        
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        
+   showHighlightButton: function(selection, dateStr) {
+    this.removeHighlightButton();
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) return;
+    if (selectedText.length < 3) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    const picker = document.createElement('div');
+    picker.id = 'highlight-btn';
+    picker.className = 'highlight-picker';
+
+    const colors = [
+        { key: 'yellow', label: '🟡' },
+        { key: 'blue', label: '🔵' }
+    ];
+
+    colors.forEach(colorItem => {
         const btn = document.createElement('button');
-        btn.id = 'highlight-btn';
-        btn.className = 'highlight-btn';
-        btn.textContent = '✨ Resaltar';
-        
-        btn.style.top = `${window.scrollY + rect.top - 45}px`;
-        btn.style.left = `${window.scrollX + rect.left}px`;
-        
-        btn.addEventListener('click', () => {
-             if (selectedText.length < 3) {
-                this.showToast('Selecciona un texto un poco más largo');
-                selection.removeAllRanges();
-                this.removeHighlightButton();
-                return;
-            }
-            
+        btn.type = 'button';
+        btn.className = `highlight-color-btn highlight-color-${colorItem.key}`;
+        btn.textContent = colorItem.label;
+        btn.title = `Resaltar en ${colorItem.key === 'yellow' ? 'amarillo' : 'azul'}`;
+
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
             const highlights = this.getHighlights(dateStr);
-            if (!highlights.includes(selectedText)) {
-                highlights.push(selectedText);
+
+            const alreadyExists = highlights.some(item =>
+                item.text === selectedText && item.color === colorItem.key
+            );
+
+            if (!alreadyExists) {
+                highlights.push({
+                    text: selectedText,
+                    color: colorItem.key
+                });
+
                 this.saveHighlights(dateStr, highlights);
-                this.showToast('Texto resaltado');
+                this.showToast(
+                    colorItem.key === 'yellow'
+                        ? 'Texto resaltado en amarillo'
+                        : 'Texto resaltado en azul'
+                );
+            } else {
+                this.showToast('Ese texto ya está resaltado con ese color');
             }
+
             selection.removeAllRanges();
             this.removeHighlightButton();
             this.scheduleRender();
         });
-        
-        document.body.appendChild(btn);
-    },
+
+        picker.appendChild(btn);
+    });
+
+    const top = window.scrollY + rect.top - 54;
+    const left = window.scrollX + rect.left;
+
+    picker.style.top = `${Math.max(12, top)}px`;
+    picker.style.left = `${Math.max(12, left)}px`;
+
+    document.body.appendChild(picker);
+},
     
     // ========================================
     // NAVEGACIÓN Y RENDERIZADO
@@ -1435,46 +1491,45 @@ highlightTextInElement: function(container, text) {
         }
     },
     
-    exportAllData: function() {
-        const allData = {
-            version: '2.1',
-            exportDate: new Date().toISOString(),
-            readDates: this.getReadDates(),
-            streak: this.streak,
-            settings: this.settings,
-            notes: {},
-            highlights: {}
-        };
-        
-        // Recopilar notas
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
+   exportAllData: function() {
+    const allData = {
+        version: '2.1',
+        exportDate: new Date().toISOString(),
+        readDates: this.getReadDates(),
+        streak: this.streak,
+        settings: this.settings,
+        notes: {},
+        highlights: {}
+    };
+    
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
 
-            if (key && key.startsWith('su-voz-note-')) {
-                const date = key.replace('su-voz-note-', '');
-                allData.notes[date] = this.storage.get(key, {
-                    dios: '',
-                    aprendizaje: '',
-                    respuesta: ''
-                });
-            }
-
-            if (key && key.startsWith('su-voz-highlights-')) {
-                const date = key.replace('su-voz-highlights-', '');
-                allData.highlights[date] = this.storage.get(key, []);
-            }
+        if (key && key.startsWith('su-voz-note-')) {
+            const date = key.replace('su-voz-note-', '');
+            allData.notes[date] = this.storage.get(key, {
+                dios: '',
+                aprendizaje: '',
+                respuesta: ''
+            });
         }
-        
-        const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `su-voz-backup-${this.getTodayDateStr()}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-        
-        this.showToast('Datos exportados correctamente');
-    },
+
+        if (key && key.startsWith('su-voz-highlights-')) {
+            const date = key.replace('su-voz-highlights-', '');
+            allData.highlights[date] = this.getHighlights(date);
+        }
+    }
+
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `su-voz-backup-${this.getTodayDateStr()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    this.showToast('Datos exportados correctamente');
+},
     
     importData: function(file) {
         if (!file) return;
