@@ -970,6 +970,9 @@ highlightTextInElement: function(container, text) {
             
            ${this.openNoteDate === reading.date ? `
     <div class="note-box">
+        <div class="note-privacy">
+            🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.
+        </div>
         <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
             <div class="note-title">👑 Lo que veo de Dios</div>
             <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
@@ -1076,6 +1079,8 @@ highlightTextInElement: function(container, text) {
                     Este espacio existe para compartir reflexiones edificantes basadas en la lectura del día.
                     Publica con respeto, claridad y sencillez. Evita discusiones, ataques personales,
                     lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
+                    <br><br>
+                    Lo que publiques aquí podrá ser visible para otros usuarios y moderado por la aplicación.
                 </div>
             </div>
 
