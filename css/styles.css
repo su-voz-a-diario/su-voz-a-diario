@@ -829,6 +829,19 @@ body.dark-mode .note-section.active {
     margin-top: 4px;
 }
 
+.community-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.community-actions .btn-secondary {
+    width: auto;
+    min-height: 42px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+}
+
 /* ========================================
    ESTADÍSTICAS
    ======================================== */
