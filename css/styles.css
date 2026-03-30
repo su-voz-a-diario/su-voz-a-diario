@@ -1483,3 +1483,14 @@ body.dark-mode .about-feature {
     border-radius: 4px;
     padding: 0 2px;
 }
+
+/* ===== MODO OSCURO ===== */
+body.dark-mode .user-highlight-yellow {
+    background: rgba(255, 210, 80, 0.55);
+    color: inherit;
+}
+
+body.dark-mode .user-highlight-blue {
+    background: rgba(90, 160, 255, 0.45);
+    color: inherit;
+}
