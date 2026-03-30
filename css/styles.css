@@ -1437,3 +1437,49 @@ body.dark-mode .about-feature {
     font-size: 0.9rem;
     padding: 12px;
 }
+
+.highlight-picker {
+    position: absolute;
+    z-index: 9999;
+    display: flex;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    background: rgba(20, 20, 20, 0.95);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+    backdrop-filter: blur(8px);
+}
+
+.highlight-color-btn {
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.highlight-color-btn:active {
+    transform: scale(0.92);
+}
+
+.highlight-color-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.user-highlight-yellow {
+    background: rgba(255, 230, 120, 0.75);
+    border-radius: 4px;
+    padding: 0 2px;
+}
+
+.user-highlight-blue {
+    background: rgba(120, 190, 255, 0.45);
+    border-radius: 4px;
+    padding: 0 2px;
+}
