@@ -1149,7 +1149,7 @@ highlightTextInElement: function(container, text) {
                         <div class="community-text">“${this.escapeHtml(post.text)}”</div>
 
                         <div class="community-actions">
-                            <button class="btn-secondary" data-action="delete-community-post" data-id="${post.id}">
+                            <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
                                 🗑️ Eliminar
                         </button>
                     </div>
