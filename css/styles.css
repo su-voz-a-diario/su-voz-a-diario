@@ -1423,3 +1423,10 @@ body.dark-mode .about-feature {
     font-size: 0.9rem;
     padding: 12px;
 }
+
+.note-privacy {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    margin-bottom: 10px;
+    text-align: center;
+}
