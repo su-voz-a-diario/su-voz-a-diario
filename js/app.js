@@ -895,7 +895,7 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         picker.appendChild(btn);
     });
 
-    const top = window.scrollY + rect.top - 54;
+    const top = window.scrollY + rect.bottom + 10;
     const left = window.scrollX + rect.left;
 
     picker.style.top = `${Math.max(12, top)}px`;
@@ -1929,29 +1929,35 @@ this.$content.addEventListener('focusin', (e) => {
 });
         
         // Resaltado de texto
-        document.addEventListener('selectionchange', () => {
-            const selection = window.getSelection();
-            if (!selection || selection.isCollapsed) {
-                this.removeHighlightButton();
-                return;
-            }
-            const anchorNode = selection.anchorNode;
-            if (!anchorNode) return;
-            const readingTextEl = document.querySelector('.reading-text');
-            if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
-                this.removeHighlightButton();
-                return;
-            }
-            const dateStr = readingTextEl.getAttribute('data-reading-date');
-            if (dateStr) this.showHighlightButton(selection, dateStr);
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('#highlight-btn') && !e.target.closest('.reading-text')) {
-                this.removeHighlightButton();
-            }
-        });
-    },
+        let selectionTimeout;
+
+document.addEventListener('selectionchange', () => {
+    clearTimeout(selectionTimeout);
+
+    selectionTimeout = setTimeout(() => {
+        const selection = window.getSelection();
+
+        if (!selection || selection.isCollapsed) {
+            this.removeHighlightButton();
+            return;
+        }
+
+        const anchorNode = selection.anchorNode;
+        if (!anchorNode) return;
+
+        const readingTextEl = document.querySelector('.reading-text');
+        if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
+            this.removeHighlightButton();
+            return;
+        }
+
+        const dateStr = readingTextEl.getAttribute('data-reading-date');
+        if (dateStr) {
+            this.showHighlightButton(selection, dateStr);
+        }
+    }, 350);
+});
+},
     
     initTheme: function() {
         const savedTheme = localStorage.getItem('theme');
