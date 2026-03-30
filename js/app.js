@@ -967,12 +967,13 @@ highlightTextInElement: function(container, text) {
                     ${this.hasNote(reading.date) ? ' ✓' : ''}
                 </button>
             </div>
-            
+
            ${this.openNoteDate === reading.date ? `
     <div class="note-box">
         <div class="note-privacy">
             🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.
         </div>
+
         <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
             <div class="note-title">👑 Lo que veo de Dios</div>
             <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
