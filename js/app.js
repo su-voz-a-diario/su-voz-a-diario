@@ -840,7 +840,6 @@ highlightTextInElement: function(container, text, color = 'yellow') {
 
     const selectedText = selection.toString().trim();
     if (!selectedText) return;
-    if (selectedText.length < 3) return;
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -850,41 +849,45 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     picker.className = 'highlight-picker';
 
     const colors = [
-        { key: 'yellow', label: '🟡' },
-        { key: 'blue', label: '🔵' }
+        { color: 'yellow', icon: '🟡', label: 'Amarillo' },
+        { color: 'blue', icon: '🔵', label: 'Azul' }
     ];
 
-    colors.forEach(colorItem => {
+    colors.forEach(({ color, icon, label }) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = `highlight-color-btn highlight-color-${colorItem.key}`;
-        btn.textContent = colorItem.label;
-        btn.title = `Resaltar en ${colorItem.key === 'yellow' ? 'amarillo' : 'azul'}`;
+        btn.className = 'highlight-color-btn';
+        btn.setAttribute('aria-label', `Resaltar en ${label}`);
+        btn.setAttribute('title', `Resaltar en ${label}`);
+        btn.textContent = icon;
 
-        btn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (selectedText.length < 3) {
+                this.showToast('Selecciona un texto un poco más largo');
+                selection.removeAllRanges();
+                this.removeHighlightButton();
+                return;
+            }
 
             const highlights = this.getHighlights(dateStr);
 
             const alreadyExists = highlights.some(item =>
-                item.text === selectedText && item.color === colorItem.key
+                item.text === selectedText && item.color === color
             );
 
             if (!alreadyExists) {
                 highlights.push({
                     text: selectedText,
-                    color: colorItem.key
+                    color
                 });
 
                 this.saveHighlights(dateStr, highlights);
-                this.showToast(
-                    colorItem.key === 'yellow'
-                        ? 'Texto resaltado en amarillo'
-                        : 'Texto resaltado en azul'
-                );
+                this.showToast(`Texto resaltado en ${label.toLowerCase()}`);
             } else {
-                this.showToast('Ese texto ya está resaltado con ese color');
+                this.showToast(`Ese texto ya está resaltado en ${label.toLowerCase()}`);
             }
 
             selection.removeAllRanges();
@@ -895,13 +898,41 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         picker.appendChild(btn);
     });
 
-    const top = window.scrollY + rect.bottom + 10;
-    const left = window.scrollX + rect.left;
-
-    picker.style.top = `${Math.max(12, top)}px`;
-    picker.style.left = `${Math.max(12, left)}px`;
-
     document.body.appendChild(picker);
+
+    requestAnimationFrame(() => {
+        const pickerRect = picker.getBoundingClientRect();
+        const margin = 12;
+
+        const spaceAbove = rect.top;
+        const spaceBelow = window.innerHeight - rect.bottom;
+
+        let top;
+
+        if (spaceBelow >= pickerRect.height + 12) {
+            top = window.scrollY + rect.bottom + 10;
+        } else if (spaceAbove >= pickerRect.height + 12) {
+            top = window.scrollY + rect.top - pickerRect.height - 10;
+        } else {
+            top = window.scrollY + Math.max(
+                margin,
+                Math.min(
+                    window.innerHeight - pickerRect.height - margin,
+                    rect.bottom + 10
+                )
+            );
+        }
+
+        let left = window.scrollX + rect.left + (rect.width / 2) - (pickerRect.width / 2);
+
+        const minLeft = window.scrollX + margin;
+        const maxLeft = window.scrollX + window.innerWidth - pickerRect.width - margin;
+
+        left = Math.max(minLeft, Math.min(left, maxLeft));
+
+        picker.style.top = `${top}px`;
+        picker.style.left = `${left}px`;
+    });
 },
     
     // ========================================
