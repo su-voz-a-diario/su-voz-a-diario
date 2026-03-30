@@ -1141,9 +1141,19 @@ highlightTextInElement: function(container, text) {
                 ${posts.length ? posts.map(post => `
                     <div class="community-card">
                         <div class="community-ref">${this.escapeHtml(post.reference)}</div>
-                        <div class="community-meta">${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}</div>
+
+                        <div class="community-meta">
+                            ${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}
+                        </div>
+
                         <div class="community-text">“${this.escapeHtml(post.text)}”</div>
+
+                        <div class="community-actions">
+                            <button class="btn-secondary" data-action="delete-community-post" data-id="${post.id}">
+                                🗑️ Eliminar
+                        </button>
                     </div>
+                </div>
                 `).join('') : `
                     <div class="community-intro-card">
                         <div class="community-intro-title">Aún no hay publicaciones</div>
@@ -1660,6 +1670,24 @@ if (publishCommunityBtn) {
     return;
 }
 
+const deleteCommunityBtn = e.target.closest('[data-action="delete-community-post"]');
+if (deleteCommunityBtn) {
+    const postId = Number(deleteCommunityBtn.getAttribute('data-id'));
+
+    if (confirm('¿Deseas eliminar esta reflexión?')) {
+        this.deleteCommunityPost(postId);
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate(20);
+        }
+
+        this.showToast('Reflexión eliminada');
+        this.handleRoute();
+    }
+
+    return;
+}
+            
 // Exportar PDF
 const pdfBtn = e.target.closest('[data-action="export-pdf"]');
 if (pdfBtn) {
