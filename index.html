@@ -113,18 +113,39 @@
     </nav>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="js/app.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('sw.js').then(reg => {
-                    console.log('ServiceWorker registration successful');
-                }).catch(err => {
-                    console.error('ServiceWorker registration failed: ', err);
-                });
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
+  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyATEQ0kmd3HPloNlZ872t8C11jiYitLkUk",
+    authDomain: "su-voz-a-diario.firebaseapp.com",
+    projectId: "su-voz-a-diario",
+    storageBucket: "su-voz-a-diario.firebasestorage.app",
+    messagingSenderId: "372912228994",
+    appId: "1:372912228994:web:f252b44bdbd00d7c56429b"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  window.firebaseDb = db;
+</script>
+
+<script src="js/app.js"></script>
+
+<script>
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                console.log('ServiceWorker registration successful');
+            }).catch(err => {
+                console.error('ServiceWorker registration failed: ', err);
             });
-        }
-    </script>
+        });
+    }
+</script>
 </body>
 
 </html>
