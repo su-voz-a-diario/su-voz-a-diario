@@ -494,18 +494,43 @@ checkReminderOnOpen: function() {
     return `su-voz-note-${dateStr}`;
     },
 
-    getCommunityPosts: function() {
-    return this.storage.get('su-voz-community-posts', []);
-    },
+   async getCommunityPosts() {
+    try {
+        const q = query(collection(db, "communityPosts"), orderBy("createdAt", "desc"));
+        const snapshot = await getDocs(q);
 
-    saveCommunityPosts: function(posts) {
-    this.storage.set('su-voz-community-posts', posts);
-    },
+        return snapshot.docs.map(docSnap => ({
+            id: docSnap.id,
+            ...docSnap.data()
+        }));
+    } catch (error) {
+        console.error("Error cargando posts:", error);
+        return [];
+    }
+},
 
-    deleteCommunityPost: function(postId) {
-    const posts = this.getCommunityPosts().filter(post => post.id !== postId);
-    this.saveCommunityPosts(posts);
-    },
+async addCommunityPost(post) {
+    try {
+        await addDoc(collection(db, "communityPosts"), {
+            ...post,
+            createdAt: serverTimestamp()
+        });
+        return true;
+    } catch (error) {
+        console.error("Error guardando post:", error);
+        return false;
+    }
+},
+
+async deleteCommunityPost(postId) {
+    try {
+        await deleteDoc(doc(db, "communityPosts", postId));
+        return true;
+    } catch (error) {
+        console.error("Error eliminando post:", error);
+        return false;
+    }
+},
     
    getHighlights: function(dateStr) {
     return this.storage.get(this.getHighlightsKey(dateStr), []);
@@ -1072,11 +1097,11 @@ highlightTextInElement: function(container, text) {
         this.$content.innerHTML = html;
     },
 
-    renderCommunity: function() {
+   renderCommunity: async function() {
     const todayStr = this.getTodayDateStr();
     const todayReading = this.data.find(r => r.date === todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
-    const posts = this.getCommunityPosts();
+    const posts = await this.getCommunityPosts();
 
     this.$content.innerHTML = `
         <div class="community-container">
@@ -1541,7 +1566,7 @@ highlightTextInElement: function(container, text) {
         });
         
         // Eventos del contenido
-        this.$content.addEventListener('click', (e) => {
+       this.$content.addEventListener('click', async (e) => {
             // Activar modo lectura solo si se hace clic directo en el bloque,
             // no cuando se está seleccionando texto
             const readingEl = e.target.closest('.reading-text');
@@ -1667,17 +1692,19 @@ if (publishCommunityBtn) {
     const todayReading = this.data.find(r => r.date === todayStr);
     const displayName = isAnonymous ? 'Anónimo' : (typedName || 'Anónimo');
 
-   const newPost = {
-    id: Date.now(),
-    reference: todayReading ? todayReading.reference : 'Lectura del día',
-    name: displayName,
-    text: reflectionText,
-    date: todayStr
+    const newPost = {
+        reference: todayReading ? todayReading.reference : 'Lectura del día',
+        name: displayName,
+        text: reflectionText,
+        date: todayStr
     };
 
-    const savedPosts = this.getCommunityPosts();
-    savedPosts.unshift(newPost);
-    this.saveCommunityPosts(savedPosts);
+    const success = await this.addCommunityPost(newPost);
+
+    if (!success) {
+        this.showToast('No se pudo publicar la reflexión');
+        return;
+    }
 
     if ('vibrate' in navigator) {
         navigator.vibrate(30);
@@ -1688,13 +1715,17 @@ if (publishCommunityBtn) {
     this.handleRoute();
     return;
 }
-
 const deleteCommunityBtn = e.target.closest('[data-action="delete-community-post"]');
 if (deleteCommunityBtn) {
-    const postId = Number(deleteCommunityBtn.getAttribute('data-id'));
+    const postId = deleteCommunityBtn.getAttribute('data-id');
 
     if (confirm('¿Deseas eliminar esta reflexión?')) {
-        this.deleteCommunityPost(postId);
+        const success = await this.deleteCommunityPost(postId);
+
+        if (!success) {
+            this.showToast('No se pudo eliminar la reflexión');
+            return;
+        }
 
         if ('vibrate' in navigator) {
             navigator.vibrate(20);
