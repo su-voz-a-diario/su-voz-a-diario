@@ -1,5 +1,3 @@
-const db = window.firebaseDb;
-
 import {
     collection,
     addDoc,
@@ -10,6 +8,8 @@ import {
     deleteDoc,
     doc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
+
+const db = window.firebaseDb;
 
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
