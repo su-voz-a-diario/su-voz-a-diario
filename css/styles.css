@@ -718,6 +718,24 @@ body.dark-mode .note-section.active {
     opacity: 0.55;
 }
 
+.community-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.community-actions .btn-secondary {
+    width: auto;
+    min-height: auto;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    border-radius: 10px;
+}
+
+.community-actions .btn-secondary:hover {
+    transform: none;
+}
+
 .community-ref {
     font-family: var(--font-reading);
     font-weight: 700;
