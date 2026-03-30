@@ -1448,6 +1448,7 @@ body.dark-mode .about-feature {
     background: rgba(20, 20, 20, 0.95);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     backdrop-filter: blur(8px);
+    max-width: calc(100vw - 24px);
 }
 
 .highlight-color-btn {
@@ -1462,6 +1463,7 @@ body.dark-mode .about-feature {
     justify-content: center;
     background: transparent;
     transition: transform 0.15s ease, background 0.15s ease;
+    flex-shrink: 0;
 }
 
 .highlight-color-btn:active {
