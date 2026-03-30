@@ -9,7 +9,13 @@ import {
     doc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
+import {
+    signInAnonymously,
+    onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+
 const db = window.firebaseDb;
+const auth = window.firebaseAuth;
 
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
@@ -29,6 +35,7 @@ const App = {
     activeNoteField: null,
     readingMode: false,
     communityFormOpen: false,
+    currentUser: null,
     
     // Sistema de rachas
     streak: {
@@ -103,6 +110,7 @@ const App = {
     this.setupSWCommunication();
     this.bindEvents();
     this.bindFloatingToggle();
+    await this.initAuth();
     await this.loadData();
     this.checkReminderOnOpen();
     this.handleRoute();
@@ -1192,11 +1200,13 @@ highlightTextInElement: function(container, text) {
 
                         <div class="community-text">“${this.escapeHtml(post.text)}”</div>
 
-                        <div class="community-actions">
-                            <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
-                                🗑️ Eliminar
-                        </button>
-                    </div>
+                        ${post.ownerUid === this.currentUser?.uid ? `
+                             <div class="community-actions">
+                                <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
+                                    🗑️ Eliminar
+                                </button>
+                              </div>
+                        ` : ''}
                 </div>
                 `).join('') : `
                     <div class="community-intro-card">
@@ -1531,6 +1541,29 @@ highlightTextInElement: function(container, text) {
         this.showToast('🗑️ Todos los datos han sido reiniciados');
         setTimeout(() => location.reload(), 1000);
     },
+
+    initAuth: async function() {
+        return new Promise((resolve) => {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    this.currentUser = user;
+                    console.log('[Auth] Usuario anónimo activo:', user.uid);
+                    resolve();
+                } else {
+                    try {
+                        const cred = await signInAnonymously(auth);
+                        this.currentUser = cred.user;
+                        console.log('[Auth] Sesión anónima iniciada:', cred.user.uid);
+                        resolve();
+                    } catch (error) {
+                        console.error('[Auth] Error en autenticación anónima:', error);
+                        this.showToast('No se pudo iniciar la sesión de comunidad');
+                        resolve();
+                    }
+                }
+            });
+        });
+    },
     
     // ========================================
     // EVENTOS
@@ -1692,11 +1725,17 @@ if (publishCommunityBtn) {
     const todayReading = this.data.find(r => r.date === todayStr);
     const displayName = isAnonymous ? 'Anónimo' : (typedName || 'Anónimo');
 
+    if (!this.currentUser) {
+        this.showToast('No se pudo identificar al usuario');
+        return;
+    }
+
     const newPost = {
         reference: todayReading ? todayReading.reference : 'Lectura del día',
         name: displayName,
         text: reflectionText,
-        date: todayStr
+        date: todayStr,
+        ownerUid: this.currentUser.uid
     };
 
     const success = await this.addCommunityPost(newPost);
