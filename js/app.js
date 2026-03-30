@@ -1066,7 +1066,7 @@ highlightTextInElement: function(container, text) {
             <div class="community-header">
                 <div class="community-title">Compartamos Su Voz</div>
                 <div class="community-subtitle">
-                    Un espacio para compartir lo que Dios ha hablado a través de su Palabra.
+                   Un espacio para compartir lo que Dios te ha hablado a través de su Palabra.
                 </div>
             </div>
 
@@ -1105,7 +1105,8 @@ highlightTextInElement: function(container, text) {
                             type="text" 
                             class="community-input" 
                             id="community-name" 
-                            placeholder="Escribe tu nombre o deja Anónimo"
+                            placeholder="Se publicará como Anónimo"
+                            disabled
                         >
                     </div>
 
@@ -1718,6 +1719,23 @@ if (navItem) {
                 }
             }
         });
+
+        this.$content.addEventListener('change', (e) => {
+    if (e.target.id === 'community-anonymous') {
+        const nameInput = document.getElementById('community-name');
+        if (!nameInput) return;
+
+        if (e.target.checked) {
+            nameInput.value = '';
+            nameInput.disabled = true;
+            nameInput.placeholder = 'Se publicará como Anónimo';
+        } else {
+            nameInput.disabled = false;
+            nameInput.placeholder = 'Escribe tu nombre';
+            nameInput.focus();
+        }
+    }
+});
 
         // Detectar campo activo de reflexión
 this.$content.addEventListener('focusin', (e) => {
