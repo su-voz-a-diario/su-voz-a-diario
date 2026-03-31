@@ -732,24 +732,6 @@ body.dark-mode .note-privacy {
     opacity: 0.55;
 }
 
-.community-actions {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 14px;
-}
-
-.community-actions .btn-secondary {
-    width: auto;
-    min-height: auto;
-    padding: 8px 12px;
-    font-size: 0.82rem;
-    border-radius: 10px;
-}
-
-.community-actions .btn-secondary:hover {
-    transform: none;
-}
-
 .community-ref {
     font-family: var(--font-reading);
     font-weight: 700;
@@ -872,6 +854,11 @@ body.dark-mode .note-privacy {
     min-height: 42px;
     padding: 10px 14px;
     font-size: 0.85rem;
+    border-radius: 10px;
+}
+
+.community-actions .btn-secondary:hover {
+    transform: none;
 }
 
 /* ========================================
@@ -1060,16 +1047,9 @@ body.dark-mode .toast-message {
    RESALTADOS
    ======================================== */
 .user-highlight {
-    background-color: #fff3a3;
-    color: #1a202c;
+    border-radius: 4px;
     padding: 0 2px;
-    border-radius: 3px;
     transition: background-color 0.3s ease;
-}
-
-body.dark-mode .user-highlight {
-    background-color: #f6e58d;
-    color: #1a202c;
 }
 
 .highlight-btn {
@@ -1198,24 +1178,21 @@ body.reading-mode .reading-text {
 
 .nav-btn-community {
     position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .community-badge {
     position: absolute;
-    top: 6px;
-    right: 18px;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 999px;
+    top: 2px;
+    right: 22px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
     background: #e53935;
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 18px;
-    text-align: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
-    z-index: 2;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+    z-index: 5;
 }
 
 .community-badge[hidden] {
@@ -1223,7 +1200,7 @@ body.reading-mode .reading-text {
 }
 
 body.dark-mode .community-badge {
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95);
 }
 
 /* ========================================
