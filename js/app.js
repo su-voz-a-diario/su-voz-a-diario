@@ -629,10 +629,9 @@ updateCommunityBadge: function() {
 
     if (this.communityUnreadCount > 0) {
         this.$communityBadge.hidden = false;
-        this.$communityBadge.textContent = this.communityUnreadCount > 9 ? '9+' : String(this.communityUnreadCount);
+        this.$communityBadge.textContent = ''; // sin número
     } else {
         this.$communityBadge.hidden = true;
-        this.$communityBadge.textContent = '';
     }
 },
     
