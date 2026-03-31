@@ -1085,6 +1085,7 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         this.renderCalendar();
     } else if (view === 'community') {
         this.renderCommunity();
+        this.markCommunityAsSeen();
     } else if (view === 'stats') {
         this.renderStats();
     } else if (view === 'settings') {
