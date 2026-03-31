@@ -1185,13 +1185,13 @@ body.reading-mode .reading-text {
 
 .community-badge {
     position: absolute;
-    top: 2px;
-    right: 22px;
-    width: 10px;
-    height: 10px;
+    top: 4px;
+    right: 18px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: #e53935;
-    box-shadow: 0 0 0 2px rgba(255,255,255,0.9);
+    box-shadow: 0 0 0 1.5px rgba(255,255,255,0.9);
     z-index: 5;
 }
 
