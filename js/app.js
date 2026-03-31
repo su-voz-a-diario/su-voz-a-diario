@@ -36,6 +36,8 @@ const App = {
     readingMode: false,
     communityFormOpen: false,
     currentUser: null,
+    communityUnreadCount: 0,
+    lastSeenCommunityAt: null,
     
     // Sistema de rachas
     streak: {
@@ -99,7 +101,8 @@ const App = {
     this.loadStreak();
     this.loadFontSize();
     this.loadControlsState();
-
+    this.loadCommunityLastSeen();
+       
     const savedVersion = localStorage.getItem('current-version');
     if (savedVersion) {
     this.currentVersion = savedVersion;
@@ -112,6 +115,7 @@ const App = {
     this.bindFloatingToggle();
     await this.initAuth();
     await this.loadData();
+    await this.refreshCommunityBadge();
     this.checkReminderOnOpen();
     this.handleRoute();
     this.updateStreakUI();
@@ -126,6 +130,7 @@ cacheDOM: function() {
     this.$navStats = document.getElementById('nav-stats');
     this.$navSettings = document.getElementById('nav-settings');
     this.$navCommunity = document.getElementById('nav-community');
+    this.$communityBadge = document.getElementById('community-badge');
     this.$streakIndicator = document.getElementById('streak-indicator');
     this.$streakCount = document.getElementById('streak-count');
     this.$floatingControls = document.getElementById('floating-controls');
@@ -538,6 +543,96 @@ async deleteCommunityPost(postId) {
     } catch (error) {
         console.error("Error eliminando post:", error);
         return false;
+    }
+},
+
+    getCommunityLastSeenKey: function() {
+    return 'su-voz-community-last-seen';
+},
+
+loadCommunityLastSeen: function() {
+    this.lastSeenCommunityAt = localStorage.getItem(this.getCommunityLastSeenKey());
+},
+
+saveCommunityLastSeen: function(value) {
+    this.lastSeenCommunityAt = value || null;
+
+    if (value) {
+        localStorage.setItem(this.getCommunityLastSeenKey(), value);
+    } else {
+        localStorage.removeItem(this.getCommunityLastSeenKey());
+    }
+},
+
+markCommunityAsSeen: async function() {
+    try {
+        const posts = await this.getCommunityPosts();
+
+        if (!posts.length) {
+            this.saveCommunityLastSeen(null);
+            this.communityUnreadCount = 0;
+            this.updateCommunityBadge();
+            return;
+        }
+
+        const latestPost = posts[0];
+        const latestValue = latestPost.createdAt?.seconds
+            ? String(latestPost.createdAt.seconds)
+            : latestPost.date || null;
+
+        this.saveCommunityLastSeen(latestValue);
+        this.communityUnreadCount = 0;
+        this.updateCommunityBadge();
+    } catch (error) {
+        console.error('[Community] Error marcando como visto:', error);
+    }
+},
+
+refreshCommunityBadge: async function() {
+    try {
+        const posts = await this.getCommunityPosts();
+        const lastSeen = this.lastSeenCommunityAt;
+
+        if (!posts.length) {
+            this.communityUnreadCount = 0;
+            this.updateCommunityBadge();
+            return;
+        }
+
+        if (!lastSeen) {
+            this.communityUnreadCount = posts.length;
+            this.updateCommunityBadge();
+            return;
+        }
+
+        let unread = 0;
+
+        posts.forEach(post => {
+            const postValue = post.createdAt?.seconds
+                ? String(post.createdAt.seconds)
+                : post.date || '';
+
+            if (postValue > lastSeen) {
+                unread++;
+            }
+        });
+
+        this.communityUnreadCount = unread;
+        this.updateCommunityBadge();
+    } catch (error) {
+        console.error('[Community] Error actualizando badge:', error);
+    }
+},
+
+updateCommunityBadge: function() {
+    if (!this.$communityBadge) return;
+
+    if (this.communityUnreadCount > 0) {
+        this.$communityBadge.hidden = false;
+        this.$communityBadge.textContent = this.communityUnreadCount > 9 ? '9+' : String(this.communityUnreadCount);
+    } else {
+        this.$communityBadge.hidden = true;
+        this.$communityBadge.textContent = '';
     }
 },
     
