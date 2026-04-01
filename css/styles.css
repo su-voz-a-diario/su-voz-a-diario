@@ -1657,3 +1657,24 @@ body.dark-mode .user-highlight-blue {
 .april-message.hidden {
     display: none;
 }
+
+/* ========================================
+   SPLASH SCREEN
+   ======================================== */
+#splash-screen {
+    position: fixed;
+    inset: 0;
+    background: #0f172a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 30000;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+#splash-screen img {
+    width: min(220px, 70vw);
+    height: auto;
+    display: block;
+}
