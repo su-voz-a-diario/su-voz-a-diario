@@ -2173,3 +2173,14 @@ document.addEventListener('selectionchange', () => {
 document.addEventListener('DOMContentLoaded', () => {
     App.init();
 });
+
+window.addEventListener('load', () => {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
+
+    splash.style.opacity = '0';
+
+    setTimeout(() => {
+        splash.remove();
+    }, 500);
+});
