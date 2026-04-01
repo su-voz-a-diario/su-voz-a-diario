@@ -97,6 +97,7 @@ const App = {
     console.log('[App] Inicializando...');
     
     this.cacheDOM();
+    this.showAprilMessageIfNeeded();
     this.loadSettings();
     this.loadStreak();
     this.loadFontSize();
@@ -105,7 +106,7 @@ const App = {
        
     const savedVersion = localStorage.getItem('current-version');
     if (savedVersion) {
-    this.currentVersion = savedVersion;
+        this.currentVersion = savedVersion;
     }
        
     this.initTheme();
@@ -135,6 +136,22 @@ cacheDOM: function() {
     this.$streakCount = document.getElementById('streak-count');
     this.$floatingControls = document.getElementById('floating-controls');
     this.$floatingToggle = document.getElementById('floating-toggle');
+},
+
+    showAprilMessageIfNeeded: function() {
+    const aprilMessage = document.getElementById('april-message');
+    if (!aprilMessage) return;
+
+    const today = this.getTodayDateStr();
+
+    // Mostrar solo el 1 de abril de 2026
+    if (today !== '2026-04-01') return;
+
+    aprilMessage.classList.remove('hidden');
+
+    setTimeout(() => {
+        aprilMessage.classList.add('hidden');
+    }, 4000);
 },
     
     // ========================================
