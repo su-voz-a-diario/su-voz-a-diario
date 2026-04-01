@@ -1,28 +1,35 @@
 {
+  "id": "./",
   "name": "Su Voz a Diario",
   "short_name": "Su Voz",
   "description": "Lectura bíblica diaria con reflexiones personales. Medita la Palabra de Dios cada día.",
+
   "start_url": "./",
   "scope": "./",
+
   "display": "standalone",
   "orientation": "portrait",
+
   "lang": "es",
   "dir": "ltr",
-  "background_color": "#f7fafc",
+
+  "background_color": "#ffffff",
   "theme_color": "#3182ce",
+
   "prefer_related_applications": false,
+
   "icons": [
     {
-      "src": "icons/icon-192.png",
+      "src": "./icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512.png",
+      "src": "./icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }
