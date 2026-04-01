@@ -324,6 +324,124 @@ body {
     font-size: 0.95rem;
 }
 
+.badge-progress-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.badge-progress {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: fit-content;
+    max-width: calc(100% - 24px);
+    margin: 0 auto 14px auto;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.2;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    border: 1px solid transparent;
+    text-align: center;
+}
+
+.badge-progress-text {
+    white-space: normal;
+}
+
+/* Estado inicial */
+.badge-inicial {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
+
+/* Cobre */
+.badge-cobre {
+    background: rgba(184, 115, 51, 0.14);
+    color: #9c5d2e;
+    border-color: rgba(184, 115, 51, 0.28);
+}
+
+/* Bronce */
+.badge-bronce {
+    background: rgba(205, 127, 50, 0.14);
+    color: #a35d1f;
+    border-color: rgba(205, 127, 50, 0.28);
+}
+
+/* Plata */
+.badge-plata {
+    background: rgba(192, 192, 192, 0.18);
+    color: #68707a;
+    border-color: rgba(160, 170, 180, 0.35);
+}
+
+/* Oro */
+.badge-oro {
+    background: rgba(212, 175, 55, 0.16);
+    color: #9c7a00;
+    border-color: rgba(212, 175, 55, 0.3);
+}
+
+/* Diamante */
+.badge-diamante {
+    background: rgba(120, 190, 255, 0.18);
+    color: #2c6ea3;
+    border-color: rgba(120, 190, 255, 0.34);
+}
+
+/* Corona */
+.badge-corona {
+    background: rgba(155, 89, 182, 0.16);
+    color: #7d3c98;
+    border-color: rgba(155, 89, 182, 0.3);
+}
+
+body.dark-mode .badge-inicial {
+    background: rgba(255, 255, 255, 0.05);
+    color: #cbd5e0;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .badge-cobre {
+    background: rgba(184, 115, 51, 0.2);
+    color: #f0b183;
+    border-color: rgba(184, 115, 51, 0.32);
+}
+
+body.dark-mode .badge-bronce {
+    background: rgba(205, 127, 50, 0.2);
+    color: #f4be85;
+    border-color: rgba(205, 127, 50, 0.34);
+}
+
+body.dark-mode .badge-plata {
+    background: rgba(190, 200, 210, 0.14);
+    color: #e2e8f0;
+    border-color: rgba(190, 200, 210, 0.25);
+}
+
+body.dark-mode .badge-oro {
+    background: rgba(212, 175, 55, 0.2);
+    color: #ffd86b;
+    border-color: rgba(212, 175, 55, 0.34);
+}
+
+body.dark-mode .badge-diamante {
+    background: rgba(120, 190, 255, 0.18);
+    color: #9ed5ff;
+    border-color: rgba(120, 190, 255, 0.32);
+}
+
+body.dark-mode .badge-corona {
+    background: rgba(155, 89, 182, 0.2);
+    color: #d7a6ef;
+    border-color: rgba(155, 89, 182, 0.34);
+}
+
 /* ========================================
    BOTONES
    ======================================== */
