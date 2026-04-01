@@ -2178,9 +2178,11 @@ window.addEventListener('load', () => {
     const splash = document.getElementById('splash-screen');
     if (!splash) return;
 
-    splash.style.opacity = '0';
-
     setTimeout(() => {
-        splash.remove();
-    }, 500);
+        splash.style.opacity = '0';
+
+        setTimeout(() => {
+            splash.remove();
+        }, 800);
+    }, 1800);
 });
