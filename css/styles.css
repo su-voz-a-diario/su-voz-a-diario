@@ -1536,6 +1536,6 @@ body.dark-mode .user-highlight-blue {
     color: var(--text-muted);
 }
 
-.hidden {
+.april-message.hidden {
     display: none;
 }
