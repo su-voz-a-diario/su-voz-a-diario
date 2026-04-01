@@ -45,6 +45,31 @@ const App = {
         longest: 0,
         lastReadDate: null
     },
+
+    badgeLevels: [
+        { min: 365, key: 'corona', label: 'Corona', icon: '👑' },
+        { min: 180, key: 'diamante', label: 'Diamante', icon: '💎' },
+        { min: 100, key: 'oro', label: 'Oro', icon: '🥇' },
+        { min: 60, key: 'plata', label: 'Plata', icon: '🥈' },
+        { min: 30, key: 'bronce', label: 'Bronce', icon: '🥉' },
+        { min: 15, key: 'cobre', label: 'Cobre', icon: '🟤' }
+    ],
+
+    getCurrentBadge: function() {
+    const streakValue = this.streak.longest || 0;
+
+    for (const level of this.badgeLevels) {
+        if (streakValue >= level.min) {
+            return level;
+        }
+    }
+
+    return {
+        key: 'inicial',
+        label: 'Inicio',
+        icon: '⭐'
+    };
+},
     
     // Configuración
     settings: {
@@ -1194,9 +1219,15 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         
         const dateFormatted = this.formatDateEs(reading.date);
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
+        const currentBadge = this.getCurrentBadge();
         
            this.$content.innerHTML = `
                 <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+
+                <div class="badge-progress badge-${currentBadge.key}">
+                    <span class="badge-progress-icon">${currentBadge.icon}</span>
+                    <span class="badge-progress-text">Insignia actual: ${currentBadge.label}</span>
+                </div>
     
                 <div class="reading-card">
                     <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
