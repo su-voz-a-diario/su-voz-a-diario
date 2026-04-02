@@ -719,19 +719,21 @@ updateCommunityBadge: function() {
     this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
 },
     
-    getNote: function(dateStr) {
+   getNote: function(dateStr) {
     return this.storage.get(this.getNoteKey(dateStr), {
         dios: '',
         aprendizaje: '',
-        respuesta: ''
+        respuesta: '',
+        oracion: ''
     });
-},
+  },
     
-    hasNote: function(dateStr) {
-        const note = this.getNote(dateStr);
-        return (note.dios?.trim().length > 0) ||
-               (note.aprendizaje?.trim().length > 0) ||
-               (note.respuesta?.trim().length > 0);
+   hasNote: function(dateStr) {
+    const note = this.getNote(dateStr);
+    return (note.dios?.trim().length > 0) ||
+           (note.aprendizaje?.trim().length > 0) ||
+           (note.respuesta?.trim().length > 0) ||
+           (note.oracion?.trim().length > 0);
     },
     
     saveNote: function(dateStr, noteObj) {
@@ -872,6 +874,9 @@ updateCommunityBadge: function() {
 
     addSectionTitle('Mi respuesta hoy');
     addParagraph(note.respuesta);
+
+    addSectionTitle('Mi oración');
+    addParagraph(note.oracion);
 
     doc.save(`reflexion-${dateStr}.pdf`);
     this.showToast('Se abrió el PDF para descargar');
@@ -1263,6 +1268,11 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
             <div class="note-title">🙏 Mi respuesta hoy</div>
             <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
+        </div>
+
+        <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
+            <div class="note-title">🙏 Mi oración</div>
+            <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
         </div>
 
         <div class="note-actions">
@@ -1684,7 +1694,8 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             allData.notes[date] = this.storage.get(key, {
                 dios: '',
                 aprendizaje: '',
-                respuesta: ''
+                respuesta: '',
+                oracion: ''
             });
         }
 
