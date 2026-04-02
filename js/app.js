@@ -861,7 +861,7 @@ updateCommunityBadge: function() {
 
     y += 14;
     doc.setFontSize(14);
-    doc.text('Mi reflexión', marginLeft, y);
+    doc.text('Profundiza en Su voz', marginLeft, y);
     y += 10;
 
     addSectionTitle('Lo que veo de Dios');
@@ -1239,7 +1239,7 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             
             <div class="main-action">
                 <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
-                    ${this.openNoteDate === reading.date ? '📝 Cerrar reflexión' : '📝 Mi reflexión'}
+                    ${this.openNoteDate === reading.date ? '✕ Ocultar sección' : '🔎 Profundiza en Su voz'}
                     ${this.hasNote(reading.date) ? ' ✓' : ''}
                 </button>
             </div>
