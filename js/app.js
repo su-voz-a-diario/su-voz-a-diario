@@ -1557,7 +1557,7 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     </p>
 
     <div class="about-actions">
-        <button class="btn-secondary">Apoyar proyecto</button>
+        <button class="btn-secondary" data-action="donate">Apoyar proyecto</button>
         <a href="mailto:appsuvoz@gmail.com" class="btn-secondary">
             ✉️ Contactar
         </a>
@@ -1876,11 +1876,11 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             
             // Compartir
           const shareBtn = e.target.closest('[data-action="share-reading"]');
-if (shareBtn) {
-    const date = shareBtn.getAttribute('data-date');
-    const reading = this.data.find(r => r.date === date);
+          if (shareBtn) {
+            const date = shareBtn.getAttribute('data-date');
+            const reading = this.data.find(r => r.date === date);
 
-    if (reading) {
+        if (reading) {
         const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
 
         const cleanText = rawHtml
@@ -1910,7 +1910,14 @@ Compartido desde Su voz a diario`;
     return;
 }
 
-          const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
+const donateBtn = e.target.closest('[data-action="donate"]');
+if (donateBtn) {
+    window.open('https://paypal.me/suvozadiario', '_blank');
+    this.showToast('Serás redirigido a PayPal');
+    return;
+}
+
+const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
 if (shareCommunityBtn) {
     this.communityFormOpen = !this.communityFormOpen;
 
