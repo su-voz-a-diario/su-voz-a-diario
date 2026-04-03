@@ -651,7 +651,7 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
                     aria-label="Abrir reacciones"
                     title="Reaccionar"
                 >
-                    <span class="reaction-trigger-icon">😊</span>
+                   <span class="reaction-trigger-icon">🙂</span>
                 </button>
 
                 ${isOpen ? `
