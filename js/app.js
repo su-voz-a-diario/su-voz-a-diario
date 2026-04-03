@@ -40,6 +40,7 @@ const App = {
     currentUser: null,
     communityUnreadCount: 0,
     lastSeenCommunityAt: null,
+    openReactionMenuPostId: null,
     
     // Sistema de rachas
     streak: {
@@ -145,7 +146,7 @@ const App = {
     await this.loadData();
     await this.refreshCommunityBadge();
     this.checkReminderOnOpen();
-    this.handleRoute();
+    await this.handleRoute();
     this.updateStreakUI();
     
     console.log('[App] Inicialización completada');
@@ -608,6 +609,7 @@ getReactionDocId: function(postId, userId) {
 
 renderCommunityReactionBar: function(postId, reactionData = null) {
     const state = reactionData || this.getEmptyCommunityReactionState();
+    const isOpen = this.openReactionMenuPostId === postId;
 
     const reactions = [
         { key: 'pray', emoji: '🙏', label: 'Orando' },
@@ -616,25 +618,60 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
         { key: 'thanks', emoji: '❤️', label: 'Gracias' }
     ];
 
+    const usedReactions = reactions.filter(item => (state.counts[item.key] || 0) > 0);
+
     return `
-        <div class="community-reactions" data-post-id="${postId}">
-            ${reactions.map(item => `
+        <div class="community-reaction-wrap" data-post-id="${postId}">
+            <div class="community-reaction-summary">
+                ${usedReactions.length
+                    ? usedReactions.map(item => `
+                        <button
+                            class="reaction-summary-chip ${state.userReaction === item.key ? 'is-active' : ''}"
+                            type="button"
+                            data-action="community-reaction"
+                            data-post-id="${postId}"
+                            data-reaction="${item.key}"
+                            aria-label="${item.label}"
+                            title="${item.label}"
+                        >
+                            <span class="reaction-summary-emoji">${item.emoji}</span>
+                            <span class="reaction-summary-count">${state.counts[item.key]}</span>
+                        </button>
+                    `).join('')
+                    : `<span class="community-reaction-empty">Sin reacciones</span>`
+                }
+            </div>
+
+            <div class="community-reaction-menu-box">
                 <button
-                    class="reaction-chip ${state.userReaction === item.key ? 'is-active' : ''}"
+                    class="reaction-trigger-btn ${isOpen ? 'is-open' : ''}"
                     type="button"
-                    data-action="community-reaction"
+                    data-action="toggle-reaction-menu"
                     data-post-id="${postId}"
-                    data-reaction="${item.key}"
-                    aria-label="${item.label}"
-                    title="${item.label}"
+                    aria-label="Abrir reacciones"
+                    title="Reaccionar"
                 >
-                    <span class="reaction-emoji">${item.emoji}</span>
-                    <span class="reaction-label">${item.label}</span>
-                    <span class="reaction-count ${(state.counts[item.key] || 0) === 0 ? 'is-hidden' : ''}">
-                        ${state.counts[item.key] || 0}
-                    </span>
+                    <span class="reaction-trigger-icon">😊</span>
                 </button>
-            `).join('')}
+
+                ${isOpen ? `
+                    <div class="community-reaction-popover">
+                        ${reactions.map(item => `
+                            <button
+                                class="reaction-emoji-btn ${state.userReaction === item.key ? 'is-active' : ''}"
+                                type="button"
+                                data-action="community-reaction"
+                                data-post-id="${postId}"
+                                data-reaction="${item.key}"
+                                aria-label="${item.label}"
+                                title="${item.label}"
+                            >
+                                ${item.emoji}
+                            </button>
+                        `).join('')}
+                    </div>
+                ` : ''}
+            </div>
         </div>
     `;
 },
@@ -711,8 +748,12 @@ toggleCommunityReaction: async function(postId, reaction) {
     }
 },
 
-    getCommunityLastSeenKey: function() {
-    return 'su-voz-community-last-seen';
+closeReactionMenu: function() {
+    this.openReactionMenuPostId = null;
+},
+
+getCommunityLastSeenKey: function() {
+return 'su-voz-community-last-seen';
 },
 
 loadCommunityLastSeen: function() {
@@ -889,14 +930,18 @@ updateCommunityBadge: function() {
         this.storage.set('su-voz-settings', this.settings);
     },
     
-    scheduleRender: function() {
-        if (this.renderScheduled) return;
-        this.renderScheduled = true;
-        requestAnimationFrame(() => {
-            this.handleRoute();
+   scheduleRender: function() {
+    if (this.renderScheduled) return;
+    this.renderScheduled = true;
+
+    requestAnimationFrame(() => {
+        this.handleRoute().catch(error => {
+            console.error('[Route] Error en render programado:', error);
+        }).finally(() => {
             this.renderScheduled = false;
         });
-    },
+    });
+},
     
     showToast: function(message, duration = 3000) {
         // Eliminar toast existente
@@ -1224,10 +1269,12 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         let path = `#${view}`;
         if (param) path += `/${param}`;
         history.pushState(null, '', path);
-        this.handleRoute();
+        this.handleRoute().catch(error => {
+            console.error('[Route] Error al navegar:', error);
+        });
     },
     
-    handleRoute: function() {
+    handleRoute: async function() {
     const hash = window.location.hash.substring(1) || 'home';
     const parts = hash.split('/');
     const view = parts[0];
@@ -1253,8 +1300,8 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     } else if (view === 'calendar') {
         this.renderCalendar();
     } else if (view === 'community') {
-        this.renderCommunity();
-        this.markCommunityAsSeen();
+        await this.renderCommunity();
+        await this.markCommunityAsSeen();
     } else if (view === 'stats') {
         this.renderStats();
     } else if (view === 'settings') {
@@ -1945,7 +1992,11 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         if (this.$navStats) this.$navStats.addEventListener('click', () => this.navigate('stats'));
         if (this.$navSettings) this.$navSettings.addEventListener('click', () => this.navigate('settings'));
         if (this.$navCommunity) this.$navCommunity.addEventListener('click', () => this.navigate('community'));
-        window.addEventListener('popstate', () => this.handleRoute());
+        window.addEventListener('popstate', () => {
+            this.handleRoute().catch(error => {
+            console.error('[Route] Error en popstate:', error);
+        });
+    });
         
         // Controles de fuente y versión
         document.addEventListener('click', (e) => {
@@ -1963,7 +2014,10 @@ highlightTextInElement: function(container, text, color = 'yellow') {
                 document.querySelectorAll('.version-btn').forEach(btn => {
                     btn.classList.toggle('active', btn.getAttribute('data-version') === this.currentVersion);
                 });
-                this.handleRoute();
+                this.handleRoute().catch(error => {
+                console.error('[Route] Error cambiando versión:', error);
+                });
+                
                 this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
             }
         });
@@ -2066,7 +2120,9 @@ if (shareCommunityBtn) {
         navigator.vibrate(25);
     }
 
-    this.handleRoute();
+   this.handleRoute().catch(error => {
+    console.error('[Route] Error actualizando comunidad:', error);
+    });
     return;
 }
 
@@ -2078,10 +2134,12 @@ if (cancelCommunityBtn) {
         navigator.vibrate(20);
     }
 
-    this.handleRoute();
+    this.handleRoute().catch(error => {
+        console.error('[Route] Error actualizando comunidad:', error);
+    });
     return;
 }
-
+           
 const publishCommunityBtn = e.target.closest('[data-action="publish-community-reflection"]');
 if (publishCommunityBtn) {
     const nameInput = document.getElementById('community-name');
@@ -2122,15 +2180,18 @@ if (publishCommunityBtn) {
         return;
     }
 
-    if ('vibrate' in navigator) {
+       if ('vibrate' in navigator) {
         navigator.vibrate(30);
     }
 
     this.communityFormOpen = false;
     this.showToast('Reflexión publicada correctamente');
-    this.handleRoute();
+    this.handleRoute().catch(error => {
+        console.error('[Route] Error actualizando comunidad:', error);
+    });
     return;
 }
+           
 const deleteCommunityBtn = e.target.closest('[data-action="delete-community-post"]');
 if (deleteCommunityBtn) {
     const postId = deleteCommunityBtn.getAttribute('data-id');
@@ -2148,9 +2209,27 @@ if (deleteCommunityBtn) {
         }
 
         this.showToast('Reflexión eliminada');
-        this.handleRoute();
+        this.handleRoute().catch(error => {
+            console.error('[Route] Error actualizando comunidad:', error);
+        });
     }
 
+    return;
+}
+
+const toggleReactionMenuBtn = e.target.closest('[data-action="toggle-reaction-menu"]');
+if (toggleReactionMenuBtn) {
+    const postId = toggleReactionMenuBtn.getAttribute('data-post-id');
+
+    if (this.openReactionMenuPostId === postId) {
+        this.closeReactionMenu();
+    } else {
+        this.openReactionMenuPostId = postId;
+    }
+
+    this.handleRoute().catch(error => {
+        console.error('[Route] Error actualizando comunidad:', error);
+    });
     return;
 }
 
@@ -2166,11 +2245,15 @@ if (communityReactionBtn) {
         return;
     }
 
+    this.closeReactionMenu();
+
     if ('vibrate' in navigator) {
         navigator.vibrate(15);
     }
 
-    this.handleRoute();
+    this.handleRoute().catch(error => {
+        console.error('[Route] Error actualizando comunidad:', error);
+    });
     return;
 }
             
@@ -2273,6 +2356,18 @@ this.$content.addEventListener('focusin', (e) => {
         // Resaltado de texto
         let selectionTimeout;
 
+document.addEventListener('click', (e) => {
+    const clickedInsideReactionUI = e.target.closest('.community-reaction-wrap');
+
+    if (!clickedInsideReactionUI && this.openReactionMenuPostId && this.currentView === 'community') {
+        this.closeReactionMenu();
+
+        this.renderCommunity().catch(error => {
+            console.error('[Community] Error cerrando menú de reacciones:', error);
+        });
+    }
+});
+
 document.addEventListener('selectionchange', () => {
     clearTimeout(selectionTimeout);
 
@@ -2339,7 +2434,9 @@ document.addEventListener('selectionchange', () => {
 
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+    App.init().catch(error => {
+        console.error('[App] Error al inicializar:', error);
+    });
 });
 
 window.addEventListener('load', () => {
