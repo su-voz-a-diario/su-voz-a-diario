@@ -623,24 +623,24 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
     return `
         <div class="community-reaction-wrap" data-post-id="${postId}">
             <div class="community-reaction-summary">
-                ${usedReactions.length
-                    ? usedReactions.map(item => `
-                        <button
-                            class="reaction-summary-chip ${state.userReaction === item.key ? 'is-active' : ''}"
-                            type="button"
-                            data-action="community-reaction"
-                            data-post-id="${postId}"
-                            data-reaction="${item.key}"
-                            aria-label="${item.label}"
-                            title="${item.label}"
-                        >
-                            <span class="reaction-summary-emoji">${item.emoji}</span>
-                            <span class="reaction-summary-count">${state.counts[item.key]}</span>
-                        </button>
-                    `).join('')
-                    : `<span class="community-reaction-empty">Sin reacciones</span>`
-                }
-            </div>
+    ${usedReactions.length
+        ? usedReactions.map(item => `
+            <button
+                class="reaction-summary-chip ${state.userReaction === item.key ? 'is-active' : ''}"
+                type="button"
+                data-action="community-reaction"
+                data-post-id="${postId}"
+                data-reaction="${item.key}"
+                aria-label="${item.label}"
+                title="${item.label}"
+            >
+                <span class="reaction-summary-emoji">${item.emoji}</span>
+                <span class="reaction-summary-count">${state.counts[item.key]}</span>
+            </button>
+        `).join('')
+        : ''
+    }
+</div>
 
             <div class="community-reaction-menu-box">
                 <button
