@@ -1789,7 +1789,8 @@ body.dark-mode .user-highlight-blue {
   position: absolute;
   right: calc(100% + 10px);
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-50%) scale(0.88);
+  transform-origin: right center;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -1802,6 +1803,26 @@ body.dark-mode .user-highlight-blue {
   -webkit-backdrop-filter: blur(10px);
   z-index: 30;
   white-space: nowrap;
+  opacity: 0;
+  animation: reactionPopoverIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes reactionPopoverIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.88) translateX(8px);
+    filter: blur(4px);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.03) translateX(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+    filter: blur(0);
+  }
 }
 
 .reaction-emoji-btn {
