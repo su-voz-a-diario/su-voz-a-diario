@@ -6,7 +6,9 @@ import {
     orderBy,
     serverTimestamp,
     deleteDoc,
-    doc
+    doc,
+    setDoc,
+    getDoc
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
 
 import {
@@ -585,6 +587,127 @@ async deleteCommunityPost(postId) {
     } catch (error) {
         console.error("Error eliminando post:", error);
         return false;
+    }
+},
+
+    getEmptyCommunityReactionState: function() {
+    return {
+        counts: {
+            pray: 0,
+            useful: 0,
+            excellent: 0,
+            thanks: 0
+        },
+        userReaction: null
+    };
+},
+
+getReactionDocId: function(postId, userId) {
+    return `${postId}_${userId}`;
+},
+
+renderCommunityReactionBar: function(postId, reactionData = null) {
+    const state = reactionData || this.getEmptyCommunityReactionState();
+
+    const reactions = [
+        { key: 'pray', emoji: '🙏', label: 'Orando' },
+        { key: 'useful', emoji: '👍', label: 'Me sirve' },
+        { key: 'excellent', emoji: '✨', label: 'Excelente' },
+        { key: 'thanks', emoji: '❤️', label: 'Gracias' }
+    ];
+
+    return `
+        <div class="community-reactions" data-post-id="${postId}">
+            ${reactions.map(item => `
+                <button
+                    class="reaction-chip ${state.userReaction === item.key ? 'is-active' : ''}"
+                    type="button"
+                    data-action="community-reaction"
+                    data-post-id="${postId}"
+                    data-reaction="${item.key}"
+                    aria-label="${item.label}"
+                    title="${item.label}"
+                >
+                    <span class="reaction-emoji">${item.emoji}</span>
+                    <span class="reaction-label">${item.label}</span>
+                    <span class="reaction-count ${(state.counts[item.key] || 0) === 0 ? 'is-hidden' : ''}">
+                        ${state.counts[item.key] || 0}
+                    </span>
+                </button>
+            `).join('')}
+        </div>
+    `;
+},
+
+getCommunityReactionSummary: async function(posts) {
+    const summary = {};
+
+    posts.forEach(post => {
+        summary[post.id] = this.getEmptyCommunityReactionState();
+    });
+
+    if (!posts.length) return summary;
+
+    try {
+        const snapshot = await getDocs(collection(db, "communityReactions"));
+
+        snapshot.docs.forEach(docSnap => {
+            const data = docSnap.data();
+            const postId = data.postId;
+            const reaction = data.reaction;
+            const userId = data.userId;
+
+            if (!summary[postId]) return;
+            if (!summary[postId].counts.hasOwnProperty(reaction)) return;
+
+            summary[postId].counts[reaction] += 1;
+
+            if (userId === this.currentUser?.uid) {
+                summary[postId].userReaction = reaction;
+            }
+        });
+
+        return summary;
+    } catch (error) {
+        console.error("Error cargando reacciones:", error);
+        return summary;
+    }
+},
+
+toggleCommunityReaction: async function(postId, reaction) {
+    if (!this.currentUser?.uid) {
+        return { success: false, message: 'No se pudo identificar al usuario' };
+    }
+
+    try {
+        const reactionRef = doc(
+            db,
+            "communityReactions",
+            this.getReactionDocId(postId, this.currentUser.uid)
+        );
+
+        const existingSnap = await getDoc(reactionRef);
+
+        if (existingSnap.exists()) {
+            const existingData = existingSnap.data();
+
+            if (existingData.reaction === reaction) {
+                await deleteDoc(reactionRef);
+                return { success: true, removed: true };
+            }
+        }
+
+        await setDoc(reactionRef, {
+            postId,
+            userId: this.currentUser.uid,
+            reaction,
+            updatedAt: serverTimestamp()
+        });
+
+        return { success: true, removed: false };
+    } catch (error) {
+        console.error("Error al reaccionar:", error);
+        return { success: false, message: 'No se pudo guardar la reacción' };
     }
 },
 
@@ -1350,6 +1473,7 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     const todayReading = this.data.find(r => r.date === todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
     const posts = await this.getCommunityPosts();
+    const reactionSummary = await this.getCommunityReactionSummary(posts);
 
     this.$content.innerHTML = `
         <div class="community-container">
@@ -1430,25 +1554,31 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             ` : ''}
 
             <div class="community-feed">
-                ${posts.length ? posts.map(post => `
-                    <div class="community-card">
-                        <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+                ${posts.length ? posts.map(post => {
+                    const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
 
-                        <div class="community-meta">
-                            ${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}
+                    return `
+                        <div class="community-card">
+                            <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+
+                            <div class="community-meta">
+                                ${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}
+                            </div>
+
+                            <div class="community-text">“${this.escapeHtml(post.text)}”</div>
+
+                            ${this.renderCommunityReactionBar(post.id, reactionData)}
+
+                            ${post.ownerUid === this.currentUser?.uid ? `
+                                <div class="community-actions">
+                                    <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
+                                        🗑️ Eliminar
+                                    </button>
+                                </div>
+                            ` : ''}
                         </div>
-
-                        <div class="community-text">“${this.escapeHtml(post.text)}”</div>
-
-                        ${post.ownerUid === this.currentUser?.uid ? `
-                             <div class="community-actions">
-                                <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
-                                    🗑️ Eliminar
-                                </button>
-                              </div>
-                        ` : ''}
-                </div>
-                `).join('') : `
+                    `;
+                }).join('') : `
                     <div class="community-intro-card">
                         <div class="community-intro-title">Aún no hay publicaciones</div>
                         <div class="community-intro-text">
@@ -2021,6 +2151,26 @@ if (deleteCommunityBtn) {
         this.handleRoute();
     }
 
+    return;
+}
+
+const communityReactionBtn = e.target.closest('[data-action="community-reaction"]');
+if (communityReactionBtn) {
+    const postId = communityReactionBtn.getAttribute('data-post-id');
+    const reaction = communityReactionBtn.getAttribute('data-reaction');
+
+    const result = await this.toggleCommunityReaction(postId, reaction);
+
+    if (!result.success) {
+        this.showToast(result.message || 'No se pudo guardar la reacción');
+        return;
+    }
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(15);
+    }
+
+    this.handleRoute();
     return;
 }
             
