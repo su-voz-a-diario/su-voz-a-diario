@@ -1688,7 +1688,8 @@ body.dark-mode .user-highlight-blue {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  width: 100%;
 }
 
 .community-reaction-summary {
@@ -1696,7 +1697,7 @@ body.dark-mode .user-highlight-blue {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -1709,28 +1710,28 @@ body.dark-mode .user-highlight-blue {
 .reaction-summary-chip {
   appearance: none;
   -webkit-appearance: none;
-  border: 1px solid rgba(15, 23, 42, 0.06);
-  background: rgba(255, 255, 255, 0.88);
-  color: #334155;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
   border-radius: 999px;
-  min-height: 34px;
-  padding: 6px 10px;
+  min-height: 30px;
+  padding: 4px 6px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   font: inherit;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.18s ease, color 0.18s ease;
 }
 
 .reaction-summary-chip:hover {
-  transform: translateY(-1px);
+  transform: scale(1.04);
+  opacity: 0.9;
 }
 
 .reaction-summary-chip.is-active {
-  background: rgba(49, 130, 206, 0.14);
-  border-color: rgba(49, 130, 206, 0.24);
-  color: #0f3c68;
+  background: transparent;
+  color: var(--accent);
 }
 
 .reaction-summary-emoji {
@@ -1748,6 +1749,9 @@ body.dark-mode .user-highlight-blue {
   position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .reaction-trigger-btn {
@@ -1756,124 +1760,130 @@ body.dark-mode .user-highlight-blue {
   width: 42px;
   height: 42px;
   border-radius: 999px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: rgba(255, 255, 255, 0.92);
-  color: #334155;
+  border: none;
+  background: transparent !important;
+  color: inherit;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font: inherit;
-  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
-  transition: transform 0.16s ease, box-shadow 0.18s ease, background 0.18s ease;
+  box-shadow: none !important;
+  transition: transform 0.16s ease, opacity 0.18s ease;
+  padding: 0;
 }
 
 .reaction-trigger-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+  transform: scale(1.08);
+  opacity: 0.92;
 }
 
 .reaction-trigger-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
 .reaction-trigger-btn.is-open {
-  background: rgba(49, 130, 206, 0.12);
-  border-color: rgba(49, 130, 206, 0.24);
+  background: transparent !important;
 }
 
 .reaction-trigger-icon {
-  font-size: 1.3rem;
+  font-size: 1.6rem;
   line-height: 1;
 }
 
 .community-reaction-popover {
   position: absolute;
-  right: 0;
-  bottom: calc(100% + 10px);
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px;
+  gap: 4px;
+  padding: 6px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   z-index: 30;
+  white-space: nowrap;
 }
 
 .reaction-emoji-btn {
   appearance: none;
   -webkit-appearance: none;
-  width: 46px;
-  height: 46px;
-  border-radius: 999px;
+  width: 42px;
+  height: 42px;
   border: none;
-  background: transparent;
+  border-radius: 50%;
+  background: transparent !important;
+  box-shadow: none !important;
   font-size: 1.5rem;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: transform 0.16s ease, background 0.18s ease;
+  transition: transform 0.16s ease, opacity 0.18s ease;
+  padding: 0;
 }
 
 .reaction-emoji-btn:hover {
-  transform: scale(1.08);
-  background: rgba(15, 23, 42, 0.05);
+  transform: scale(1.12);
+  background: transparent !important;
+  opacity: 0.92;
 }
 
 .reaction-emoji-btn:active {
   transform: scale(0.95);
+  background: transparent !important;
 }
 
 .reaction-emoji-btn.is-active {
-  background: rgba(49, 130, 206, 0.14);
+  background: transparent !important;
+  transform: scale(1.08);
 }
 
 body.dark-mode .reaction-summary-chip {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  background: transparent;
+  color: #cbd5e0;
 }
 
 body.dark-mode .reaction-summary-chip.is-active {
-  background: rgba(99, 179, 237, 0.16);
-  border-color: rgba(99, 179, 237, 0.24);
-  color: #eff6ff;
+  background: transparent;
+  color: #63b3ed;
 }
 
 body.dark-mode .reaction-trigger-btn {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: transparent !important;
+  border: none !important;
   color: #e2e8f0;
 }
 
 body.dark-mode .reaction-trigger-btn.is-open {
-  background: rgba(99, 179, 237, 0.16);
-  border-color: rgba(99, 179, 237, 0.24);
+  background: transparent !important;
+  border: none !important;
 }
 
 body.dark-mode .community-reaction-popover {
-  background: rgba(30, 41, 59, 0.96);
+  background: rgba(15, 23, 42, 0.94);
   border-color: rgba(255, 255, 255, 0.08);
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
 }
 
 body.dark-mode .reaction-emoji-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: transparent !important;
 }
 
 body.dark-mode .reaction-emoji-btn.is-active {
-  background: rgba(99, 179, 237, 0.16);
+  background: transparent !important;
 }
 
 @media (max-width: 480px) {
   .community-reaction-wrap {
-    align-items: flex-start;
+    align-items: center;
     gap: 10px;
+    flex-wrap: nowrap;
   }
 
   .reaction-trigger-btn {
@@ -1882,18 +1892,19 @@ body.dark-mode .reaction-emoji-btn.is-active {
   }
 
   .reaction-trigger-icon {
-    font-size: 1.22rem;
+  font-size: 1.45rem;
   }
 
   .reaction-emoji-btn {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     font-size: 1.35rem;
   }
 
   .community-reaction-popover {
-    gap: 4px;
-    padding: 7px;
+    right: calc(100% + 8px);
+    gap: 2px;
+    padding: 5px 6px;
   }
 
   .reaction-summary-chip {
