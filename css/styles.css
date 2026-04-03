@@ -1701,12 +1701,6 @@ body.dark-mode .user-highlight-blue {
   min-width: 0;
 }
 
-.community-reaction-empty {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  font-weight: 500;
-}
-
 .reaction-summary-chip {
   appearance: none;
   -webkit-appearance: none;
