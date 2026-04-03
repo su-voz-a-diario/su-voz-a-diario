@@ -2227,8 +2227,8 @@ if (toggleReactionMenuBtn) {
         this.openReactionMenuPostId = postId;
     }
 
-    this.handleRoute().catch(error => {
-        console.error('[Route] Error actualizando comunidad:', error);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando menú de reacciones:', error);
     });
     return;
 }
@@ -2251,8 +2251,8 @@ if (communityReactionBtn) {
         navigator.vibrate(15);
     }
 
-    this.handleRoute().catch(error => {
-        console.error('[Route] Error actualizando comunidad:', error);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando reacciones:', error);
     });
     return;
 }
