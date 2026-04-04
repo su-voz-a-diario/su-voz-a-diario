@@ -656,12 +656,15 @@ getReactionIcon: function(type) {
             </svg>
         `,
         pray: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.5 4.5 8 7l4 4"/>
-                <path d="M13.5 4.5 16 7l-4 4"/>
-                <path d="M8 7v6a4 4 0 0 0 8 0V7"/>
-                <path d="M10 17h4"/>
-                <path d="M9 20h6"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2v6"/>
+              <path d="M12 22v-6"/>
+              <path d="M4.9 4.9l4.2 4.2"/>
+              <path d="M14.9 14.9l4.2 4.2"/>
+              <path d="M2 12h6"/>
+              <path d="M22 12h-6"/>
+              <path d="M4.9 19.1l4.2-4.2"/>
+              <path d="M14.9 9.1l4.2-4.2"/>
             </svg>
         `,
         excellent: `
