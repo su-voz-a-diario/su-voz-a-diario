@@ -40,7 +40,7 @@ const App = {
     currentUser: null,
     communityUnreadCount: 0,
     lastSeenCommunityAt: null,
-    openReactionMenuPostId: null,
+  
     
     // Sistema de rachas
     streak: {
@@ -591,7 +591,7 @@ async deleteCommunityPost(postId) {
     }
 },
 
-    getEmptyCommunityReactionState: function() {
+   getEmptyCommunityReactionState: function() {
     return {
         counts: {
             pray: 0,
@@ -599,7 +599,12 @@ async deleteCommunityPost(postId) {
             excellent: 0,
             thanks: 0
         },
-        userReaction: null
+        userReactions: {
+            pray: false,
+            useful: false,
+            excellent: false,
+            thanks: false
+        }
     };
 },
 
@@ -609,69 +614,30 @@ getReactionDocId: function(postId, userId) {
 
 renderCommunityReactionBar: function(postId, reactionData = null) {
     const state = reactionData || this.getEmptyCommunityReactionState();
-    const isOpen = this.openReactionMenuPostId === postId;
 
     const reactions = [
-        { key: 'pray', emoji: '🙏', label: 'Orando' },
-        { key: 'useful', emoji: '👍', label: 'Me sirve' },
-        { key: 'excellent', emoji: '✨', label: 'Excelente' },
-        { key: 'thanks', emoji: '❤️', label: 'Gracias' }
+        { key: 'pray', icon: '🙏', label: 'Orando' },
+        { key: 'useful', icon: '👍', label: 'Me sirve' },
+        { key: 'excellent', icon: '✨', label: 'Excelente' },
+        { key: 'thanks', icon: '❤️', label: 'Gracias' }
     ];
 
-    const usedReactions = reactions.filter(item => (state.counts[item.key] || 0) > 0);
-
     return `
-        <div class="community-reaction-wrap" data-post-id="${postId}">
-            <div class="community-reaction-summary">
-    ${usedReactions.length
-        ? usedReactions.map(item => `
-            <button
-                class="reaction-summary-chip ${state.userReaction === item.key ? 'is-active' : ''}"
-                type="button"
-                data-action="community-reaction"
-                data-post-id="${postId}"
-                data-reaction="${item.key}"
-                aria-label="${item.label}"
-                title="${item.label}"
-            >
-                <span class="reaction-summary-emoji">${item.emoji}</span>
-                <span class="reaction-summary-count">${state.counts[item.key]}</span>
-            </button>
-        `).join('')
-        : ''
-    }
-</div>
-
-            <div class="community-reaction-menu-box">
+        <div class="community-reaction-bar" data-post-id="${postId}">
+            ${reactions.map(item => `
                 <button
-                    class="reaction-trigger-btn ${isOpen ? 'is-open' : ''}"
+                    class="community-reaction-btn ${state.userReactions[item.key] ? 'is-active' : ''}"
                     type="button"
-                    data-action="toggle-reaction-menu"
+                    data-action="community-reaction-toggle"
                     data-post-id="${postId}"
-                    aria-label="Abrir reacciones"
-                    title="Reaccionar"
+                    data-reaction="${item.key}"
+                    aria-label="${item.label}"
+                    title="${item.label}"
                 >
-                   <span class="reaction-trigger-icon">🙂</span>
+                    <span class="community-reaction-icon">${item.icon}</span>
+                    <span class="community-reaction-count">${state.counts[item.key] || 0}</span>
                 </button>
-
-                ${isOpen ? `
-                    <div class="community-reaction-popover">
-                        ${reactions.map(item => `
-                            <button
-                                class="reaction-emoji-btn ${state.userReaction === item.key ? 'is-active' : ''}"
-                                type="button"
-                                data-action="community-reaction"
-                                data-post-id="${postId}"
-                                data-reaction="${item.key}"
-                                aria-label="${item.label}"
-                                title="${item.label}"
-                            >
-                                ${item.emoji}
-                            </button>
-                        `).join('')}
-                    </div>
-                ` : ''}
-            </div>
+            `).join('')}
         </div>
     `;
 },
@@ -691,17 +657,20 @@ getCommunityReactionSummary: async function(posts) {
         snapshot.docs.forEach(docSnap => {
             const data = docSnap.data();
             const postId = data.postId;
-            const reaction = data.reaction;
             const userId = data.userId;
+            const reactions = data.reactions || {};
 
             if (!summary[postId]) return;
-            if (!summary[postId].counts.hasOwnProperty(reaction)) return;
 
-            summary[postId].counts[reaction] += 1;
+            Object.keys(summary[postId].counts).forEach(key => {
+                if (reactions[key] === true) {
+                    summary[postId].counts[key] += 1;
 
-            if (userId === this.currentUser?.uid) {
-                summary[postId].userReaction = reaction;
-            }
+                    if (userId === this.currentUser?.uid) {
+                        summary[postId].userReactions[key] = true;
+                    }
+                }
+            });
         });
 
         return summary;
@@ -725,19 +694,36 @@ toggleCommunityReaction: async function(postId, reaction) {
 
         const existingSnap = await getDoc(reactionRef);
 
+        const emptyReactions = {
+            pray: false,
+            useful: false,
+            excellent: false,
+            thanks: false
+        };
+
+        let currentReactions = { ...emptyReactions };
+
         if (existingSnap.exists()) {
             const existingData = existingSnap.data();
+            currentReactions = {
+                ...emptyReactions,
+                ...(existingData.reactions || {})
+            };
+        }
 
-            if (existingData.reaction === reaction) {
-                await deleteDoc(reactionRef);
-                return { success: true, removed: true };
-            }
+        currentReactions[reaction] = !currentReactions[reaction];
+
+        const hasAnyReaction = Object.values(currentReactions).some(value => value === true);
+
+        if (!hasAnyReaction) {
+            await deleteDoc(reactionRef);
+            return { success: true, removed: true };
         }
 
         await setDoc(reactionRef, {
             postId,
             userId: this.currentUser.uid,
-            reaction,
+            reactions: currentReactions,
             updatedAt: serverTimestamp()
         });
 
@@ -746,10 +732,6 @@ toggleCommunityReaction: async function(postId, reaction) {
         console.error("Error al reaccionar:", error);
         return { success: false, message: 'No se pudo guardar la reacción' };
     }
-},
-
-closeReactionMenu: function() {
-    this.openReactionMenuPostId = null;
 },
 
 getCommunityLastSeenKey: function() {
@@ -1612,17 +1594,19 @@ highlightTextInElement: function(container, text, color = 'yellow') {
                                 ${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}
                             </div>
 
-                            <div class="community-text">“${this.escapeHtml(post.text)}”</div>
+                           <div class="community-text">“${this.escapeHtml(post.text)}”</div>
 
-                            ${this.renderCommunityReactionBar(post.id, reactionData)}
-
-                            ${post.ownerUid === this.currentUser?.uid ? `
-                                <div class="community-actions">
-                                    <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
-                                        🗑️ Eliminar
-                                    </button>
+                                <div class="community-reaction-row">
+                                    ${this.renderCommunityReactionBar(post.id, reactionData)}
                                 </div>
-                            ` : ''}
+
+                                    ${post.ownerUid === this.currentUser?.uid ? `
+                                <div class="community-actions">
+                                <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
+                                    🗑️ Eliminar
+                            </button>
+                            </div>
+                        ` : ''}
                         </div>
                     `;
                 }).join('') : `
@@ -2217,23 +2201,7 @@ if (deleteCommunityBtn) {
     return;
 }
 
-const toggleReactionMenuBtn = e.target.closest('[data-action="toggle-reaction-menu"]');
-if (toggleReactionMenuBtn) {
-    const postId = toggleReactionMenuBtn.getAttribute('data-post-id');
-
-    if (this.openReactionMenuPostId === postId) {
-        this.closeReactionMenu();
-    } else {
-        this.openReactionMenuPostId = postId;
-    }
-
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error actualizando menú de reacciones:', error);
-    });
-    return;
-}
-
-const communityReactionBtn = e.target.closest('[data-action="community-reaction"]');
+const communityReactionBtn = e.target.closest('[data-action="community-reaction-toggle"]');
 if (communityReactionBtn) {
     const postId = communityReactionBtn.getAttribute('data-post-id');
     const reaction = communityReactionBtn.getAttribute('data-reaction');
@@ -2244,8 +2212,6 @@ if (communityReactionBtn) {
         this.showToast(result.message || 'No se pudo guardar la reacción');
         return;
     }
-
-    this.closeReactionMenu();
 
     if ('vibrate' in navigator) {
         navigator.vibrate(15);
@@ -2355,18 +2321,6 @@ this.$content.addEventListener('focusin', (e) => {
         
         // Resaltado de texto
         let selectionTimeout;
-
-document.addEventListener('click', (e) => {
-    const clickedInsideReactionUI = e.target.closest('.community-reaction-wrap');
-
-    if (!clickedInsideReactionUI && this.openReactionMenuPostId && this.currentView === 'community') {
-        this.closeReactionMenu();
-
-        this.renderCommunity().catch(error => {
-            console.error('[Community] Error cerrando menú de reacciones:', error);
-        });
-    }
-});
 
 document.addEventListener('selectionchange', () => {
     clearTimeout(selectionTimeout);
