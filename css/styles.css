@@ -1757,6 +1757,11 @@ body.dark-mode .community-reaction-btn.is-active .community-reaction-icon {
     overflow: visible;
 }
 
+.community-reaction-btn[data-reaction="pray"] .community-reaction-icon {
+    width: 24px;
+    height: 24px;
+}
+
 .community-reaction-count {
     font-size: 0.84rem;
     font-weight: 700;
@@ -1784,6 +1789,11 @@ body.dark-mode .community-reaction-btn.is-active {
     .community-reaction-icon {
         width: 21px;
         height: 21px;
+    }
+
+    .community-reaction-btn[data-reaction="pray"] .community-reaction-icon {
+        width: 25px;
+        height: 25px;
     }
 
     .community-reaction-count {
