@@ -1747,12 +1747,14 @@ body.dark-mode .community-reaction-btn.is-active .community-reaction-icon {
     align-items: center;
     justify-content: center;
     color: currentColor;
+    flex-shrink: 0;
 }
 
 .community-reaction-icon svg {
     width: 100%;
     height: 100%;
     display: block;
+    overflow: visible;
 }
 
 .community-reaction-count {
@@ -1780,7 +1782,8 @@ body.dark-mode .community-reaction-btn.is-active {
     }
 
     .community-reaction-icon {
-        font-size: 1.08rem;
+        width: 21px;
+        height: 21px;
     }
 
     .community-reaction-count {
