@@ -1682,248 +1682,87 @@ body.dark-mode .user-highlight-blue {
    REACCIONES DE COMUNIDAD
    ========================================================= */
 
-.community-reaction-wrap {
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: nowrap;
-  width: 100%;
+.community-reaction-row {
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
 
-.community-reaction-summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  flex: 1 1 auto;
-  min-width: 0;
+.community-reaction-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+    width: 100%;
 }
 
-.reaction-summary-chip {
-  appearance: none;
-  -webkit-appearance: none;
-  border: none;
-  background: transparent;
-  color: var(--text-muted);
-  border-radius: 999px;
-  min-height: 30px;
-  padding: 4px 6px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  font: inherit;
-  transition: transform 0.15s ease, opacity 0.18s ease, color 0.18s ease;
+.community-reaction-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    color: var(--text-muted);
+    font: inherit;
+    transition: transform 0.15s ease, opacity 0.15s ease, color 0.2s ease;
 }
 
-.reaction-summary-chip:hover {
-  transform: scale(1.04);
-  opacity: 0.9;
+.community-reaction-btn:hover {
+    transform: scale(1.06);
+    opacity: 0.92;
 }
 
-.reaction-summary-chip.is-active {
-  background: transparent;
-  color: var(--accent);
+.community-reaction-btn:active {
+    transform: scale(0.96);
 }
 
-.reaction-summary-emoji {
-  font-size: 1.05rem;
-  line-height: 1;
+.community-reaction-btn.is-active {
+    color: var(--accent);
 }
 
-.reaction-summary-count {
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1;
+.community-reaction-icon {
+    font-size: 1.15rem;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.community-reaction-menu-box {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex: 0 0 auto;
-  margin-left: auto;
+.community-reaction-count {
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1;
+    min-width: 10px;
 }
 
-.reaction-trigger-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 42px;
-  height: 42px;
-  border-radius: 999px;
-  border: none;
-  background: transparent !important;
-  color: inherit;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font: inherit;
-  box-shadow: none !important;
-  transition: transform 0.16s ease, opacity 0.18s ease;
-  padding: 0;
+body.dark-mode .community-reaction-row {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.reaction-trigger-btn:hover {
-  transform: scale(1.08);
-  opacity: 0.92;
+body.dark-mode .community-reaction-btn {
+    color: #94a3b8;
 }
 
-.reaction-trigger-btn:active {
-  transform: scale(0.95);
-}
-
-.reaction-trigger-btn.is-open {
-  background: transparent !important;
-}
-
-.reaction-trigger-icon {
-  font-size: 1.6rem;
-  line-height: 1;
-}
-
-.community-reaction-popover {
-  position: absolute;
-  right: calc(100% + 10px);
-  top: 50%;
-  transform: translateY(-50%) scale(0.88);
-  transform-origin: right center;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.22);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 30;
-  white-space: nowrap;
-  opacity: 0;
-  animation: reactionPopoverIn 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-@keyframes reactionPopoverIn {
-  0% {
-    opacity: 0;
-    transform: translateY(-50%) scale(0.88) translateX(8px);
-    filter: blur(4px);
-  }
-  60% {
-    opacity: 1;
-    transform: translateY(-50%) scale(1.03) translateX(0);
-    filter: blur(0);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(-50%) scale(1);
-    filter: blur(0);
-  }
-}
-
-.reaction-emoji-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 42px;
-  height: 42px;
-  border: none;
-  border-radius: 50%;
-  background: transparent !important;
-  box-shadow: none !important;
-  font-size: 1.5rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: transform 0.16s ease, opacity 0.18s ease;
-  padding: 0;
-}
-
-.reaction-emoji-btn:hover {
-  transform: scale(1.12);
-  background: transparent !important;
-  opacity: 0.92;
-}
-
-.reaction-emoji-btn:active {
-  transform: scale(0.95);
-  background: transparent !important;
-}
-
-.reaction-emoji-btn.is-active {
-  background: transparent !important;
-  transform: scale(1.08);
-}
-
-body.dark-mode .reaction-summary-chip {
-  background: transparent;
-  color: #cbd5e0;
-}
-
-body.dark-mode .reaction-summary-chip.is-active {
-  background: transparent;
-  color: #63b3ed;
-}
-
-body.dark-mode .reaction-trigger-btn {
-  background: transparent !important;
-  border: none !important;
-  color: #e2e8f0;
-}
-
-body.dark-mode .reaction-trigger-btn.is-open {
-  background: transparent !important;
-  border: none !important;
-}
-
-body.dark-mode .community-reaction-popover {
-  background: rgba(15, 23, 42, 0.94);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
-}
-
-body.dark-mode .reaction-emoji-btn:hover {
-  background: transparent !important;
-}
-
-body.dark-mode .reaction-emoji-btn.is-active {
-  background: transparent !important;
+body.dark-mode .community-reaction-btn.is-active {
+    color: #63b3ed;
 }
 
 @media (max-width: 480px) {
-  .community-reaction-wrap {
-    align-items: center;
-    gap: 10px;
-    flex-wrap: nowrap;
-  }
+    .community-reaction-bar {
+        gap: 16px;
+    }
 
-  .reaction-trigger-btn {
-    width: 40px;
-    height: 40px;
-  }
+    .community-reaction-icon {
+        font-size: 1.08rem;
+    }
 
-  .reaction-trigger-icon {
-  font-size: 1.45rem;
-  }
-
-  .reaction-emoji-btn {
-    width: 38px;
-    height: 38px;
-    font-size: 1.35rem;
-  }
-
-  .community-reaction-popover {
-    right: calc(100% + 8px);
-    gap: 2px;
-    padding: 5px 6px;
-  }
-
-  .reaction-summary-chip {
-    min-height: 32px;
-    padding: 5px 9px;
-  }
+    .community-reaction-count {
+        font-size: 0.8rem;
+    }
 }
