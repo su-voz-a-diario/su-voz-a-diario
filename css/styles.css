@@ -1786,14 +1786,16 @@ body.dark-mode .community-reaction-btn.is-active {
         gap: 16px;
     }
 
+    /* tamaño general un poco más grande */
     .community-reaction-icon {
-        width: 21px;
-        height: 21px;
+        width: 23px;
+        height: 23px;
     }
 
+    /* oración ligeramente más grande que los demás */
     .community-reaction-btn[data-reaction="pray"] .community-reaction-icon {
-        width: 25px;
-        height: 25px;
+        width: 26px;
+        height: 26px;
     }
 
     .community-reaction-count {
