@@ -760,10 +760,13 @@ toggleCommunityReaction: async function(postId, reaction) {
         });
 
         return { success: true, removed: false };
-    } catch (error) {
-        console.error("Error al reaccionar:", error);
-        return { success: false, message: 'No se pudo guardar la reacción' };
-    }
+            } catch (error) {
+            console.error("Error al reaccionar:", error);
+            return {
+                success: false,
+            message: error?.message || 'No se pudo guardar la reacción'
+        };
+      }
 },
 
 getCommunityLastSeenKey: function() {
