@@ -644,16 +644,15 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
 
 getReactionIcon: function(type) {
     const icons = {
-        pray: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.2 4.5 8.4 6.8c-.5.6-.5 1.4 0 2l2.3 2.8"/>
-                <path d="M13.8 4.5 15.6 6.8c.5.6.5 1.4 0 2l-2.3 2.8"/>
-                <path d="M10.7 11.6v5.1c0 1.2-.9 2.1-2.1 2.1S6.5 17.9 6.5 16.7v-4.1c0-.8.3-1.5.8-2.1l1.1-1.3"/>
-                <path d="M13.3 11.6v5.1c0 1.2.9 2.1 2.1 2.1s2.1-.9 2.1-2.1v-4.1c0-.8-.3-1.5-.8-2.1l-1.1-1.3"/>
-                <path d="M10.7 10.8h2.6"/>
-                <path d="M10 20.5h4"/>
-            </svg>
-        `,
+       pray: `
+    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9.2 4.8 7.6 6.9a1.8 1.8 0 0 0 .1 2.4l2.6 3"/>
+        <path d="M14.8 4.8 16.4 6.9a1.8 1.8 0 0 1-.1 2.4l-2.6 3"/>
+        <path d="M10.3 12.3v5.1c0 1-.8 1.8-1.8 1.8h0c-1 0-1.8-.8-1.8-1.8v-3.6c0-.7.2-1.3.7-1.8l1.2-1.3"/>
+        <path d="M13.7 12.3v5.1c0 1 .8 1.8 1.8 1.8h0c1 0 1.8-.8 1.8-1.8v-3.6c0-.7-.2-1.3-.7-1.8l-1.2-1.3"/>
+        <path d="M10.6 11.5h2.8"/>
+    </svg>
+`,
         useful: `
             <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M14 10V6.3c0-1.3-1-2.3-2.3-2.3H11l-2.4 6v11H18c1 0 1.8-.7 2-1.7l1.1-6.8c.2-1.3-.8-2.5-2.1-2.5H14z"/>
