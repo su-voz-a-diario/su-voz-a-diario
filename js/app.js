@@ -615,12 +615,12 @@ getReactionDocId: function(postId, userId) {
 renderCommunityReactionBar: function(postId, reactionData = null) {
     const state = reactionData || this.getEmptyCommunityReactionState();
 
-    const reactions = [
-        { key: 'pray', icon: '🙏', label: 'Orando' },
-        { key: 'useful', icon: '👍', label: 'Me sirve' },
-        { key: 'excellent', icon: '✨', label: 'Excelente' },
-        { key: 'thanks', icon: '❤️', label: 'Gracias' }
-    ];
+   const reactions = [
+    { key: 'pray', label: 'Orando' },
+    { key: 'useful', label: 'Me sirve' },
+    { key: 'excellent', label: 'Excelente' },
+    { key: 'thanks', label: 'Gracias' }
+];
 
     return `
         <div class="community-reaction-bar" data-post-id="${postId}">
@@ -634,12 +634,44 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
                     aria-label="${item.label}"
                     title="${item.label}"
                 >
-                    <span class="community-reaction-icon">${item.icon}</span>
+                    <span class="community-reaction-icon">${this.getReactionIcon(item.key)}</span>
                     <span class="community-reaction-count">${state.counts[item.key] || 0}</span>
                 </button>
             `).join('')}
         </div>
     `;
+},
+
+getReactionIcon: function(type) {
+    const icons = {
+        thanks: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20s-6.5-4.35-9-8.28C1.2 8.9 2.3 5.5 5.6 4.4c2.1-.7 4.2.1 5.4 1.9 1.2-1.8 3.3-2.6 5.4-1.9 3.3 1.1 4.4 4.5 2.6 7.32C18.5 15.65 12 20 12 20z"/>
+            </svg>
+        `,
+        useful: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 10V5.5A2.5 2.5 0 0 0 11.5 3L8 10v11h9.2a2 2 0 0 0 2-1.64l1.1-7A2 2 0 0 0 18.3 10H14z"/>
+                <path d="M8 10H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4"/>
+            </svg>
+        `,
+        pray: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.5 4.5 8 7l4 4"/>
+                <path d="M13.5 4.5 16 7l-4 4"/>
+                <path d="M8 7v6a4 4 0 0 0 8 0V7"/>
+                <path d="M10 17h4"/>
+                <path d="M9 20h6"/>
+            </svg>
+        `,
+        excellent: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/>
+            </svg>
+        `
+    };
+
+    return icons[type] || '';
 },
 
 getCommunityReactionSummary: async function(posts) {
