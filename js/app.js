@@ -644,32 +644,34 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
 
 getReactionIcon: function(type) {
     const icons = {
-        thanks: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20s-6.5-4.35-9-8.28C1.2 8.9 2.3 5.5 5.6 4.4c2.1-.7 4.2.1 5.4 1.9 1.2-1.8 3.3-2.6 5.4-1.9 3.3 1.1 4.4 4.5 2.6 7.32C18.5 15.65 12 20 12 20z"/>
+        pray: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.2 4.5 8.4 6.8c-.5.6-.5 1.4 0 2l2.3 2.8"/>
+                <path d="M13.8 4.5 15.6 6.8c.5.6.5 1.4 0 2l-2.3 2.8"/>
+                <path d="M10.7 11.6v5.1c0 1.2-.9 2.1-2.1 2.1S6.5 17.9 6.5 16.7v-4.1c0-.8.3-1.5.8-2.1l1.1-1.3"/>
+                <path d="M13.3 11.6v5.1c0 1.2.9 2.1 2.1 2.1s2.1-.9 2.1-2.1v-4.1c0-.8-.3-1.5-.8-2.1l-1.1-1.3"/>
+                <path d="M10.7 10.8h2.6"/>
+                <path d="M10 20.5h4"/>
             </svg>
         `,
         useful: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 10V5.5A2.5 2.5 0 0 0 11.5 3L8 10v11h9.2a2 2 0 0 0 2-1.64l1.1-7A2 2 0 0 0 18.3 10H14z"/>
-                <path d="M8 10H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4"/>
-            </svg>
-        `,
-        pray: `
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v6"/>
-              <path d="M12 22v-6"/>
-              <path d="M4.9 4.9l4.2 4.2"/>
-              <path d="M14.9 14.9l4.2 4.2"/>
-              <path d="M2 12h6"/>
-              <path d="M22 12h-6"/>
-              <path d="M4.9 19.1l4.2-4.2"/>
-              <path d="M14.9 9.1l4.2-4.2"/>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 10V6.3c0-1.3-1-2.3-2.3-2.3H11l-2.4 6v11H18c1 0 1.8-.7 2-1.7l1.1-6.8c.2-1.3-.8-2.5-2.1-2.5H14z"/>
+                <path d="M8.6 10H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3.6"/>
             </svg>
         `,
         excellent: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z"/>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3.5 13.8 8.2 18.5 10 13.8 11.8 12 16.5 10.2 11.8 5.5 10 10.2 8.2 12 3.5z"/>
+                <path d="M18.5 3.5v3"/>
+                <path d="M20 5h-3"/>
+                <path d="M5.5 16.5v2.5"/>
+                <path d="M6.75 17.75h-2.5"/>
+            </svg>
+        `,
+        thanks: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20.5s-7-4.6-9.2-8.7C1.3 8.8 2.6 5.3 6 4.4c2.2-.6 4.3.2 6 2.3 1.7-2.1 3.8-2.9 6-2.3 3.4.9 4.7 4.4 3.2 7.4C19 15.9 12 20.5 12 20.5z"/>
             </svg>
         `
     };
