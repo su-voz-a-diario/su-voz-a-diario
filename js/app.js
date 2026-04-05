@@ -482,9 +482,17 @@ checkReminderOnOpen: function() {
             const key = localStorage.key(i);
             if (key && key.startsWith('su-voz-note-')) {
                 const note = this.storage.get(key, null);
-                if (note && (note.dios?.trim() || note.aprendizaje?.trim() || note.respuesta?.trim())) {
-                    totalNotes++;
-                }
+                if (
+                note &&
+                (
+                    note.dios?.trim() ||
+                    note.aprendizaje?.trim() ||
+                    note.respuesta?.trim() ||
+                    note.oracion?.trim()
+                )
+            ) {
+                  totalNotes++;
+            }
             }
         }
         
@@ -594,15 +602,12 @@ async deleteCommunityPost(postId) {
    getEmptyCommunityReactionState: function() {
     return {
         counts: {
-            pray: 0,
-            useful: 0,
-            excellent: 0,
-            thanks: 0
+         useful: 0,
+         thanks: 0
         },
+        
         userReactions: {
-            pray: false,
             useful: false,
-            excellent: false,
             thanks: false
         }
     };
@@ -615,10 +620,8 @@ getReactionDocId: function(postId, userId) {
 renderCommunityReactionBar: function(postId, reactionData = null) {
     const state = reactionData || this.getEmptyCommunityReactionState();
 
-   const reactions = [
-    { key: 'pray', label: 'Orando' },
+  const reactions = [
     { key: 'useful', label: 'Me sirve' },
-    { key: 'excellent', label: 'Excelente' },
     { key: 'thanks', label: 'Gracias' }
 ];
 
@@ -644,33 +647,15 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
 
 getReactionIcon: function(type) {
     const icons = {
-       pray: `
-    <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.95" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M9.2 4.8 7.6 6.9a1.8 1.8 0 0 0 .1 2.4l2.6 3"/>
-        <path d="M14.8 4.8 16.4 6.9a1.8 1.8 0 0 1-.1 2.4l-2.6 3"/>
-        <path d="M10.3 12.3v5.1c0 1-.8 1.8-1.8 1.8h0c-1 0-1.8-.8-1.8-1.8v-3.6c0-.7.2-1.3.7-1.8l1.2-1.3"/>
-        <path d="M13.7 12.3v5.1c0 1 .8 1.8 1.8 1.8h0c1 0 1.8-.8 1.8-1.8v-3.6c0-.7-.2-1.3-.7-1.8l-1.2-1.3"/>
-        <path d="M10.6 11.5h2.8"/>
-    </svg>
-`,
-        useful: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14 10V6.3c0-1.3-1-2.3-2.3-2.3H11l-2.4 6v11H18c1 0 1.8-.7 2-1.7l1.1-6.8c.2-1.3-.8-2.5-2.1-2.5H14z"/>
-                <path d="M8.6 10H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h3.6"/>
-            </svg>
-        `,
-        excellent: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 3.5 13.8 8.2 18.5 10 13.8 11.8 12 16.5 10.2 11.8 5.5 10 10.2 8.2 12 3.5z"/>
-                <path d="M18.5 3.5v3"/>
-                <path d="M20 5h-3"/>
-                <path d="M5.5 16.5v2.5"/>
-                <path d="M6.75 17.75h-2.5"/>
-            </svg>
-        `,
         thanks: `
-            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12 20.5s-7-4.6-9.2-8.7C1.3 8.8 2.6 5.3 6 4.4c2.2-.6 4.3.2 6 2.3 1.7-2.1 3.8-2.9 6-2.3 3.4.9 4.7 4.4 3.2 7.4C19 15.9 12 20.5 12 20.5z"/>
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20s-6.5-4.35-9-8.28C1.2 8.9 2.3 5.5 5.6 4.4c2.1-.7 4.2.1 5.4 1.9 1.2-1.8 3.3-2.6 5.4-1.9 3.3 1.1 4.4 4.5 2.6 7.32C18.5 15.65 12 20 12 20z"/>
+            </svg>
+        `,
+        useful: `
+            <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 10V5.5A2.5 2.5 0 0 0 11.5 3L8 10v11h9.2a2 2 0 0 0 2-1.64l1.1-7A2 2 0 0 0 18.3 10H14z"/>
+                <path d="M8 10H4a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h4"/>
             </svg>
         `
     };
@@ -731,9 +716,7 @@ toggleCommunityReaction: async function(postId, reaction) {
         const existingSnap = await getDoc(reactionRef);
 
         const emptyReactions = {
-            pray: false,
             useful: false,
-            excellent: false,
             thanks: false
         };
 
@@ -764,13 +747,13 @@ toggleCommunityReaction: async function(postId, reaction) {
         });
 
         return { success: true, removed: false };
-            } catch (error) {
-            console.error("Error al reaccionar:", error);
-            return {
-                success: false,
+    } catch (error) {
+        console.error("Error al reaccionar:", error);
+        return {
+            success: false,
             message: error?.message || 'No se pudo guardar la reacción'
         };
-      }
+    }
 },
 
 getCommunityLastSeenKey: function() {
