@@ -1807,7 +1807,7 @@ body.dark-mode .community-reaction-btn.is-active {
 .home-reading-bar {
     position: fixed;
     left: 50%;
-    bottom: calc(var(--nav-height) + 10px + env(safe-area-inset-bottom));
+    bottom: calc(var(--nav-height) + 4px + env(safe-area-inset-bottom));
     transform: translateX(-50%);
     width: min(92vw, 420px);
     height: 44px;
