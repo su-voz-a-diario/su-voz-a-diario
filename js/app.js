@@ -1467,7 +1467,7 @@ const introVideoHtml = showIntroVideo ? `
             <div class="intro-video-title">Introducción a Deuteronomio</div>
         </div>
 
-        <div class="intro-video-frame">
+       <div class="intro-video-frame">
     <iframe
         src="https://www.youtube.com/embed/LfGZnrbmWaM"
         title="Introducción a Deuteronomio"
