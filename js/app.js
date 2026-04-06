@@ -1467,15 +1467,15 @@ const introVideoHtml = showIntroVideo ? `
             <div class="intro-video-title">Introducción a Deuteronomio</div>
         </div>
 
-        <video
-            class="intro-video-player"
-            controls
-            preload="metadata"
-            playsinline
-            webkit-playsinline
-        >
-            <source src="media/deuteronomio-intro.mp4" type="video/mp4">
-        </video>
+        <div class="intro-video-frame">
+    <iframe
+        src="https://www.youtube.com/embed/LfGZnrbmWaM"
+        title="Introducción a Deuteronomio"
+        frameborder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowfullscreen>
+    </iframe>
+</div>
 
         <div class="intro-video-note">
             Antes de comenzar la lectura, puedes ver esta introducción.
