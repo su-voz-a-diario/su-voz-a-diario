@@ -1877,3 +1877,40 @@ body.dark-mode .home-reading-bar-btn,
 body.dark-mode .home-reading-bar-title {
     color: #f8fafc;
 }
+
+.intro-video-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 16px;
+}
+
+.intro-video-head {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.intro-video-label {
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 700;
+}
+
+.intro-video-title {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.intro-video-player {
+    width: 100%;
+    border-radius: 12px;
+    background: black;
+}
+
+.intro-video-note {
+    font-size: 0.85rem;
+    text-align: center;
+    margin-top: 8px;
+    color: var(--text-muted);
+}
