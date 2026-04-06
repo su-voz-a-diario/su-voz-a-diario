@@ -35,6 +35,7 @@ const App = {
     currentVersion: 'rvr60',
     openNoteDate: null,
     activeNoteField: null,
+    homeViewingDate: null,
     readingMode: false,
     communityFormOpen: false,
     currentUser: null,
@@ -1306,7 +1307,11 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     this.$content.classList.add('fade-in');
     
     if (view === 'home') {
+        if (!this.homeViewingDate) {
+            this.homeViewingDate = this.getTodayDateStr();
+        }
         this.renderHome();
+    }
     } else if (view === 'calendar') {
         this.renderCalendar();
     } else if (view === 'community') {
@@ -1356,6 +1361,28 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         return `${year}-${month}-${day}`;
     },
 
+    getReadingIndexByDate: function(dateStr) {
+    return this.data.findIndex(item => item.date === dateStr);
+},
+
+getHomeViewingDate: function() {
+    return this.homeViewingDate || this.getTodayDateStr();
+},
+
+changeHomeDay: function(direction) {
+    const currentDate = this.getHomeViewingDate();
+    const currentIndex = this.getReadingIndexByDate(currentDate);
+
+    if (currentIndex === -1) return;
+
+    const newIndex = currentIndex + direction;
+
+    if (newIndex < 0 || newIndex >= this.data.length) return;
+
+    this.homeViewingDate = this.data[newIndex].date;
+    this.renderHome();
+},
+
     formatCommunityDateLabel: function(dateStr) {
     const today = this.getTodayDateStr();
     const yesterday = this.getYesterdayDateStr();
@@ -1398,11 +1425,11 @@ restoreCalendarPosition: function() {
     this.calendarScrollTop = Math.max(0, top);
 },
     
-    renderHome: function() {
-        const todayStr = this.getTodayDateStr();
-        const reading = this.data.find(r => r.date === todayStr);
-        this.renderViewContent(reading, true);
-    },
+   renderHome: function() {
+    const viewingDate = this.getHomeViewingDate();
+    const reading = this.data.find(r => r.date === viewingDate);
+    this.renderViewContent(reading, true);
+},
     
     renderReading: function(dateStr) {
         const reading = this.data.find(r => r.date === dateStr);
@@ -1426,6 +1453,14 @@ restoreCalendarPosition: function() {
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         const currentBadge = this.getCurrentBadge();
         
+        const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex >= 0 && currentIndex < this.data.length - 1;
+        const isRealToday = reading && reading.date === this.getTodayDateStr();
+        const readingLabel = isHome
+            ? (isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día')
+            : '📖 Su voz este día';
+        
            this.$content.innerHTML = `
                 <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
 
@@ -1435,7 +1470,7 @@ restoreCalendarPosition: function() {
                 </div>
     
                 <div class="reading-card">
-                    <div class="section-title">📖 Su voz ${isHome ? 'hoy' : 'este día'}</div>
+                    <div class="section-title">${readingLabel}</div>
                     <h2 class="reading-reference">${reading.reference}</h2>
                     <div class="reading-text" data-reading-date="${reading.date}">
                         ${readingText}
@@ -1500,6 +1535,29 @@ restoreCalendarPosition: function() {
             ${this.readingMode ? `
                 <button class="exit-reading-btn" data-action="exit-reading-mode">✕ Salir del modo lectura</button>
             ` : ''}
+            ${isHome ? `
+    <div class="home-day-nav">
+        <button
+            class="home-day-nav-btn"
+            data-action="home-prev-day"
+            ${hasPrev ? '' : 'disabled'}
+            aria-label="Ver día anterior"
+            title="Ver día anterior"
+        >
+            ←
+        </button>
+
+        <button
+            class="home-day-nav-btn"
+            data-action="home-next-day"
+            ${hasNext ? '' : 'disabled'}
+            aria-label="Ver día siguiente"
+            title="Ver día siguiente"
+        >
+            →
+        </button>
+    </div>
+` : ''}
         `;
             this.restoreHighlightsInDOM(reading.date);
     },
@@ -2024,7 +2082,12 @@ restoreCalendarPosition: function() {
     // ========================================
     bindEvents: function() {
         // Navegación
-        if (this.$navHome) this.$navHome.addEventListener('click', () => this.navigate('home'));
+        if (this.$navHome) {
+            this.$navHome.addEventListener('click', () => {
+             this.homeViewingDate = null;
+            this.navigate('home');
+            });
+        }
         if (this.$navCalendar) this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
         if (this.$navStats) this.$navStats.addEventListener('click', () => this.navigate('stats'));
         if (this.$navSettings) this.$navSettings.addEventListener('click', () => this.navigate('settings'));
@@ -2142,6 +2205,18 @@ Compartido desde Su voz a diario`;
     return;
 }
 
+const prevDayBtn = e.target.closest('[data-action="home-prev-day"]');
+if (prevDayBtn) {
+    this.changeHomeDay(-1);
+    return;
+}
+
+const nextDayBtn = e.target.closest('[data-action="home-next-day"]');
+if (nextDayBtn) {
+    this.changeHomeDay(1);
+    return;
+}
+           
 const donateBtn = e.target.closest('[data-action="donate"]');
 if (donateBtn) {
     window.open('https://paypal.me/suvozadiario', '_blank');
