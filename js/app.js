@@ -1306,25 +1306,25 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     void this.$content.offsetWidth;
     this.$content.classList.add('fade-in');
     
-    if (view === 'home') {
-        if (!this.homeViewingDate) {
-            this.homeViewingDate = this.getTodayDateStr();
-        }
-        this.renderHome();
-    } else if (view === 'calendar') {
-        this.renderCalendar();
-    } else if (view === 'community') {
-        await this.renderCommunity();
-        await this.markCommunityAsSeen();
-    } else if (view === 'stats') {
-        this.renderStats();
-    } else if (view === 'settings') {
-        this.renderSettings();
-    } else if (view === 'reading' && param) {
-        this.renderReading(param);
-    } else {
-        this.renderHome();
+   if (view === 'home') {
+    if (!this.homeViewingDate) {
+        this.homeViewingDate = this.getTodayDateStr();
     }
+    this.renderHome();
+} else if (view === 'calendar') {
+    this.renderCalendar();
+} else if (view === 'community') {
+    await this.renderCommunity();
+    await this.markCommunityAsSeen();
+} else if (view === 'stats') {
+    this.renderStats();
+} else if (view === 'settings') {
+    this.renderSettings();
+} else if (view === 'reading' && param) {
+    this.renderReading(param);
+} else {
+    this.renderHome();
+}
 },
     
    updateNavUI: function() {
