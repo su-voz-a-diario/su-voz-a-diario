@@ -1534,10 +1534,11 @@ restoreCalendarPosition: function() {
             ${this.readingMode ? `
                 <button class="exit-reading-btn" data-action="exit-reading-mode">✕ Salir del modo lectura</button>
             ` : ''}
+            
             ${isHome ? `
-    <div class="home-day-nav">
+    <div class="home-reading-bar">
         <button
-            class="home-day-nav-btn"
+            class="home-reading-bar-btn"
             data-action="home-prev-day"
             ${hasPrev ? '' : 'disabled'}
             aria-label="Ver día anterior"
@@ -1546,8 +1547,12 @@ restoreCalendarPosition: function() {
             ←
         </button>
 
+        <div class="home-reading-bar-title" title="${reading.reference}">
+            ${reading.reference}
+        </div>
+
         <button
-            class="home-day-nav-btn"
+            class="home-reading-bar-btn"
             data-action="home-next-day"
             ${hasNext ? '' : 'disabled'}
             aria-label="Ver día siguiente"
