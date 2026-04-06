@@ -1311,7 +1311,6 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             this.homeViewingDate = this.getTodayDateStr();
         }
         this.renderHome();
-    }
     } else if (view === 'calendar') {
         this.renderCalendar();
     } else if (view === 'community') {
