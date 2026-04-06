@@ -40,6 +40,9 @@ const App = {
     currentUser: null,
     communityUnreadCount: 0,
     lastSeenCommunityAt: null,
+    
+    calendarInitialized: false,
+    calendarScrollTop: 0,
   
     
     // Sistema de rachas
@@ -1285,6 +1288,9 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     const param = parts[1] || null;
     
     this.resetReadingMode();
+    if (this.currentView === 'calendar' && view !== 'calendar') {
+    this.saveCalendarScroll();
+    }
     this.currentView = view;
     this.updateNavUI();
     
@@ -1372,18 +1378,24 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     return `${year}-${month}-${day}`;
     },
 
-   scrollCalendarToToday: function() {
-    requestAnimationFrame(() => {
-        const todayCard = this.$content.querySelector('.calendar-day.today');
-        if (!todayCard) return;
+    saveCalendarScroll: function() {
+    this.calendarScrollTop = window.scrollY || window.pageYOffset || 0;
+},
 
-        const top = todayCard.getBoundingClientRect().top + window.scrollY - 100;
+restoreCalendarPosition: function() {
+    const todayCard = this.$content.querySelector('.calendar-day.today');
+    if (!todayCard) return;
 
-        window.scrollTo({
-            top: Math.max(0, top),
-            behavior: 'smooth'
-        });
-    });
+    if (this.calendarInitialized) {
+        window.scrollTo(0, this.calendarScrollTop || 0);
+        return;
+    }
+
+    const top = todayCard.getBoundingClientRect().top + window.scrollY - 100;
+    window.scrollTo(0, Math.max(0, top));
+
+    this.calendarInitialized = true;
+    this.calendarScrollTop = Math.max(0, top);
 },
     
     renderHome: function() {
@@ -1533,7 +1545,9 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     html += '</div>';
     this.$content.innerHTML = html;
 
-    this.scrollCalendarToToday();
+    requestAnimationFrame(() => {
+    this.restoreCalendarPosition();
+});
 },
 
    renderCommunity: async function() {
