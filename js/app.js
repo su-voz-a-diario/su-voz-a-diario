@@ -1451,6 +1451,31 @@ restoreCalendarPosition: function() {
         const dateFormatted = this.formatDateEs(reading.date);
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         const currentBadge = this.getCurrentBadge();
+
+        const showIntroVideo = isHome && reading.date === '2026-04-07';
+
+const introVideoHtml = showIntroVideo ? `
+    <div class="intro-video-card">
+        <div class="intro-video-head">
+            <div class="intro-video-label">🎬 Video introductorio</div>
+            <div class="intro-video-title">Introducción a Deuteronomio</div>
+        </div>
+
+        <video
+            class="intro-video-player"
+            controls
+            preload="metadata"
+            playsinline
+            webkit-playsinline
+        >
+            <source src="media/deuteronomio-intro.mp4" type="video/mp4">
+        </video>
+
+        <div class="intro-video-note">
+            Antes de comenzar la lectura, puedes ver esta introducción.
+        </div>
+    </div>
+` : '';
         
         const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
         const hasPrev = currentIndex > 0;
@@ -1467,6 +1492,8 @@ restoreCalendarPosition: function() {
                     <span class="badge-progress-icon">${currentBadge.icon}</span>
                     <span class="badge-progress-text">Insignia actual: ${currentBadge.label}</span>
                 </div>
+
+                ${introVideoHtml}
     
                 <div class="reading-card">
                     <div class="section-title">${readingLabel}</div>
