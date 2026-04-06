@@ -1371,6 +1371,26 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
     },
+
+    scrollCalendarToToday: function() {
+    requestAnimationFrame(() => {
+        const todayCard = this.$content.querySelector('.calendar-day.today');
+        if (!todayCard) return;
+
+        const contentRect = this.$content.getBoundingClientRect();
+        const cardRect = todayCard.getBoundingClientRect();
+
+        const offsetTop =
+            (cardRect.top - contentRect.top) +
+            this.$content.scrollTop -
+            16;
+
+        this.$content.scrollTo({
+            top: Math.max(0, offsetTop),
+            behavior: 'smooth'
+        });
+    });
+},
     
     renderHome: function() {
         const todayStr = this.getTodayDateStr();
@@ -1485,39 +1505,42 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         return div.innerHTML;
     },
     
-    renderCalendar: function() {
-        if (this.data.length === 0) {
-            this.$content.innerHTML = `<div class="empty-state">📅 No hay lecturas disponibles.</div>`;
-            return;
-        }
-        
-        let html = '<div class="calendar-grid">';
-        
-        this.data.forEach(item => {
-            const dateStr = this.formatDateEs(item.date);
-            const readClass = this.isRead(item.date) ? 'read' : '';
-            const todayStr = this.getTodayDateStr();
-            const isToday = item.date === todayStr;
-            const todayClass = isToday ? 'today' : '';
-            
-            html += `
-                <div class="calendar-day ${readClass} ${todayClass}" data-nav="reading" data-param="${item.date}">
-                    ${isToday ? '<div class="today-badge">HOY</div>' : ''}
-                    <div class="cal-date">${dateStr}</div>
-                    <div class="cal-ref">
-                        ${item.reference}
-                        ${this.isRead(item.date) ? '<span class="read-badge" title="Leído">✓</span>' : ''}
-                        ${this.hasNote(item.date) ? '<span class="note-badge" title="Tiene reflexión">📝</span>' : ''}
-                        ${this.hasHighlights(item.date) ? '<span class="highlight-badge" title="Tiene resaltados">✨</span>' : ''}
-                    </div>
-                    <div class="cal-arrow">→</div>
+   renderCalendar: function() {
+    if (this.data.length === 0) {
+        this.$content.innerHTML = `<div class="empty-state">📅 No hay lecturas disponibles.</div>`;
+        return;
+    }
+
+    const todayStr = this.getTodayDateStr();
+
+    let html = '<div class="calendar-grid">';
+
+    this.data.forEach(item => {
+        const dateStr = this.formatDateEs(item.date);
+        const readClass = this.isRead(item.date) ? 'read' : '';
+        const isToday = item.date === todayStr;
+        const todayClass = isToday ? 'today' : '';
+
+        html += `
+            <div class="calendar-day ${readClass} ${todayClass}" data-nav="reading" data-param="${item.date}">
+                ${isToday ? '<div class="today-badge">HOY</div>' : ''}
+                <div class="cal-date">${dateStr}</div>
+                <div class="cal-ref">
+                    ${item.reference}
+                    ${this.isRead(item.date) ? '<span class="read-badge" title="Leído">✓</span>' : ''}
+                    ${this.hasNote(item.date) ? '<span class="note-badge" title="Tiene reflexión">📝</span>' : ''}
+                    ${this.hasHighlights(item.date) ? '<span class="highlight-badge" title="Tiene resaltados">✨</span>' : ''}
                 </div>
-            `;
-        });
-        
-        html += '</div>';
-        this.$content.innerHTML = html;
-    },
+                <div class="cal-arrow">→</div>
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    this.$content.innerHTML = html;
+
+    this.scrollCalendarToToday();
+},
 
    renderCommunity: async function() {
     const todayStr = this.getTodayDateStr();
