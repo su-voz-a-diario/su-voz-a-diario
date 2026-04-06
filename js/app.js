@@ -1452,7 +1452,13 @@ restoreCalendarPosition: function() {
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
         const currentBadge = this.getCurrentBadge();
 
-        const showIntroVideo = isHome && reading.date === '2026-04-07';
+       const introStartDate = '2026-04-07';
+        const introEndDate = '2026-04-11';
+
+        const showIntroVideo =
+            isHome &&
+            reading.date >= introStartDate &&
+            reading.date <= introEndDate;
 
 const introVideoHtml = showIntroVideo ? `
     <div class="intro-video-card">
