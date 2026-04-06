@@ -1434,6 +1434,16 @@ restoreCalendarPosition: function() {
         const reading = this.data.find(r => r.date === dateStr);
         this.renderViewContent(reading, false);
     },
+
+    rerenderCurrentReadingView: function(dateStr = null) {
+    if (this.currentView === 'home') {
+        this.renderHome();
+        return;
+    }
+
+    const targetDate = dateStr || this.getTodayDateStr();
+    this.renderReading(targetDate);
+},
     
     renderViewContent: function(reading, isHome = false) {
         
@@ -2179,7 +2189,7 @@ const introVideoHtml = showIntroVideo ? `
                 this.lastReadingTap = 0;
 
                     if (date) {
-                        this.renderReading(date);
+                        this.rerenderCurrentReadingView(date);
                     }
                 } else {
                     this.lastReadingTap = now;
@@ -2193,7 +2203,7 @@ const introVideoHtml = showIntroVideo ? `
                 const date = readingEl ? readingEl.getAttribute('data-reading-date') : null;
                 this.readingMode = false;
                 document.body.classList.remove('reading-mode');
-                if (date) this.renderReading(date);
+                if (date) this.rerenderCurrentReadingView(date);
                 return;
             }
             
@@ -2202,7 +2212,7 @@ const introVideoHtml = showIntroVideo ? `
             if (markBtn) {
                 const date = markBtn.getAttribute('data-date');
                 this.markAsRead(date);
-                this.renderReading(date);
+                this.rerenderCurrentReadingView(date);
                 return;
             }
             
@@ -2402,7 +2412,7 @@ if (clearBtn) {
     const date = clearBtn.getAttribute('data-date');
     this.storage.remove(this.getHighlightsKey(date));
     this.removeHighlightButton();
-    this.renderReading(date);
+    this.rerenderCurrentReadingView(date);
     this.showToast('Resaltados eliminados');
     return;
 }
@@ -2412,7 +2422,7 @@ const noteBtn = e.target.closest('[data-action="toggle-note"]');
 if (noteBtn) {
     const date = noteBtn.getAttribute('data-date');
     this.toggleNote(date);
-    this.renderReading(date);
+    this.rerenderCurrentReadingView(date);
     return;
 }
 
@@ -2420,7 +2430,7 @@ const deleteNoteBtn = e.target.closest('[data-action="delete-note"]');
 if (deleteNoteBtn) {
     const date = deleteNoteBtn.getAttribute('data-date');
     this.deleteNote(date);
-    this.renderReading(date);
+    this.rerenderCurrentReadingView(date);
     return;
 }
 
