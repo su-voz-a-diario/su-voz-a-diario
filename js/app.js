@@ -1372,21 +1372,15 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     return `${year}-${month}-${day}`;
     },
 
-    scrollCalendarToToday: function() {
+   scrollCalendarToToday: function() {
     requestAnimationFrame(() => {
         const todayCard = this.$content.querySelector('.calendar-day.today');
         if (!todayCard) return;
 
-        const contentRect = this.$content.getBoundingClientRect();
-        const cardRect = todayCard.getBoundingClientRect();
+        const top = todayCard.getBoundingClientRect().top + window.scrollY - 100;
 
-        const offsetTop =
-            (cardRect.top - contentRect.top) +
-            this.$content.scrollTop -
-            16;
-
-        this.$content.scrollTo({
-            top: Math.max(0, offsetTop),
+        window.scrollTo({
+            top: Math.max(0, top),
             behavior: 'smooth'
         });
     });
