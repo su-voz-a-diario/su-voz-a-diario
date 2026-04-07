@@ -41,6 +41,9 @@ const App = {
     currentUser: null,
     communityUnreadCount: 0,
     lastSeenCommunityAt: null,
+    openReplyPostId: null,
+    replyDrafts: {},
+    replyCharLimit: 300,
     
     calendarInitialized: false,
     calendarScrollTop: 0,
@@ -615,6 +618,105 @@ async deleteCommunityPost(postId) {
     }
 },
 
+async getRepliesByPostId(postId) {
+    try {
+        const q = query(collection(db, "communityReplies"), orderBy("createdAt", "asc"));
+        const snapshot = await getDocs(q);
+
+        return snapshot.docs
+            .map(docSnap => ({
+                id: docSnap.id,
+                ...docSnap.data()
+            }))
+            .filter(reply => reply.postId === postId);
+    } catch (error) {
+        console.error("Error cargando respuestas:", error);
+        return [];
+    }
+},
+
+async getRepliesSummary(posts) {
+    const summary = {};
+
+    posts.forEach(post => {
+        summary[post.id] = [];
+    });
+
+    if (!posts.length) return summary;
+
+    try {
+        const q = query(collection(db, "communityReplies"), orderBy("createdAt", "asc"));
+        const snapshot = await getDocs(q);
+
+        snapshot.docs.forEach(docSnap => {
+            const reply = {
+                id: docSnap.id,
+                ...docSnap.data()
+            };
+
+            if (!summary[reply.postId]) return;
+            summary[reply.postId].push(reply);
+        });
+
+        return summary;
+    } catch (error) {
+        console.error("Error cargando resumen de respuestas:", error);
+        return summary;
+    }
+},
+
+async addCommunityReply(reply) {
+    try {
+        const cleanText = (reply.text || '').trim();
+
+        if (!cleanText) {
+            return { success: false, message: 'Escribe una respuesta' };
+        }
+
+        if (cleanText.length > this.replyCharLimit) {
+            return { success: false, message: `Máximo ${this.replyCharLimit} caracteres` };
+        }
+
+        await addDoc(collection(db, "communityReplies"), {
+            ...reply,
+            text: cleanText,
+            createdAt: serverTimestamp()
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error guardando respuesta:", error);
+        return { success: false, message: 'No se pudo guardar la respuesta' };
+    }
+},
+
+async deleteCommunityReply(replyId) {
+    try {
+        await deleteDoc(doc(db, "communityReplies", replyId));
+        return true;
+    } catch (error) {
+        console.error("Error eliminando respuesta:", error);
+        return false;
+    }
+},
+
+toggleReplyForm(postId) {
+    this.openReplyPostId = this.openReplyPostId === postId ? null : postId;
+},
+
+updateReplyDraft(postId, value) {
+    const cleanValue = (value || '').slice(0, this.replyCharLimit);
+    this.replyDrafts[postId] = cleanValue;
+},
+
+getReplyDraft(postId) {
+    return this.replyDrafts[postId] || '';
+},
+
+clearReplyDraft(postId) {
+    delete this.replyDrafts[postId];
+},
+
    getEmptyCommunityReactionState: function() {
     return {
         counts: {
@@ -657,6 +759,95 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
                     <span class="community-reaction-count">${state.counts[item.key] || 0}</span>
                 </button>
             `).join('')}
+        </div>
+    `;
+},
+
+renderReplyBlock: function(post, replies = []) {
+    const isOpen = this.openReplyPostId === post.id;
+    const draft = this.getReplyDraft(post.id);
+    const replyCount = replies.length;
+
+    return `
+        <div class="community-reply-block">
+            <div class="community-reply-toolbar">
+                <button
+                    class="community-reply-toggle"
+                    type="button"
+                    data-action="toggle-reply-form"
+                    data-post-id="${post.id}"
+                >
+                    💬 ${replyCount > 0 ? `Responder · ${replyCount}` : 'Responder'}
+                </button>
+            </div>
+
+            ${isOpen ? `
+                <div class="community-reply-form">
+                    <textarea
+                        class="community-reply-textarea"
+                        data-action="reply-input"
+                        data-post-id="${post.id}"
+                        placeholder="Escribe una respuesta breve y edificante..."
+                        maxlength="${this.replyCharLimit}"
+                    >${this.escapeHtml(draft)}</textarea>
+
+                    <div class="community-reply-form-footer">
+                        <div class="community-reply-counter">
+                            ${draft.length}/${this.replyCharLimit}
+                        </div>
+
+                        <div class="community-reply-form-actions">
+                            <button
+                                class="btn-secondary"
+                                type="button"
+                                data-action="cancel-reply-form"
+                                data-post-id="${post.id}"
+                            >
+                                Cancelar
+                            </button>
+
+                            <button
+                                class="btn-primary"
+                                type="button"
+                                data-action="publish-reply"
+                                data-post-id="${post.id}"
+                            >
+                                Responder
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            ` : ''}
+
+            ${replies.length ? `
+                <div class="community-reply-list">
+                    ${replies.map(reply => `
+                        <div class="community-reply-item">
+                            <div class="community-reply-meta">
+                                ${this.escapeHtml(reply.name || 'Anónimo')} · ${this.escapeHtml(this.formatCommunityDateLabel(reply.date || ''))}
+                            </div>
+
+                            <div class="community-reply-text">
+                                ${this.escapeHtml(reply.text || '')}
+                            </div>
+
+                            ${reply.ownerUid === this.currentUser?.uid ? `
+                                <div class="community-reply-actions">
+                                    <button
+                                        class="community-reply-delete"
+                                        type="button"
+                                        data-action="delete-community-reply"
+                                        data-reply-id="${reply.id}"
+                                        data-post-id="${post.id}"
+                                    >
+                                        Eliminar
+                                    </button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
         </div>
     `;
 },
@@ -1672,6 +1863,7 @@ const introVideoHtml = showIntroVideo ? `
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
     const posts = await this.getCommunityPosts();
     const reactionSummary = await this.getCommunityReactionSummary(posts);
+    const repliesSummary = await this.getRepliesSummary(posts);
 
     this.$content.innerHTML = `
         <div class="community-container">
@@ -1757,6 +1949,7 @@ const introVideoHtml = showIntroVideo ? `
             <div class="community-feed">
                 ${posts.length ? posts.map(post => {
                     const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
+                    const replies = repliesSummary[post.id] || [];
 
                     return `
                         <div class="community-card">
@@ -1771,6 +1964,8 @@ const introVideoHtml = showIntroVideo ? `
                                 <div class="community-reaction-row">
                                     ${this.renderCommunityReactionBar(post.id, reactionData)}
                                 </div>
+
+                                ${this.renderReplyBlock(post, replies)}
 
                                     ${post.ownerUid === this.currentUser?.uid ? `
                                 <div class="community-actions">
@@ -2421,6 +2616,86 @@ if (deleteCommunityBtn) {
     return;
 }
 
+const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
+if (toggleReplyBtn) {
+    const postId = toggleReplyBtn.getAttribute('data-post-id');
+    this.toggleReplyForm(postId);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando formulario de respuesta:', error);
+    });
+    return;
+}
+
+const cancelReplyBtn = e.target.closest('[data-action="cancel-reply-form"]');
+if (cancelReplyBtn) {
+    const postId = cancelReplyBtn.getAttribute('data-post-id');
+    this.openReplyPostId = null;
+    this.clearReplyDraft(postId);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error cerrando formulario de respuesta:', error);
+    });
+    return;
+}
+
+const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
+if (publishReplyBtn) {
+    const postId = publishReplyBtn.getAttribute('data-post-id');
+    const text = this.getReplyDraft(postId).trim();
+
+    if (!text) {
+        this.showToast('Escribe una respuesta');
+        return;
+    }
+
+    if (!this.currentUser) {
+        this.showToast('No se pudo identificar al usuario');
+        return;
+    }
+
+    const result = await this.addCommunityReply({
+        postId,
+        name: 'Anónimo',
+        text,
+        date: this.getTodayDateStr(),
+        ownerUid: this.currentUser.uid
+    });
+
+    if (!result.success) {
+        this.showToast(result.message || 'No se pudo guardar la respuesta');
+        return;
+    }
+
+    this.clearReplyDraft(postId);
+    this.openReplyPostId = null;
+    this.showToast('Respuesta publicada');
+
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando respuestas:', error);
+    });
+    return;
+}
+
+const deleteReplyBtn = e.target.closest('[data-action="delete-community-reply"]');
+if (deleteReplyBtn) {
+    const replyId = deleteReplyBtn.getAttribute('data-reply-id');
+
+    if (confirm('¿Deseas eliminar esta respuesta?')) {
+        const success = await this.deleteCommunityReply(replyId);
+
+        if (!success) {
+            this.showToast('No se pudo eliminar la respuesta');
+            return;
+        }
+
+        this.showToast('Respuesta eliminada');
+        this.renderCommunity().catch(error => {
+            console.error('[Community] Error actualizando respuestas:', error);
+        });
+    }
+
+    return;
+}
+
 const communityReactionBtn = e.target.closest('[data-action="community-reaction-toggle"]');
 if (communityReactionBtn) {
     const postId = communityReactionBtn.getAttribute('data-post-id');
@@ -2492,6 +2767,21 @@ if (navItem) {
         
         // Auto-guardado de notas
        this.$content.addEventListener('input', (e) => {
+        if (e.target.matches('.community-reply-textarea')) {
+    const postId = e.target.getAttribute('data-post-id');
+    if (postId) {
+        this.updateReplyDraft(postId, e.target.value);
+
+        const counter = e.target
+            .closest('.community-reply-form')
+            ?.querySelector('.community-reply-counter');
+
+        if (counter) {
+            counter.textContent = `${this.getReplyDraft(postId).length}/${this.replyCharLimit}`;
+        }
+    }
+    return;
+}
     if (e.target.matches('.note-textarea')) {
         const date = e.target.getAttribute('data-note-date');
         const field = e.target.getAttribute('data-field');
