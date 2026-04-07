@@ -2321,6 +2321,12 @@ if (publishCommunityBtn) {
 
     let reflectionText = reflectionInput ? reflectionInput.value.trim() : '';
 
+    if (reflectionText.length > 1200) {
+    this.showToast('La reflexión no puede exceder 1200 caracteres');
+    if (reflectionInput) reflectionInput.focus();
+    return;
+}
+
     const validation = Sanitizer.validateText(reflectionText);
     if (!validation.valid) {
         this.showToast(validation.message);
