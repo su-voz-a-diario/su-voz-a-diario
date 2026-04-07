@@ -1926,3 +1926,22 @@ body.dark-mode .home-reading-bar-title {
     margin-top: 8px;
     color: var(--text-muted);
 }
+
+.community-input.error,
+.community-textarea.error {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+    animation: shake 0.3s ease-in-out;
+}
+
+body.dark-mode .community-input.error,
+body.dark-mode .community-textarea.error {
+    background-color: rgba(231, 76, 60, 0.08);
+    border-color: #e74c3c;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
