@@ -2560,6 +2560,53 @@ document.addEventListener('selectionchange', () => {
     }
 };
 
+// ================================
+// MANEJO GLOBAL DE ERRORES
+// ================================
+class ErrorHandler {
+    constructor() {
+        this.errorLog = [];
+        this.setupGlobalHandler();
+    }
+    
+    setupGlobalHandler() {
+        window.addEventListener('error', (e) => {
+            this.logError({
+                type: 'error',
+                message: e.message,
+                filename: e.filename,
+                lineno: e.lineno,
+                colno: e.colno,
+                timestamp: new Date().toISOString()
+            });
+            
+            if (!e.message.includes('NetworkError')) {
+                App.showToast('Ocurrió un error. Por favor, recarga la página.');
+            }
+        });
+        
+        window.addEventListener('unhandledrejection', (e) => {
+            this.logError({
+                type: 'unhandledRejection',
+                reason: e.reason,
+                timestamp: new Date().toISOString()
+            });
+        });
+    }
+
+    logError(errorData) {
+        this.errorLog.push(errorData);
+
+        if (this.errorLog.length > 50) {
+            this.errorLog.shift();
+        }
+
+        console.error('[ErrorHandler]', errorData);
+    }
+}
+
+const errorHandler = new ErrorHandler();
+
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
     App.init().catch(error => {
