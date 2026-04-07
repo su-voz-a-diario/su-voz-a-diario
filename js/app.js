@@ -1466,7 +1466,6 @@ restoreCalendarPosition: function() {
         const introEndDate = '2026-04-11';
 
         const showIntroVideo =
-            isHome &&
             reading.date >= introStartDate &&
             reading.date <= introEndDate;
 
