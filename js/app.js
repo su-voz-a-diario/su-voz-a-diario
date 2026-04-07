@@ -2687,7 +2687,7 @@ const Sanitizer = {
         let cleaned = text.trim();
 
         // Limitar longitud
-        cleaned = cleaned.substring(0, 2000);
+        cleaned = cleaned.substring(0, 1200);
 
         // Eliminar HTML
         cleaned = cleaned.replace(/<[^>]*>/g, '');
@@ -2731,7 +2731,7 @@ const Sanitizer = {
             return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
         }
 
-        if (text.length > 2000) {
+        if (text.length > 1200) {
             return { valid: false, message: 'Texto demasiado largo' };
         }
 
