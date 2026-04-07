@@ -582,10 +582,22 @@ checkReminderOnOpen: function() {
 
 async addCommunityPost(post) {
     try {
-        await addDoc(collection(db, "communityPosts"), {
-            ...post,
+        const validation = Sanitizer.validateText(post.text);
+        if (!validation.valid) {
+            this.showToast(validation.message);
+            return false;
+        }
+
+        const safePost = {
+            reference: Sanitizer.sanitizeReference(post.reference),
+            name: Sanitizer.sanitizeUsername(post.name),
+            text: Sanitizer.sanitizeText(post.text),
+            date: post.date,
+            ownerUid: post.ownerUid,
             createdAt: serverTimestamp()
-        });
+        };
+
+        await addDoc(collection(db, "communityPosts"), safePost);
         return true;
     } catch (error) {
         console.error("Error guardando post:", error);
@@ -2304,24 +2316,39 @@ if (publishCommunityBtn) {
     const anonymousInput = document.getElementById('community-anonymous');
     const reflectionInput = document.getElementById('community-reflection');
 
-    const reflectionText = reflectionInput ? reflectionInput.value.trim() : '';
-    const typedName = nameInput ? nameInput.value.trim() : '';
-    const isAnonymous = anonymousInput ? anonymousInput.checked : true;
+    let reflectionText = reflectionInput ? reflectionInput.value.trim() : '';
 
-    if (!reflectionText) {
-        this.showToast('Escribe primero tu reflexión');
-        if (reflectionInput) reflectionInput.focus();
+    const validation = Sanitizer.validateText(reflectionText);
+    if (!validation.valid) {
+        this.showToast(validation.message);
+
+        if (reflectionInput) {
+            reflectionInput.focus();
+            reflectionInput.classList.add('error');
+
+            setTimeout(() => {
+                reflectionInput.classList.remove('error');
+            }, 2000);
+        }
+
         return;
     }
 
-    const todayStr = this.getTodayDateStr();
-    const todayReading = this.data.find(r => r.date === todayStr);
-    const displayName = isAnonymous ? 'Anónimo' : (typedName || 'Anónimo');
+    reflectionText = Sanitizer.sanitizeText(reflectionText);
+
+    const typedName = nameInput ? nameInput.value.trim() : '';
+    const isAnonymous = anonymousInput ? anonymousInput.checked : true;
+    const displayName = isAnonymous
+        ? 'Anónimo'
+        : (Sanitizer.sanitizeUsername(typedName) || 'Anónimo');
 
     if (!this.currentUser) {
         this.showToast('No se pudo identificar al usuario');
         return;
     }
+
+    const todayStr = this.getTodayDateStr();
+    const todayReading = this.data.find(r => r.date === todayStr);
 
     const newPost = {
         reference: todayReading ? todayReading.reference : 'Lectura del día',
@@ -2338,12 +2365,22 @@ if (publishCommunityBtn) {
         return;
     }
 
-       if ('vibrate' in navigator) {
+    if ('vibrate' in navigator) {
         navigator.vibrate(30);
     }
 
     this.communityFormOpen = false;
+
+    if (reflectionInput) reflectionInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (anonymousInput) anonymousInput.checked = true;
+    if (nameInput) {
+        nameInput.disabled = true;
+        nameInput.placeholder = 'Se publicará como Anónimo';
+    }
+
     this.showToast('Reflexión publicada correctamente');
+
     this.handleRoute().catch(error => {
         console.error('[Route] Error actualizando comunidad:', error);
     });
@@ -2580,9 +2617,11 @@ class ErrorHandler {
                 timestamp: new Date().toISOString()
             });
             
-            if (!e.message.includes('NetworkError')) {
+           const errorMessage = (e.message || '');
+
+            if (!errorMessage.includes('NetworkError')) {
                 App.showToast('Ocurrió un error. Por favor, recarga la página.');
-            }
+        }
         });
         
         window.addEventListener('unhandledrejection', (e) => {
@@ -2606,6 +2645,69 @@ class ErrorHandler {
 }
 
 const errorHandler = new ErrorHandler();
+
+// ================================
+// SANITIZADOR BÁSICO DE CONTENIDO
+// ================================
+const Sanitizer = {
+    
+    sanitizeText(text) {
+        if (!text || typeof text !== 'string') return '';
+
+        let cleaned = text.trim();
+
+        // Limitar longitud
+        cleaned = cleaned.substring(0, 2000);
+
+        // Eliminar HTML
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+
+        // Quitar scripts peligrosos
+        cleaned = cleaned.replace(/javascript:/gi, '');
+        cleaned = cleaned.replace(/on\w+=/gi, '');
+
+        // Normalizar espacios
+        cleaned = cleaned.replace(/\s+/g, ' ');
+
+        return cleaned.trim();
+    },
+
+    sanitizeUsername(name) {
+        if (!name) return 'Anónimo';
+
+        let cleaned = name.trim().substring(0, 30);
+
+        cleaned = cleaned.replace(/[^a-zA-ZáéíóúñÑüÁÉÍÓÚÜ\s]/g, '');
+
+        return cleaned || 'Anónimo';
+    },
+
+    sanitizeReference(ref) {
+        if (!ref) return 'Lectura del día';
+
+        let cleaned = ref.trim().substring(0, 100);
+
+        cleaned = cleaned.replace(/[^a-zA-Z0-9\s:;.,\-]/g, '');
+
+        return cleaned || 'Lectura del día';
+    },
+
+    validateText(text) {
+        if (!text || text.trim().length === 0) {
+            return { valid: false, message: 'Escribe tu reflexión' };
+        }
+
+        if (text.length < 10) {
+            return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
+        }
+
+        if (text.length > 2000) {
+            return { valid: false, message: 'Texto demasiado largo' };
+        }
+
+        return { valid: true };
+    }
+};
 
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
