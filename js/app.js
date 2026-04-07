@@ -1737,7 +1737,10 @@ const introVideoHtml = showIntroVideo ? `
                             class="community-textarea" 
                             id="community-reflection" 
                             placeholder="Escribe aquí lo que Dios te habló a través de este pasaje..."
+                            maxlength="1200"
                         ></textarea>
+
+                        <div class="community-char-counter" id="community-char-counter">0 / 1200</div>
                     </div>
 
                     <div class="community-form-actions">
@@ -2483,16 +2486,37 @@ if (navItem) {
         
         // Auto-guardado de notas
        this.$content.addEventListener('input', (e) => {
-            if (e.target.matches('.note-textarea')) {
-                const date = e.target.getAttribute('data-note-date');
-                const field = e.target.getAttribute('data-field');
-                if (date && field) {
-                    const note = this.getNote(date);
-                    note[field] = e.target.value;
-                    this.saveNote(date, note);
-                }
-            }
-        });
+    if (e.target.matches('.note-textarea')) {
+        const date = e.target.getAttribute('data-note-date');
+        const field = e.target.getAttribute('data-field');
+
+        if (date && field) {
+            const note = this.getNote(date);
+            note[field] = e.target.value;
+            this.saveNote(date, note);
+        }
+    }
+
+    if (e.target.id === 'community-reflection') {
+        const counter = document.getElementById('community-char-counter');
+        if (!counter) return;
+
+        const currentLength = e.target.value.length;
+        const maxLength = 1200;
+
+        counter.textContent = `${currentLength} / ${maxLength}`;
+
+        counter.classList.remove('warning', 'danger');
+
+        if (currentLength >= 1000 && currentLength < 1200) {
+            counter.classList.add('warning');
+        }
+
+        if (currentLength >= 1200) {
+            counter.classList.add('danger');
+        }
+    }
+});
 
         this.$content.addEventListener('change', (e) => {
     if (e.target.id === 'community-anonymous') {
