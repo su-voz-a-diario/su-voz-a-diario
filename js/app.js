@@ -47,6 +47,11 @@ const App = {
     
     calendarInitialized: false,
     calendarScrollTop: 0,
+
+     // ✅ NUEVAS PROPIEDADES PARA OPTIMIZACIÓN
+    communityCache: null,           // Para caché de posts
+    communityScrollTop: 0,          // Para guardar scroll
+    shouldScrollToLastPost: false,  // Para controlar scroll al último post
   
     
     // Sistema de rachas
@@ -583,6 +588,65 @@ checkReminderOnOpen: function() {
         console.error("Error cargando posts:", error);
         return [];
     }
+},
+
+// ========================================
+// MÉTODOS OPTIMIZADOS PARA COMUNIDAD
+// ========================================
+
+// Método con caché para posts
+getCommunityPostsCached: async function() {
+    const CACHE_DURATION = 30000; // 30 segundos de caché
+    const now = Date.now();
+    
+    if (this.communityCache && 
+        this.communityCache.posts && 
+        (now - this.communityCache.timestamp) < CACHE_DURATION) {
+        console.log('[Community] Usando caché de posts');
+        return this.communityCache.posts;
+    }
+    
+    console.log('[Community] Cargando posts desde Firestore');
+    const posts = await this.getCommunityPosts();
+    this.communityCache = {
+        posts: posts,
+        timestamp: now
+    };
+    return posts;
+},
+
+// Invalidar caché (llamar después de publicar/eliminar)
+invalidateCommunityCache: function() {
+    this.communityCache = null;
+    console.log('[Community] Caché invalidada');
+},
+
+// Guardar posición de scroll
+saveCommunityScrollPosition: function() {
+    this.communityScrollTop = window.scrollY || window.pageYOffset || 0;
+},
+
+// Restaurar posición de scroll
+restoreCommunityScrollPosition: function() {
+    if (this.communityScrollTop && this.communityScrollTop > 0) {
+        setTimeout(() => {
+            window.scrollTo(0, this.communityScrollTop);
+            console.log('[Community] Scroll restaurado a:', this.communityScrollTop);
+        }, 100);
+    }
+},
+
+// Scroll al último post (más reciente)
+scrollToLastPost: function() {
+    setTimeout(() => {
+        const posts = document.querySelectorAll('.community-card');
+        if (posts.length > 0) {
+            const lastPost = posts[posts.length - 1];
+            lastPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('[Community] Scroll al último post');
+        }
+        this.shouldScrollToLastPost = false;
+    }, 150);
 },
 
 async addCommunityPost(post) {
@@ -1727,6 +1791,11 @@ removeSelectionMenu: function() {
     const parts = hash.split('/');
     const view = parts[0];
     const param = parts[1] || null;
+
+    // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
+    if (this.currentView === 'community' && view !== 'community') {
+    this.saveCommunityScrollPosition();
+    }
     
     this.resetReadingMode();
     if (this.currentView === 'calendar' && view !== 'calendar') {
@@ -2098,10 +2167,27 @@ const introVideoHtml = showIntroVideo ? `
     const todayStr = this.getTodayDateStr();
     const todayReading = this.data.find(r => r.date === todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
-    const posts = await this.getCommunityPosts();
-    const reactionSummary = await this.getCommunityReactionSummary(posts);
-    const repliesSummary = await this.getRepliesSummary(posts);
-
+    
+    // Mostrar skeleton loading mientras carga
+    this.$content.innerHTML = `
+        <div class="community-container">
+            <div class="skeleton-loading">
+                <div class="skeleton-header"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+                <div class="skeleton-card"></div>
+            </div>
+        </div>
+    `;
+    
+    // Cargar TODO en paralelo (más rápido)
+    const [posts, reactionSummary, repliesSummary] = await Promise.all([
+        this.getCommunityPostsCached(),      // Usar caché
+        this.getCommunityReactionSummary(),  // Mantener igual
+        this.getRepliesSummary()             // Mantener igual
+    ]);
+    
+    // Renderizar el contenido
     this.$content.innerHTML = `
         <div class="community-container">
             <div class="community-header">
@@ -2224,6 +2310,13 @@ const introVideoHtml = showIntroVideo ? `
             </div>
         </div>
     `;
+    
+    // Restaurar o posicionar scroll según corresponda
+    if (this.shouldScrollToLastPost) {
+        this.scrollToLastPost();
+    } else {
+        this.restoreCommunityScrollPosition();
+    }
 },
 
     
@@ -2809,6 +2902,10 @@ if (publishCommunityBtn) {
         return;
     }
 
+    // ✅ NUEVO: Invalidar caché y marcar para scroll al último
+    this.invalidateCommunityCache();
+    this.shouldScrollToLastPost = true;  // Esto hará que al recargar vaya al nuevo post
+
     if ('vibrate' in navigator) {
         navigator.vibrate(30);
     }
@@ -2842,6 +2939,8 @@ if (deleteCommunityBtn) {
             this.showToast('No se pudo eliminar la reflexión');
             return;
         }
+
+         this.invalidateCommunityCache(); 
 
         if ('vibrate' in navigator) {
             navigator.vibrate(20);
@@ -2904,6 +3003,8 @@ if (publishReplyBtn) {
         this.showToast(result.message || 'No se pudo guardar la respuesta');
         return;
     }
+
+    this.invalidateCommunityCache(); 
 
     this.clearReplyDraft(postId);
     this.openReplyPostId = null;
