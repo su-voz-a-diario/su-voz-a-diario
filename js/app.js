@@ -2440,9 +2440,7 @@ const introVideoHtml = showIntroVideo ? `
             .replace(/<[^>]+>/g, '')
             .trim();
 
-       const appLink = 'https://su-voz-a-diario.github.io/';
-
-       const appLink = 'https://su-voz-a-diario.github.io/';
+       const appLink = 'https://su-voz-a-diario.github.io/su-voz-a-diario/';
 
         const shareText = `📖 SU VOZ A DIARIO
         ━━━━━━━━━━
@@ -2453,7 +2451,7 @@ const introVideoHtml = showIntroVideo ? `
         ${cleanText}
 
         ━━━━━━━━━━
-        Lee y medita más en:
+        Sigue escuchando Su voz en:
         ${appLink}`;
 
        if (navigator.share) {
