@@ -2645,16 +2645,6 @@ if (deleteCommunityBtn) {
     return;
 }
 
-const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
-if (toggleReplyBtn) {
-    const postId = toggleReplyBtn.getAttribute('data-post-id');
-    this.toggleReplyForm(postId);
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error actualizando formulario de respuesta:', error);
-    });
-    return;
-}
-
 const cancelReplyBtn = e.target.closest('[data-action="cancel-reply-form"]');
 if (cancelReplyBtn) {
     const postId = cancelReplyBtn.getAttribute('data-post-id');
