@@ -1690,7 +1690,7 @@ removeSelectionMenu: function() {
         clearTimeout(this.selectionMenuTimeout);
         this.selectionMenuTimeout = null;
     }
-}
+},
     
     // ========================================
     // NAVEGACIÓN Y RENDERIZADO
