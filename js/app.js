@@ -1398,8 +1398,10 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 },
 
 // ========================================
-// NUEVO SISTEMA DE SELECCIÓN - POSICIONAMIENTO INTELIGENTE
+// SISTEMA DE SELECCIÓN PROFESIONAL
+// CON REPOSICIONAMIENTO DINÁMICO EN SCROLL
 // ========================================
+
 showSelectionMenu: function(selection, dateStr) {
     this.removeSelectionMenu();
 
@@ -1409,22 +1411,26 @@ showSelectionMenu: function(selection, dateStr) {
     if (!selectedText || selectedText.length < 3) return;
 
     const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
-    if (!rect || (!rect.width && !rect.height)) return;
+    
+    // Guardar referencia al rango para actualizaciones durante scroll
+    this.currentSelectionRange = range;
+    this.currentSelectionDate = dateStr;
+    this.currentSelectedText = selectedText;
 
     // Crear el menú
     const menu = document.createElement('div');
     menu.id = 'selection-menu';
     menu.className = 'selection-menu';
+    menu.setAttribute('data-selection-active', 'true');
 
     // Botón Amarillo
     const yellowBtn = document.createElement('button');
     yellowBtn.className = 'selection-menu-btn';
     yellowBtn.innerHTML = `🟡`;
     yellowBtn.title = "Resaltar en amarillo";
-    yellowBtn.onclick = () => {
-        this.saveSelectedHighlight(selectedText, 'yellow', dateStr);
+    yellowBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.saveSelectedHighlight(this.currentSelectedText, 'yellow', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
@@ -1434,8 +1440,9 @@ showSelectionMenu: function(selection, dateStr) {
     blueBtn.className = 'selection-menu-btn';
     blueBtn.innerHTML = `🔵`;
     blueBtn.title = "Resaltar en azul";
-    blueBtn.onclick = () => {
-        this.saveSelectedHighlight(selectedText, 'blue', dateStr);
+    blueBtn.onclick = (e) => {
+        e.stopPropagation();
+        this.saveSelectedHighlight(this.currentSelectedText, 'blue', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
@@ -1445,9 +1452,10 @@ showSelectionMenu: function(selection, dateStr) {
     copyBtn.className = 'selection-menu-btn';
     copyBtn.innerHTML = `📋`;
     copyBtn.title = "Copiar texto";
-    copyBtn.onclick = async () => {
+    copyBtn.onclick = async (e) => {
+        e.stopPropagation();
         try {
-            await navigator.clipboard.writeText(selectedText);
+            await navigator.clipboard.writeText(this.currentSelectedText);
             this.showToast('Texto copiado');
         } catch {
             this.showToast('No se pudo copiar');
@@ -1461,9 +1469,25 @@ showSelectionMenu: function(selection, dateStr) {
     menu.appendChild(copyBtn);
     document.body.appendChild(menu);
 
-    // ========================================
-    // LÓGICA DE POSICIONAMIENTO INTELIGENTE
-    // ========================================
+    // Posicionar inicialmente
+    this.positionSelectionMenu(menu, range);
+    
+    // Mostrar con animación
+    requestAnimationFrame(() => {
+        menu.classList.add('visible');
+    });
+
+    // ===== SISTEMA DE SCROLL INTELIGENTE =====
+    this.setupScrollBehavior(menu, range);
+    
+    this.selectionMenuVisible = true;
+},
+
+// ========================================
+// POSICIONAMIENTO DEL MENÚ
+// ========================================
+positionSelectionMenu: function(menu, range) {
+    const rect = range.getBoundingClientRect();
     const menuRect = menu.getBoundingClientRect();
     const viewportHeight = window.innerHeight;
     const viewportWidth = window.innerWidth;
@@ -1474,73 +1498,215 @@ showSelectionMenu: function(selection, dateStr) {
     // Determinar si la selección está en la mitad superior o inferior
     const isSelectionInUpperHalf = selectionMiddleY < (viewportHeight / 2);
     
-    // Margen de seguridad
+    // Márgenes
     const SAFE_MARGIN = 15;
-    const SYSTEM_MENU_OFFSET = 60; // Espacio estimado para el menú del sistema
+    const SYSTEM_MENU_OFFSET = 60;
     
     let top, left;
     
-    // Centrar horizontalmente respecto a la selección
+    // Centrar horizontalmente
     left = rect.left + (rect.width / 2) - (menuRect.width / 2);
-    
-    // Asegurar que no se salga por los bordes horizontales
     left = Math.max(SAFE_MARGIN, Math.min(left, viewportWidth - menuRect.width - SAFE_MARGIN));
     
-    // ===== POSICIONAMIENTO VERTICAL ESTRATÉGICO =====
+    // Posicionamiento vertical estratégico
     if (isSelectionInUpperHalf) {
-        // Selección en MITAD SUPERIOR
-        // El menú del sistema aparece ABAJO
-        // Nosotros aparecemos ARRIBA (para no competir)
         top = rect.top - menuRect.height - SAFE_MARGIN;
-        
-        // Si no hay espacio arriba, forzar abajo con offset adicional
         if (top < SAFE_MARGIN) {
             top = rect.bottom + SYSTEM_MENU_OFFSET;
         }
     } else {
-        // Selección en MITAD INFERIOR
-        // El menú del sistema aparece ARRIBA
-        // Nosotros aparecemos ABAJO (para no competir)
         top = rect.bottom + SAFE_MARGIN;
-        
-        // Si no hay espacio abajo, forzar arriba con offset adicional
         if (top + menuRect.height > viewportHeight - SAFE_MARGIN) {
             top = rect.top - menuRect.height - SYSTEM_MENU_OFFSET;
         }
     }
     
-    // Ajuste final de límites verticales
     top = Math.max(SAFE_MARGIN, Math.min(top, viewportHeight - menuRect.height - SAFE_MARGIN));
     
-    // Aplicar posición considerando el scroll
+    // Aplicar posición
     menu.style.top = `${top + window.scrollY}px`;
     menu.style.left = `${left + window.scrollX}px`;
     
-    // Añadir una flecha indicadora sutil (opcional pero profesional)
-    this.addMenuArrow(menu, isSelectionInUpperHalf ? 'bottom' : 'top');
+    // Actualizar flecha
+    this.updateMenuArrow(menu, isSelectionInUpperHalf ? 'bottom' : 'top');
     
-    // Mostrar con animación
-    requestAnimationFrame(() => {
-        menu.classList.add('visible');
+    // Guardar la posición relativa para el scroll
+    menu.dataset.preferredPosition = isSelectionInUpperHalf ? 'top' : 'bottom';
+    menu.dataset.lastRect = JSON.stringify({
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height
     });
-
-    this.selectionMenuVisible = true;
 },
 
 // ========================================
-// AÑADIR FLECHA INDICADORA AL MENÚ
+// COMPORTAMIENTO DURANTE SCROLL (PROFESIONAL)
 // ========================================
-addMenuArrow: function(menu, position) {
-    // Eliminar flecha existente si la hay
+setupScrollBehavior: function(menu, initialRange) {
+    let scrollTimeout;
+    let isScrolling = false;
+    let scrollTick = false;
+    let lastScrollY = window.scrollY;
+    let scrollDirection = null;
+    let scrollVelocity = 0;
+    let lastScrollTime = Date.now();
+    
+    // Función para actualizar posición durante scroll
+    const updateMenuPosition = () => {
+        const selection = window.getSelection();
+        
+        // Verificar si la selección sigue activa
+        if (!selection || selection.rangeCount === 0 || !this.currentSelectionRange) {
+            this.removeSelectionMenu();
+            return;
+        }
+        
+        // Intentar usar el rango guardado
+        let range = this.currentSelectionRange;
+        let rect;
+        
+        try {
+            rect = range.getBoundingClientRect();
+        } catch (e) {
+            // Si el rango ya no es válido, eliminar menú
+            this.removeSelectionMenu();
+            return;
+        }
+        
+        // Si el texto seleccionado ya no es visible (fuera de viewport)
+        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
+        
+        if (!isVisible) {
+            // Ocultar temporalmente si está fuera de vista
+            menu.style.opacity = '0';
+            menu.style.pointerEvents = 'none';
+        } else {
+            // Reposicionar suavemente
+            menu.style.opacity = '';
+            menu.style.pointerEvents = '';
+            this.positionSelectionMenu(menu, range);
+        }
+        
+        scrollTick = false;
+    };
+    
+    // Scroll handler optimizado con requestAnimationFrame
+    const scrollHandler = () => {
+        const now = Date.now();
+        const currentScrollY = window.scrollY;
+        
+        // Calcular dirección y velocidad
+        const deltaY = currentScrollY - lastScrollY;
+        scrollDirection = deltaY > 0 ? 'down' : 'up';
+        scrollVelocity = Math.abs(deltaY) / (now - lastScrollTime) * 16; // px/frame
+        
+        lastScrollY = currentScrollY;
+        lastScrollTime = now;
+        
+        // Si el scroll es muy rápido, ocultar temporalmente (como el nativo)
+        if (scrollVelocity > 2) {
+            menu.classList.add('selection-menu-scrolling');
+            menu.style.transition = 'none';
+        } else {
+            menu.classList.remove('selection-menu-scrolling');
+            menu.style.transition = '';
+        }
+        
+        if (!scrollTick) {
+            requestAnimationFrame(updateMenuPosition);
+            scrollTick = true;
+        }
+        
+        // Marcar que está scrolleando
+        if (!isScrolling) {
+            isScrolling = true;
+            menu.classList.add('is-scrolling');
+        }
+        
+        // Clear timeout existente
+        clearTimeout(scrollTimeout);
+        
+        // Al detener el scroll, restaurar estado normal
+        scrollTimeout = setTimeout(() => {
+            isScrolling = false;
+            menu.classList.remove('is-scrolling');
+            menu.classList.remove('selection-menu-scrolling');
+            menu.style.transition = '';
+            
+            // Reposicionar una última vez para asegurar precisión
+            const selection = window.getSelection();
+            if (selection && selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                this.positionSelectionMenu(menu, range);
+            }
+        }, 150); // 150ms después de detener el scroll
+    };
+    
+    // Click fuera para cerrar
+    const clickOutsideHandler = (e) => {
+        if (!menu.contains(e.target)) {
+            const selection = window.getSelection();
+            if (!selection.toString().trim()) {
+                this.removeSelectionMenu();
+            }
+        }
+    };
+    
+    // Guardar handlers para limpiarlos después
+    this.scrollHandler = scrollHandler;
+    this.clickOutsideHandler = clickOutsideHandler;
+    
+    // Agregar event listeners
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+    document.addEventListener('click', clickOutsideHandler);
+    
+    // Guardar referencia para limpieza
+    menu.cleanup = () => {
+        window.removeEventListener('scroll', scrollHandler);
+        document.removeEventListener('click', clickOutsideHandler);
+        clearTimeout(scrollTimeout);
+    };
+},
+
+// ========================================
+// ACTUALIZAR FLECHA DEL MENÚ
+// ========================================
+updateMenuArrow: function(menu, position) {
+    // Eliminar flecha existente
     const existingArrow = menu.querySelector('.selection-menu-arrow');
     if (existingArrow) existingArrow.remove();
     
     const arrow = document.createElement('div');
     arrow.className = `selection-menu-arrow selection-menu-arrow-${position}`;
-    
-    // La flecha se posiciona con CSS
     menu.appendChild(arrow);
 },
+
+// ========================================
+// ELIMINAR MENÚ DE SELECCIÓN (MEJORADO)
+// ========================================
+removeSelectionMenu: function() {
+    const menu = document.getElementById('selection-menu');
+    if (menu) {
+        // Ejecutar limpieza de event listeners
+        if (menu.cleanup) {
+            menu.cleanup();
+        }
+        menu.remove();
+    }
+    
+    this.selectionMenuVisible = false;
+    this.currentSelectionRange = null;
+    this.currentSelectedText = null;
+    this.currentSelectionDate = null;
+    
+    if (this.selectionMenuTimeout) {
+        clearTimeout(this.selectionMenuTimeout);
+        this.selectionMenuTimeout = null;
+    }
+}
     
     // ========================================
     // NAVEGACIÓN Y RENDERIZADO
