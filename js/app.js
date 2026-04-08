@@ -1356,22 +1356,6 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     }
 },
 
-// ========================================
-// NUEVO SISTEMA DE SELECCIÓN
-// ========================================
-
-removeSelectionMenu: function() {
-    const menu = document.getElementById('selection-menu');
-    if (menu) menu.remove();
-
-    this.selectionMenuVisible = false;
-
-    if (this.selectionMenuTimeout) {
-        clearTimeout(this.selectionMenuTimeout);
-        this.selectionMenuTimeout = null;
-    }
-},
-
 saveSelectedHighlight: function(selectedText, color, dateStr) {
     if (!selectedText || selectedText.trim().length < 3) {
         this.showToast('Selecciona un texto un poco más largo');
