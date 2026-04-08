@@ -1397,6 +1397,9 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     this.scheduleRender();
 },
 
+// ========================================
+// NUEVO SISTEMA DE SELECCIÓN (CORREGIDO)
+// ========================================
 showSelectionMenu: function(selection, dateStr) {
     this.removeSelectionMenu();
 
@@ -1414,27 +1417,34 @@ showSelectionMenu: function(selection, dateStr) {
     menu.id = 'selection-menu';
     menu.className = 'selection-menu';
 
+    // --- CORRECCIÓN PRINCIPAL AQUÍ ---
+    // Botón para Amarillo (Solo emoji con 'title' para accesibilidad)
     const yellowBtn = document.createElement('button');
     yellowBtn.className = 'selection-menu-btn';
-    yellowBtn.innerHTML = `🟡 Amarillo`;
+    yellowBtn.innerHTML = `🟡`; // <-- Sin la palabra "Amarillo"
+    yellowBtn.title = "Resaltar en amarillo"; // Pista para el usuario
     yellowBtn.onclick = () => {
         this.saveSelectedHighlight(selectedText, 'yellow', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
 
+    // Botón para Azul (Solo emoji con 'title' para accesibilidad)
     const blueBtn = document.createElement('button');
     blueBtn.className = 'selection-menu-btn';
-    blueBtn.innerHTML = `🔵 Azul`;
+    blueBtn.innerHTML = `🔵`; // <-- Sin la palabra "Azul"
+    blueBtn.title = "Resaltar en azul"; // Pista para el usuario
     blueBtn.onclick = () => {
         this.saveSelectedHighlight(selectedText, 'blue', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
+    // --- FIN DE LA CORRECCIÓN PRINCIPAL ---
 
     const copyBtn = document.createElement('button');
     copyBtn.className = 'selection-menu-btn';
-    copyBtn.innerHTML = `📋 Copiar`;
+    copyBtn.innerHTML = `📋`; // También podrías dejar solo el icono aquí
+    copyBtn.title = "Copiar texto";
     copyBtn.onclick = async () => {
         try {
             await navigator.clipboard.writeText(selectedText);
@@ -1465,6 +1475,10 @@ showSelectionMenu: function(selection, dateStr) {
 
     menu.style.top = `${top}px`;
     menu.style.left = `${left}px`;
+    
+    // Pequeño ajuste de estilo para un menú más compacto con solo iconos
+    menu.style.padding = '5px';
+    menu.style.gap = '5px';
 
     requestAnimationFrame(() => {
         menu.classList.add('visible');
