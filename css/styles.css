@@ -2225,3 +2225,35 @@ body.dark-mode .selection-menu-btn:nth-of-type(2):hover {
         font-size: 19px;
     }
 }
+
+/* ===== FLECHA INDICADORA (PROFESIONAL) ===== */
+.selection-menu-arrow {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: inherit;
+    backdrop-filter: inherit;
+    -webkit-backdrop-filter: inherit;
+    border: inherit;
+    border-radius: 3px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    z-index: -1;
+}
+
+.selection-menu-arrow-top {
+    top: -6px;
+    border-bottom: none;
+    border-right: none;
+}
+
+.selection-menu-arrow-bottom {
+    bottom: -6px;
+    border-top: none;
+    border-left: none;
+}
+
+/* Ajuste para modo oscuro */
+body.dark-mode .selection-menu-arrow {
+    background: rgba(30, 41, 59, 0.96);
+}
