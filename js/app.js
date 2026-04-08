@@ -19,69 +19,6 @@ import {
 const db = window.firebaseDb;
 const auth = window.firebaseAuth;
 
-// ================================
-// SANITIZADOR BÁSICO DE CONTENIDO
-// ================================
-const Sanitizer = {
-    
-    sanitizeText(text) {
-        if (!text || typeof text !== 'string') return '';
-
-        let cleaned = text.trim();
-
-        // Limitar longitud
-        cleaned = cleaned.substring(0, 1200);
-
-        // Eliminar HTML
-        cleaned = cleaned.replace(/<[^>]*>/g, '');
-
-        // Quitar scripts peligrosos
-        cleaned = cleaned.replace(/javascript:/gi, '');
-        cleaned = cleaned.replace(/on\w+=/gi, '');
-
-        // Normalizar espacios
-        cleaned = cleaned.replace(/\s+/g, ' ');
-
-        return cleaned.trim();
-    },
-
-    sanitizeUsername(name) {
-        if (!name) return 'Anónimo';
-
-        let cleaned = name.trim().substring(0, 30);
-
-        cleaned = cleaned.replace(/[^a-zA-ZáéíóúñÑüÁÉÍÓÚÜ\s]/g, '');
-
-        return cleaned || 'Anónimo';
-    },
-
-    sanitizeReference(ref) {
-        if (!ref) return 'Lectura del día';
-
-        let cleaned = ref.trim().substring(0, 100);
-
-        cleaned = cleaned.replace(/[^a-zA-Z0-9\s:;.,\-]/g, '');
-
-        return cleaned || 'Lectura del día';
-    },
-
-    validateText(text) {
-        if (!text || text.trim().length === 0) {
-            return { valid: false, message: 'Escribe tu reflexión' };
-        }
-
-        if (text.length < 10) {
-            return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
-        }
-
-        if (text.length > 1200) {
-            return { valid: false, message: 'Texto demasiado largo' };
-        }
-
-        return { valid: true };
-    }
-};
-
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -732,29 +669,21 @@ async getRepliesSummary(posts) {
 
 async addCommunityReply(reply) {
     try {
-        const validation = Sanitizer.validateText(reply.text);
-        if (!validation.valid) {
-            return { success: false, message: validation.message };
-        }
+        const cleanText = (reply.text || '').trim();
 
-        const safeReply = {
-            postId: reply.postId,
-            name: Sanitizer.sanitizeUsername(reply.name || 'Anónimo'),
-            text: Sanitizer.sanitizeText(reply.text),
-            date: reply.date,
-            ownerUid: reply.ownerUid,
-            createdAt: serverTimestamp()
-        };
-
-        if (!safeReply.text.trim()) {
+        if (!cleanText) {
             return { success: false, message: 'Escribe una respuesta' };
         }
 
-        if (safeReply.text.length > this.replyCharLimit) {
+        if (cleanText.length > this.replyCharLimit) {
             return { success: false, message: `Máximo ${this.replyCharLimit} caracteres` };
         }
 
-        await addDoc(collection(db, "communityReplies"), safeReply);
+        await addDoc(collection(db, "communityReplies"), {
+            ...reply,
+            text: cleanText,
+            createdAt: serverTimestamp()
+        });
 
         return { success: true };
     } catch (error) {
@@ -2708,6 +2637,16 @@ if (deleteCommunityBtn) {
     return;
 }
 
+const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
+if (toggleReplyBtn) {
+    const postId = toggleReplyBtn.getAttribute('data-post-id');
+    this.toggleReplyForm(postId);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando formulario de respuesta:', error);
+    });
+    return;
+}
+
 const cancelReplyBtn = e.target.closest('[data-action="cancel-reply-form"]');
 if (cancelReplyBtn) {
     const postId = cancelReplyBtn.getAttribute('data-post-id');
@@ -2716,6 +2655,65 @@ if (cancelReplyBtn) {
     this.renderCommunity().catch(error => {
         console.error('[Community] Error cerrando formulario de respuesta:', error);
     });
+    return;
+}
+
+const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
+if (publishReplyBtn) {
+    const postId = publishReplyBtn.getAttribute('data-post-id');
+    const text = this.getReplyDraft(postId).trim();
+
+    if (!text) {
+        this.showToast('Escribe una respuesta');
+        return;
+    }
+
+    if (!this.currentUser) {
+        this.showToast('No se pudo identificar al usuario');
+        return;
+    }
+
+    const result = await this.addCommunityReply({
+        postId,
+        name: 'Anónimo',
+        text,
+        date: this.getTodayDateStr(),
+        ownerUid: this.currentUser.uid
+    });
+
+    if (!result.success) {
+        this.showToast(result.message || 'No se pudo guardar la respuesta');
+        return;
+    }
+
+    this.clearReplyDraft(postId);
+    this.openReplyPostId = null;
+    this.showToast('Respuesta publicada');
+
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error actualizando respuestas:', error);
+    });
+    return;
+}
+
+const deleteReplyBtn = e.target.closest('[data-action="delete-community-reply"]');
+if (deleteReplyBtn) {
+    const replyId = deleteReplyBtn.getAttribute('data-reply-id');
+
+    if (confirm('¿Deseas eliminar esta respuesta?')) {
+        const success = await this.deleteCommunityReply(replyId);
+
+        if (!success) {
+            this.showToast('No se pudo eliminar la respuesta');
+            return;
+        }
+
+        this.showToast('Respuesta eliminada');
+        this.renderCommunity().catch(error => {
+            console.error('[Community] Error actualizando respuestas:', error);
+        });
+    }
+
     return;
 }
 
@@ -2738,89 +2736,6 @@ if (communityReactionBtn) {
     this.renderCommunity().catch(error => {
         console.error('[Community] Error actualizando reacciones:', error);
     });
-    return;
-}
-
-const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
-if (toggleReplyBtn) {
-    const postId = toggleReplyBtn.getAttribute('data-post-id');
-
-    this.toggleReplyForm(postId);
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error mostrando formulario de respuesta:', error);
-    });
-    return;
-}
-           
-const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
-if (publishReplyBtn) {
-    const postId = publishReplyBtn.getAttribute('data-post-id');
-    const draft = this.getReplyDraft(postId);
-
-    if (!this.currentUser) {
-        this.showToast('No se pudo identificar al usuario');
-        return;
-    }
-
-    let safeText = (draft || '').trim();
-
-    const validation = Sanitizer.validateText(safeText);
-    if (!validation.valid) {
-        this.showToast(validation.message);
-        return;
-    }
-
-    safeText = Sanitizer.sanitizeText(safeText);
-
-    const result = await this.addCommunityReply({
-        postId,
-        name: 'Anónimo',
-        text: safeText,
-        date: this.getTodayDateStr(),
-        ownerUid: this.currentUser.uid
-    });
-
-    if (!result.success) {
-        this.showToast(result.message || 'No se pudo guardar la respuesta');
-        return;
-    }
-
-    this.clearReplyDraft(postId);
-    this.openReplyPostId = null;
-
-    if ('vibrate' in navigator) {
-        navigator.vibrate(20);
-    }
-
-    this.showToast('Respuesta publicada');
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error publicando respuesta:', error);
-    });
-    return;
-}
-
-const deleteReplyBtn = e.target.closest('[data-action="delete-community-reply"]');
-if (deleteReplyBtn) {
-    const replyId = deleteReplyBtn.getAttribute('data-reply-id');
-
-    if (confirm('¿Deseas eliminar esta respuesta?')) {
-        const success = await this.deleteCommunityReply(replyId);
-
-        if (!success) {
-            this.showToast('No se pudo eliminar la respuesta');
-            return;
-        }
-
-        if ('vibrate' in navigator) {
-            navigator.vibrate(15);
-        }
-
-        this.showToast('Respuesta eliminada');
-        this.renderCommunity().catch(error => {
-            console.error('[Community] Error eliminando respuesta:', error);
-        });
-    }
-
     return;
 }
             
@@ -2981,7 +2896,7 @@ document.addEventListener('selectionchange', () => {
 
         const dateStr = readingTextEl.getAttribute('data-reading-date');
         if (dateStr) {
-        this.showSelectionMenu(selection, dateStr);
+            this.showHighlightButton(selection, dateStr);
         }
     }, 350);
 });
@@ -3072,6 +2987,68 @@ class ErrorHandler {
 
 const errorHandler = new ErrorHandler();
 
+// ================================
+// SANITIZADOR BÁSICO DE CONTENIDO
+// ================================
+const Sanitizer = {
+    
+    sanitizeText(text) {
+        if (!text || typeof text !== 'string') return '';
+
+        let cleaned = text.trim();
+
+        // Limitar longitud
+        cleaned = cleaned.substring(0, 1200);
+
+        // Eliminar HTML
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+
+        // Quitar scripts peligrosos
+        cleaned = cleaned.replace(/javascript:/gi, '');
+        cleaned = cleaned.replace(/on\w+=/gi, '');
+
+        // Normalizar espacios
+        cleaned = cleaned.replace(/\s+/g, ' ');
+
+        return cleaned.trim();
+    },
+
+    sanitizeUsername(name) {
+        if (!name) return 'Anónimo';
+
+        let cleaned = name.trim().substring(0, 30);
+
+        cleaned = cleaned.replace(/[^a-zA-ZáéíóúñÑüÁÉÍÓÚÜ\s]/g, '');
+
+        return cleaned || 'Anónimo';
+    },
+
+    sanitizeReference(ref) {
+        if (!ref) return 'Lectura del día';
+
+        let cleaned = ref.trim().substring(0, 100);
+
+        cleaned = cleaned.replace(/[^a-zA-Z0-9\s:;.,\-]/g, '');
+
+        return cleaned || 'Lectura del día';
+    },
+
+    validateText(text) {
+        if (!text || text.trim().length === 0) {
+            return { valid: false, message: 'Escribe tu reflexión' };
+        }
+
+        if (text.length < 10) {
+            return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
+        }
+
+        if (text.length > 1200) {
+            return { valid: false, message: 'Texto demasiado largo' };
+        }
+
+        return { valid: true };
+    }
+};
 
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
