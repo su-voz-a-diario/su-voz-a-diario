@@ -2180,12 +2180,14 @@ const introVideoHtml = showIntroVideo ? `
         </div>
     `;
     
-    // Cargar TODO en paralelo (más rápido)
-    const [posts, reactionSummary, repliesSummary] = await Promise.all([
-        this.getCommunityPostsCached(),      // Usar caché
-        this.getCommunityReactionSummary(),  // Mantener igual
-        this.getRepliesSummary()             // Mantener igual
-    ]);
+   // Cargar posts primero
+const posts = await this.getCommunityPostsCached();
+
+// Luego cargar reacciones y respuestas en paralelo
+const [reactionSummary, repliesSummary] = await Promise.all([
+    this.getCommunityReactionSummary(posts),
+    this.getRepliesSummary(posts)
+]);
     
     // Renderizar el contenido
     this.$content.innerHTML = `
