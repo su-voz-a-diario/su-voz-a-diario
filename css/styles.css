@@ -2096,20 +2096,20 @@ body.dark-mode .community-reply-item {
 }
 
 /* ========================================
-   MENÚ DE SELECCIÓN (HIGHLIGHTS)
+   MENÚ DE SELECCIÓN (HIGHLIGHTS) - VERSIÓN SOLO ICONOS
    ======================================== */
 .selection-menu {
     position: absolute;
     z-index: 10000;
     display: flex;
-    gap: 8px;
-    padding: 8px;
-    background: rgba(255, 255, 255, 0.98);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    gap: 6px;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 50px; /* Forma de pastilla */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2), 0 4px 10px rgba(0, 0, 0, 0.1);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     
     /* Estado inicial oculto */
     opacity: 0;
@@ -2124,56 +2124,58 @@ body.dark-mode .community-reply-item {
     pointer-events: all;
 }
 
+/* ===== BOTONES CIRCULARES SOLO CON EMOJIS ===== */
 .selection-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;          /* Ancho fijo cuadrado */
+    height: 48px;          /* Alto fijo cuadrado */
+    padding: 0;
     border: none;
+    border-radius: 50%;    /* Perfectamente circular */
     background: #f1f5f9;
     color: #1e293b;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 24px;       /* Tamaño grande para los emojis */
+    font-weight: normal;
     font-family: var(--font-ui);
     cursor: pointer;
     white-space: nowrap;
     transition: all 0.18s ease;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    line-height: 1;
 }
 
 .selection-menu-btn:hover {
     background: #e2e8f0;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    transform: scale(1.08);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .selection-menu-btn:active {
-    transform: translateY(0) scale(0.96);
+    transform: scale(0.95);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-/* Estilos específicos para los botones de color */
-.selection-menu-btn[onclick*="yellow"] {
-    background: #fef3c7;
-    color: #92400e;
+/* Colores específicos para cada botón (hover sutil) */
+.selection-menu-btn:first-of-type:hover {
+    background: #fef3c7; /* Amarillo suave */
 }
 
-.selection-menu-btn[onclick*="yellow"]:hover {
-    background: #fde68a;
+.selection-menu-btn:nth-of-type(2):hover {
+    background: #dbeafe; /* Azul suave */
 }
 
-.selection-menu-btn[onclick*="blue"] {
-    background: #dbeafe;
-    color: #1e3a8a;
+.selection-menu-btn:last-of-type {
+    font-size: 20px; /* El emoji de copiar 📋 es más pequeño */
 }
 
-.selection-menu-btn[onclick*="blue"]:hover {
-    background: #bfdbfe;
-}
-
-/* Modo oscuro */
+/* ===== MODO OSCURO ===== */
 body.dark-mode .selection-menu {
-    background: rgba(30, 41, 59, 0.98);
+    background: rgba(30, 41, 59, 0.96);
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 body.dark-mode .selection-menu-btn {
@@ -2185,33 +2187,41 @@ body.dark-mode .selection-menu-btn:hover {
     background: #475569;
 }
 
-body.dark-mode .selection-menu-btn[onclick*="yellow"] {
-    background: #854d0e;
-    color: #fef3c7;
+body.dark-mode .selection-menu-btn:first-of-type:hover {
+    background: #5a4a1a; /* Amarillo oscuro */
 }
 
-body.dark-mode .selection-menu-btn[onclick*="yellow"]:hover {
-    background: #a16207;
+body.dark-mode .selection-menu-btn:nth-of-type(2):hover {
+    background: #1a3a5a; /* Azul oscuro */
 }
 
-body.dark-mode .selection-menu-btn[onclick*="blue"] {
-    background: #1e3a8a;
-    color: #dbeafe;
-}
-
-body.dark-mode .selection-menu-btn[onclick*="blue"]:hover {
-    background: #2563eb;
-}
-
-/* Responsive para móviles */
+/* ===== RESPONSIVE PARA MÓVILES ===== */
 @media (max-width: 480px) {
     .selection-menu {
-        padding: 6px;
-        gap: 6px;
+        padding: 7px 9px;
+        gap: 5px;
     }
     
     .selection-menu-btn {
-        padding: 8px 12px;
-        font-size: 0.85rem;
+        width: 52px;        /* Más grande en móvil para mejor toque */
+        height: 52px;
+        font-size: 26px;
+    }
+    
+    .selection-menu-btn:last-of-type {
+        font-size: 22px;
+    }
+}
+
+/* Ajuste para pantallas muy pequeñas */
+@media (max-width: 380px) {
+    .selection-menu-btn {
+        width: 46px;
+        height: 46px;
+        font-size: 22px;
+    }
+    
+    .selection-menu-btn:last-of-type {
+        font-size: 19px;
     }
 }
