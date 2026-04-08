@@ -2440,16 +2440,21 @@ const introVideoHtml = showIntroVideo ? `
             .replace(/<[^>]+>/g, '')
             .trim();
 
+       const appLink = 'https://su-voz-a-diario.github.io/';
+
+       const appLink = 'https://su-voz-a-diario.github.io/';
+
         const shareText = `📖 SU VOZ A DIARIO
-━━━━━━━━━━
-Pasaje: ${reading.reference}
-Versión: ${this.currentVersion.toUpperCase()}
-━━━━━━━━━━
+        ━━━━━━━━━━
+        Pasaje: ${reading.reference}
+        Versión: ${this.currentVersion.toUpperCase()}
+        ━━━━━━━━━━
 
-${cleanText}
+        ${cleanText}
 
-━━━━━━━━━━
-Compartido desde Su voz a diario`;
+        ━━━━━━━━━━
+        Lee y medita más en:
+        ${appLink}`;
 
        if (navigator.share) {
            navigator.share({ title: 'Su voz a diario', text: shareText })
