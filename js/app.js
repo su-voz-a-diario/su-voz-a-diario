@@ -124,6 +124,8 @@ const App = {
     controlsCollapsed: false,
     lastReadingTap: 0,
     readingTapDelay: 400,
+    selectionMenuVisible: false,
+    selectionMenuTimeout: null,
     
     // ========================================
     // INICIALIZACIÓN
@@ -667,21 +669,29 @@ async getRepliesSummary(posts) {
 
 async addCommunityReply(reply) {
     try {
-        const cleanText = (reply.text || '').trim();
+        const validation = Sanitizer.validateText(reply.text);
+        if (!validation.valid) {
+            return { success: false, message: validation.message };
+        }
 
-        if (!cleanText) {
+        const safeReply = {
+            postId: reply.postId,
+            name: Sanitizer.sanitizeUsername(reply.name || 'Anónimo'),
+            text: Sanitizer.sanitizeText(reply.text),
+            date: reply.date,
+            ownerUid: reply.ownerUid,
+            createdAt: serverTimestamp()
+        };
+
+        if (!safeReply.text.trim()) {
             return { success: false, message: 'Escribe una respuesta' };
         }
 
-        if (cleanText.length > this.replyCharLimit) {
+        if (safeReply.text.length > this.replyCharLimit) {
             return { success: false, message: `Máximo ${this.replyCharLimit} caracteres` };
         }
 
-        await addDoc(collection(db, "communityReplies"), {
-            ...reply,
-            text: cleanText,
-            createdAt: serverTimestamp()
-        });
+        await addDoc(collection(db, "communityReplies"), safeReply);
 
         return { success: true };
     } catch (error) {
@@ -1272,8 +1282,7 @@ updateCommunityBadge: function() {
     },
     
     removeHighlightButton: function() {
-        const existing = document.getElementById('highlight-btn');
-        if (existing) existing.remove();
+    this.removeSelectionMenu();
     },
 
     restoreHighlightsInDOM: function(dateStr) {
@@ -1354,105 +1363,122 @@ highlightTextInElement: function(container, text, color = 'yellow') {
         node.parentNode.replaceChild(fragment, node);
     }
 },
-    
-   showHighlightButton: function(selection, dateStr) {
-    this.removeHighlightButton();
+
+// ========================================
+// NUEVO SISTEMA DE SELECCIÓN
+// ========================================
+
+removeSelectionMenu: function() {
+    const menu = document.getElementById('selection-menu');
+    if (menu) menu.remove();
+
+    this.selectionMenuVisible = false;
+
+    if (this.selectionMenuTimeout) {
+        clearTimeout(this.selectionMenuTimeout);
+        this.selectionMenuTimeout = null;
+    }
+},
+
+saveSelectedHighlight: function(selectedText, color, dateStr) {
+    if (!selectedText || selectedText.trim().length < 3) {
+        this.showToast('Selecciona un texto un poco más largo');
+        return;
+    }
+
+    const cleanText = selectedText.trim();
+    const highlights = this.getHighlights(dateStr);
+
+    const alreadyExists = highlights.some(item =>
+        item.text === cleanText && item.color === color
+    );
+
+    if (alreadyExists) {
+        this.showToast(`Ese texto ya está resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+        return;
+    }
+
+    highlights.push({ text: cleanText, color });
+
+    this.saveHighlights(dateStr, highlights);
+    this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+    this.scheduleRender();
+},
+
+showSelectionMenu: function(selection, dateStr) {
+    this.removeSelectionMenu();
+
+    if (!selection || selection.rangeCount === 0) return;
 
     const selectedText = selection.toString().trim();
-    if (!selectedText) return;
+    if (!selectedText || selectedText.length < 3) return;
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
 
-    const picker = document.createElement('div');
-    picker.id = 'highlight-btn';
-    picker.className = 'highlight-picker';
+    if (!rect || (!rect.width && !rect.height)) return;
 
-    const colors = [
-        { color: 'yellow', icon: '🟡', label: 'Amarillo' },
-        { color: 'blue', icon: '🔵', label: 'Azul' }
-    ];
+    const menu = document.createElement('div');
+    menu.id = 'selection-menu';
+    menu.className = 'selection-menu';
 
-    colors.forEach(({ color, icon, label }) => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'highlight-color-btn';
-        btn.setAttribute('aria-label', `Resaltar en ${label}`);
-        btn.setAttribute('title', `Resaltar en ${label}`);
-        btn.textContent = icon;
+    const yellowBtn = document.createElement('button');
+    yellowBtn.className = 'selection-menu-btn';
+    yellowBtn.innerHTML = `🟡 Amarillo`;
+    yellowBtn.onclick = () => {
+        this.saveSelectedHighlight(selectedText, 'yellow', dateStr);
+        selection.removeAllRanges();
+        this.removeSelectionMenu();
+    };
 
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+    const blueBtn = document.createElement('button');
+    blueBtn.className = 'selection-menu-btn';
+    blueBtn.innerHTML = `🔵 Azul`;
+    blueBtn.onclick = () => {
+        this.saveSelectedHighlight(selectedText, 'blue', dateStr);
+        selection.removeAllRanges();
+        this.removeSelectionMenu();
+    };
 
-            if (selectedText.length < 3) {
-                this.showToast('Selecciona un texto un poco más largo');
-                selection.removeAllRanges();
-                this.removeHighlightButton();
-                return;
-            }
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'selection-menu-btn';
+    copyBtn.innerHTML = `📋 Copiar`;
+    copyBtn.onclick = async () => {
+        try {
+            await navigator.clipboard.writeText(selectedText);
+            this.showToast('Texto copiado');
+        } catch {
+            this.showToast('No se pudo copiar');
+        }
+        selection.removeAllRanges();
+        this.removeSelectionMenu();
+    };
 
-            const highlights = this.getHighlights(dateStr);
+    menu.appendChild(yellowBtn);
+    menu.appendChild(blueBtn);
+    menu.appendChild(copyBtn);
 
-            const alreadyExists = highlights.some(item =>
-                item.text === selectedText && item.color === color
-            );
+    document.body.appendChild(menu);
 
-            if (!alreadyExists) {
-                highlights.push({
-                    text: selectedText,
-                    color
-                });
+    const menuRect = menu.getBoundingClientRect();
 
-                this.saveHighlights(dateStr, highlights);
-                this.showToast(`Texto resaltado en ${label.toLowerCase()}`);
-            } else {
-                this.showToast(`Ese texto ya está resaltado en ${label.toLowerCase()}`);
-            }
+    let top = window.scrollY + rect.bottom + 10;
+    let left = window.scrollX + rect.left + rect.width / 2 - menuRect.width / 2;
 
-            selection.removeAllRanges();
-            this.removeHighlightButton();
-            this.scheduleRender();
-        });
+    if (top + menuRect.height > window.innerHeight + window.scrollY) {
+        top = window.scrollY + rect.top - menuRect.height - 10;
+    }
 
-        picker.appendChild(btn);
-    });
+    left = Math.max(10, Math.min(left, window.innerWidth - menuRect.width - 10));
 
-    document.body.appendChild(picker);
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
 
     requestAnimationFrame(() => {
-        const pickerRect = picker.getBoundingClientRect();
-        const margin = 12;
-
-        const spaceAbove = rect.top;
-        const spaceBelow = window.innerHeight - rect.bottom;
-
-        let top;
-
-        if (spaceBelow >= pickerRect.height + 12) {
-            top = window.scrollY + rect.bottom + 10;
-        } else if (spaceAbove >= pickerRect.height + 12) {
-            top = window.scrollY + rect.top - pickerRect.height - 10;
-        } else {
-            top = window.scrollY + Math.max(
-                margin,
-                Math.min(
-                    window.innerHeight - pickerRect.height - margin,
-                    rect.bottom + 10
-                )
-            );
-        }
-
-        let left = window.scrollX + rect.left + (rect.width / 2) - (pickerRect.width / 2);
-
-        const minLeft = window.scrollX + margin;
-        const maxLeft = window.scrollX + window.innerWidth - pickerRect.width - margin;
-
-        left = Math.max(minLeft, Math.min(left, maxLeft));
-
-        picker.style.top = `${top}px`;
-        picker.style.left = `${left}px`;
+        menu.classList.add('visible');
     });
+
+    this.selectionMenuVisible = true;
 },
     
     // ========================================
@@ -2720,6 +2746,102 @@ if (communityReactionBtn) {
     });
     return;
 }
+
+const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
+if (toggleReplyBtn) {
+    const postId = toggleReplyBtn.getAttribute('data-post-id');
+
+    this.toggleReplyForm(postId);
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error mostrando formulario de respuesta:', error);
+    });
+    return;
+}
+
+const cancelReplyBtn = e.target.closest('[data-action="cancel-reply-form"]');
+if (cancelReplyBtn) {
+    const postId = cancelReplyBtn.getAttribute('data-post-id');
+
+    this.toggleReplyForm(postId);
+    this.clearReplyDraft(postId);
+
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error cancelando respuesta:', error);
+    });
+    return;
+}
+
+const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
+if (publishReplyBtn) {
+    const postId = publishReplyBtn.getAttribute('data-post-id');
+    const draft = this.getReplyDraft(postId);
+
+    if (!this.currentUser) {
+        this.showToast('No se pudo identificar al usuario');
+        return;
+    }
+
+    let safeText = (draft || '').trim();
+
+    const validation = Sanitizer.validateText(safeText);
+    if (!validation.valid) {
+        this.showToast(validation.message);
+        return;
+    }
+
+    safeText = Sanitizer.sanitizeText(safeText);
+
+    const result = await this.addCommunityReply({
+        postId,
+        name: 'Anónimo',
+        text: safeText,
+        date: this.getTodayDateStr(),
+        ownerUid: this.currentUser.uid
+    });
+
+    if (!result.success) {
+        this.showToast(result.message || 'No se pudo guardar la respuesta');
+        return;
+    }
+
+    this.clearReplyDraft(postId);
+    this.openReplyPostId = null;
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(20);
+    }
+
+    this.showToast('Respuesta publicada');
+    this.renderCommunity().catch(error => {
+        console.error('[Community] Error publicando respuesta:', error);
+    });
+    return;
+}
+
+const deleteReplyBtn = e.target.closest('[data-action="delete-community-reply"]');
+if (deleteReplyBtn) {
+    const replyId = deleteReplyBtn.getAttribute('data-reply-id');
+
+    if (confirm('¿Deseas eliminar esta respuesta?')) {
+        const success = await this.deleteCommunityReply(replyId);
+
+        if (!success) {
+            this.showToast('No se pudo eliminar la respuesta');
+            return;
+        }
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate(15);
+        }
+
+        this.showToast('Respuesta eliminada');
+        this.renderCommunity().catch(error => {
+            console.error('[Community] Error eliminando respuesta:', error);
+        });
+    }
+
+    return;
+}
             
 // Exportar PDF
 const pdfBtn = e.target.closest('[data-action="export-pdf"]');
@@ -2878,7 +3000,7 @@ document.addEventListener('selectionchange', () => {
 
         const dateStr = readingTextEl.getAttribute('data-reading-date');
         if (dateStr) {
-            this.showHighlightButton(selection, dateStr);
+        this.showSelectionMenu(selection, dateStr);
         }
     }, 350);
 });
