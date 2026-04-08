@@ -1616,26 +1616,25 @@ body.dark-mode .about-feature {
 }
 
 .user-highlight-yellow {
-    background: rgba(255, 230, 120, 0.75);
+    background: rgba(255, 230, 120, 0.65);  /* Aumentado de 0.75 a 0.65 para mejor legibilidad */
     border-radius: 4px;
     padding: 0 2px;
+    color: inherit;  /* Asegura que el color del texto no cambie */
 }
 
 .user-highlight-blue {
-    background: rgba(120, 190, 255, 0.45);
+    background: rgba(120, 190, 255, 0.4);   /* Ajustado para mejor visibilidad */
     border-radius: 4px;
     padding: 0 2px;
+    color: inherit;
 }
 
-/* ===== MODO OSCURO ===== */
 body.dark-mode .user-highlight-yellow {
-    background: rgba(255, 210, 80, 0.55);
-    color: inherit;
+    background: rgba(255, 210, 80, 0.5);    /* Más visible en modo oscuro */
 }
 
 body.dark-mode .user-highlight-blue {
-    background: rgba(90, 160, 255, 0.45);
-    color: inherit;
+    background: rgba(90, 160, 255, 0.4);    /* Más visible en modo oscuro */
 }
 
 .april-message {
@@ -2092,4 +2091,125 @@ body.dark-mode .community-reply-item {
     font-weight: 600;
     cursor: pointer;
     padding: 0;
+}
+
+/* ========================================
+   MENÚ DE SELECCIÓN (HIGHLIGHTS)
+   ======================================== */
+.selection-menu {
+    position: absolute;
+    z-index: 10000;
+    display: flex;
+    gap: 8px;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.98);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    
+    /* Estado inicial oculto */
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+}
+
+.selection-menu.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.selection-menu-btn {
+    border: none;
+    background: #f1f5f9;
+    color: #1e293b;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.18s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.selection-menu-btn:hover {
+    background: #e2e8f0;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.selection-menu-btn:active {
+    transform: translateY(0) scale(0.96);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Estilos específicos para los botones de color */
+.selection-menu-btn[onclick*="yellow"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.selection-menu-btn[onclick*="yellow"]:hover {
+    background: #fde68a;
+}
+
+.selection-menu-btn[onclick*="blue"] {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.selection-menu-btn[onclick*="blue"]:hover {
+    background: #bfdbfe;
+}
+
+/* Modo oscuro */
+body.dark-mode .selection-menu {
+    background: rgba(30, 41, 59, 0.98);
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .selection-menu-btn {
+    background: #334155;
+    color: #e2e8f0;
+}
+
+body.dark-mode .selection-menu-btn:hover {
+    background: #475569;
+}
+
+body.dark-mode .selection-menu-btn[onclick*="yellow"] {
+    background: #854d0e;
+    color: #fef3c7;
+}
+
+body.dark-mode .selection-menu-btn[onclick*="yellow"]:hover {
+    background: #a16207;
+}
+
+body.dark-mode .selection-menu-btn[onclick*="blue"] {
+    background: #1e3a8a;
+    color: #dbeafe;
+}
+
+body.dark-mode .selection-menu-btn[onclick*="blue"]:hover {
+    background: #2563eb;
+}
+
+/* Responsive para móviles */
+@media (max-width: 480px) {
+    .selection-menu {
+        padding: 6px;
+        gap: 6px;
+    }
+    
+    .selection-menu-btn {
+        padding: 8px 12px;
+        font-size: 0.85rem;
+    }
 }
