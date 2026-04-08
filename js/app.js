@@ -2656,65 +2656,6 @@ if (cancelReplyBtn) {
     return;
 }
 
-const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
-if (publishReplyBtn) {
-    const postId = publishReplyBtn.getAttribute('data-post-id');
-    const text = this.getReplyDraft(postId).trim();
-
-    if (!text) {
-        this.showToast('Escribe una respuesta');
-        return;
-    }
-
-    if (!this.currentUser) {
-        this.showToast('No se pudo identificar al usuario');
-        return;
-    }
-
-    const result = await this.addCommunityReply({
-        postId,
-        name: 'Anónimo',
-        text,
-        date: this.getTodayDateStr(),
-        ownerUid: this.currentUser.uid
-    });
-
-    if (!result.success) {
-        this.showToast(result.message || 'No se pudo guardar la respuesta');
-        return;
-    }
-
-    this.clearReplyDraft(postId);
-    this.openReplyPostId = null;
-    this.showToast('Respuesta publicada');
-
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error actualizando respuestas:', error);
-    });
-    return;
-}
-
-const deleteReplyBtn = e.target.closest('[data-action="delete-community-reply"]');
-if (deleteReplyBtn) {
-    const replyId = deleteReplyBtn.getAttribute('data-reply-id');
-
-    if (confirm('¿Deseas eliminar esta respuesta?')) {
-        const success = await this.deleteCommunityReply(replyId);
-
-        if (!success) {
-            this.showToast('No se pudo eliminar la respuesta');
-            return;
-        }
-
-        this.showToast('Respuesta eliminada');
-        this.renderCommunity().catch(error => {
-            console.error('[Community] Error actualizando respuestas:', error);
-        });
-    }
-
-    return;
-}
-
 const communityReactionBtn = e.target.closest('[data-action="community-reaction-toggle"]');
 if (communityReactionBtn) {
     const postId = communityReactionBtn.getAttribute('data-post-id');
@@ -2747,20 +2688,7 @@ if (toggleReplyBtn) {
     });
     return;
 }
-
-const cancelReplyBtn = e.target.closest('[data-action="cancel-reply-form"]');
-if (cancelReplyBtn) {
-    const postId = cancelReplyBtn.getAttribute('data-post-id');
-
-    this.toggleReplyForm(postId);
-    this.clearReplyDraft(postId);
-
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error cancelando respuesta:', error);
-    });
-    return;
-}
-
+           
 const publishReplyBtn = e.target.closest('[data-action="publish-reply"]');
 if (publishReplyBtn) {
     const postId = publishReplyBtn.getAttribute('data-post-id');
