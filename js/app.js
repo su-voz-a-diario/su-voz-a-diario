@@ -2871,8 +2871,8 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
         
-        // Resaltado de texto
-        let selectionTimeout;
+       // Resaltado de texto
+let selectionTimeout;
 
 document.addEventListener('selectionchange', () => {
     clearTimeout(selectionTimeout);
@@ -2881,7 +2881,7 @@ document.addEventListener('selectionchange', () => {
         const selection = window.getSelection();
 
         if (!selection || selection.isCollapsed) {
-            this.removeHighlightButton();
+            this.removeSelectionMenu();
             return;
         }
 
@@ -2890,15 +2890,15 @@ document.addEventListener('selectionchange', () => {
 
         const readingTextEl = document.querySelector('.reading-text');
         if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
-            this.removeHighlightButton();
+            this.removeSelectionMenu();
             return;
         }
 
         const dateStr = readingTextEl.getAttribute('data-reading-date');
         if (dateStr) {
-            this.showHighlightButton(selection, dateStr);
+            this.showSelectionMenu(selection, dateStr);
         }
-    }, 350);
+    }, 250);
 });
 },
     
