@@ -1398,7 +1398,7 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 },
 
 // ========================================
-// NUEVO SISTEMA DE SELECCIÓN (CORREGIDO)
+// NUEVO SISTEMA DE SELECCIÓN - POSICIONAMIENTO INTELIGENTE
 // ========================================
 showSelectionMenu: function(selection, dateStr) {
     this.removeSelectionMenu();
@@ -1413,37 +1413,37 @@ showSelectionMenu: function(selection, dateStr) {
 
     if (!rect || (!rect.width && !rect.height)) return;
 
+    // Crear el menú
     const menu = document.createElement('div');
     menu.id = 'selection-menu';
     menu.className = 'selection-menu';
 
-    // --- CORRECCIÓN PRINCIPAL AQUÍ ---
-    // Botón para Amarillo (Solo emoji con 'title' para accesibilidad)
+    // Botón Amarillo
     const yellowBtn = document.createElement('button');
     yellowBtn.className = 'selection-menu-btn';
-    yellowBtn.innerHTML = `🟡`; // <-- Sin la palabra "Amarillo"
-    yellowBtn.title = "Resaltar en amarillo"; // Pista para el usuario
+    yellowBtn.innerHTML = `🟡`;
+    yellowBtn.title = "Resaltar en amarillo";
     yellowBtn.onclick = () => {
         this.saveSelectedHighlight(selectedText, 'yellow', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
 
-    // Botón para Azul (Solo emoji con 'title' para accesibilidad)
+    // Botón Azul
     const blueBtn = document.createElement('button');
     blueBtn.className = 'selection-menu-btn';
-    blueBtn.innerHTML = `🔵`; // <-- Sin la palabra "Azul"
-    blueBtn.title = "Resaltar en azul"; // Pista para el usuario
+    blueBtn.innerHTML = `🔵`;
+    blueBtn.title = "Resaltar en azul";
     blueBtn.onclick = () => {
         this.saveSelectedHighlight(selectedText, 'blue', dateStr);
         selection.removeAllRanges();
         this.removeSelectionMenu();
     };
-    // --- FIN DE LA CORRECCIÓN PRINCIPAL ---
 
+    // Botón Copiar
     const copyBtn = document.createElement('button');
     copyBtn.className = 'selection-menu-btn';
-    copyBtn.innerHTML = `📋`; // También podrías dejar solo el icono aquí
+    copyBtn.innerHTML = `📋`;
     copyBtn.title = "Copiar texto";
     copyBtn.onclick = async () => {
         try {
@@ -1459,32 +1459,87 @@ showSelectionMenu: function(selection, dateStr) {
     menu.appendChild(yellowBtn);
     menu.appendChild(blueBtn);
     menu.appendChild(copyBtn);
-
     document.body.appendChild(menu);
 
+    // ========================================
+    // LÓGICA DE POSICIONAMIENTO INTELIGENTE
+    // ========================================
     const menuRect = menu.getBoundingClientRect();
-
-    let top = window.scrollY + rect.bottom + 10;
-    let left = window.scrollX + rect.left + rect.width / 2 - menuRect.width / 2;
-
-    if (top + menuRect.height > window.innerHeight + window.scrollY) {
-        top = window.scrollY + rect.top - menuRect.height - 10;
-    }
-
-    left = Math.max(10, Math.min(left, window.innerWidth - menuRect.width - 10));
-
-    menu.style.top = `${top}px`;
-    menu.style.left = `${left}px`;
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
     
-    // Pequeño ajuste de estilo para un menú más compacto con solo iconos
-    menu.style.padding = '5px';
-    menu.style.gap = '5px';
-
+    // Calcular el punto medio vertical de la selección
+    const selectionMiddleY = rect.top + (rect.height / 2);
+    
+    // Determinar si la selección está en la mitad superior o inferior
+    const isSelectionInUpperHalf = selectionMiddleY < (viewportHeight / 2);
+    
+    // Margen de seguridad
+    const SAFE_MARGIN = 15;
+    const SYSTEM_MENU_OFFSET = 60; // Espacio estimado para el menú del sistema
+    
+    let top, left;
+    
+    // Centrar horizontalmente respecto a la selección
+    left = rect.left + (rect.width / 2) - (menuRect.width / 2);
+    
+    // Asegurar que no se salga por los bordes horizontales
+    left = Math.max(SAFE_MARGIN, Math.min(left, viewportWidth - menuRect.width - SAFE_MARGIN));
+    
+    // ===== POSICIONAMIENTO VERTICAL ESTRATÉGICO =====
+    if (isSelectionInUpperHalf) {
+        // Selección en MITAD SUPERIOR
+        // El menú del sistema aparece ABAJO
+        // Nosotros aparecemos ARRIBA (para no competir)
+        top = rect.top - menuRect.height - SAFE_MARGIN;
+        
+        // Si no hay espacio arriba, forzar abajo con offset adicional
+        if (top < SAFE_MARGIN) {
+            top = rect.bottom + SYSTEM_MENU_OFFSET;
+        }
+    } else {
+        // Selección en MITAD INFERIOR
+        // El menú del sistema aparece ARRIBA
+        // Nosotros aparecemos ABAJO (para no competir)
+        top = rect.bottom + SAFE_MARGIN;
+        
+        // Si no hay espacio abajo, forzar arriba con offset adicional
+        if (top + menuRect.height > viewportHeight - SAFE_MARGIN) {
+            top = rect.top - menuRect.height - SYSTEM_MENU_OFFSET;
+        }
+    }
+    
+    // Ajuste final de límites verticales
+    top = Math.max(SAFE_MARGIN, Math.min(top, viewportHeight - menuRect.height - SAFE_MARGIN));
+    
+    // Aplicar posición considerando el scroll
+    menu.style.top = `${top + window.scrollY}px`;
+    menu.style.left = `${left + window.scrollX}px`;
+    
+    // Añadir una flecha indicadora sutil (opcional pero profesional)
+    this.addMenuArrow(menu, isSelectionInUpperHalf ? 'bottom' : 'top');
+    
+    // Mostrar con animación
     requestAnimationFrame(() => {
         menu.classList.add('visible');
     });
 
     this.selectionMenuVisible = true;
+},
+
+// ========================================
+// AÑADIR FLECHA INDICADORA AL MENÚ
+// ========================================
+addMenuArrow: function(menu, position) {
+    // Eliminar flecha existente si la hay
+    const existingArrow = menu.querySelector('.selection-menu-arrow');
+    if (existingArrow) existingArrow.remove();
+    
+    const arrow = document.createElement('div');
+    arrow.className = `selection-menu-arrow selection-menu-arrow-${position}`;
+    
+    // La flecha se posiciona con CSS
+    menu.appendChild(arrow);
 },
     
     // ========================================
