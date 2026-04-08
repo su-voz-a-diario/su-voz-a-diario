@@ -19,6 +19,69 @@ import {
 const db = window.firebaseDb;
 const auth = window.firebaseAuth;
 
+// ================================
+// SANITIZADOR BÁSICO DE CONTENIDO
+// ================================
+const Sanitizer = {
+    
+    sanitizeText(text) {
+        if (!text || typeof text !== 'string') return '';
+
+        let cleaned = text.trim();
+
+        // Limitar longitud
+        cleaned = cleaned.substring(0, 1200);
+
+        // Eliminar HTML
+        cleaned = cleaned.replace(/<[^>]*>/g, '');
+
+        // Quitar scripts peligrosos
+        cleaned = cleaned.replace(/javascript:/gi, '');
+        cleaned = cleaned.replace(/on\w+=/gi, '');
+
+        // Normalizar espacios
+        cleaned = cleaned.replace(/\s+/g, ' ');
+
+        return cleaned.trim();
+    },
+
+    sanitizeUsername(name) {
+        if (!name) return 'Anónimo';
+
+        let cleaned = name.trim().substring(0, 30);
+
+        cleaned = cleaned.replace(/[^a-zA-ZáéíóúñÑüÁÉÍÓÚÜ\s]/g, '');
+
+        return cleaned || 'Anónimo';
+    },
+
+    sanitizeReference(ref) {
+        if (!ref) return 'Lectura del día';
+
+        let cleaned = ref.trim().substring(0, 100);
+
+        cleaned = cleaned.replace(/[^a-zA-Z0-9\s:;.,\-]/g, '');
+
+        return cleaned || 'Lectura del día';
+    },
+
+    validateText(text) {
+        if (!text || text.trim().length === 0) {
+            return { valid: false, message: 'Escribe tu reflexión' };
+        }
+
+        if (text.length < 10) {
+            return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
+        }
+
+        if (text.length > 1200) {
+            return { valid: false, message: 'Texto demasiado largo' };
+        }
+
+        return { valid: true };
+    }
+};
+
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -3009,68 +3072,6 @@ class ErrorHandler {
 
 const errorHandler = new ErrorHandler();
 
-// ================================
-// SANITIZADOR BÁSICO DE CONTENIDO
-// ================================
-const Sanitizer = {
-    
-    sanitizeText(text) {
-        if (!text || typeof text !== 'string') return '';
-
-        let cleaned = text.trim();
-
-        // Limitar longitud
-        cleaned = cleaned.substring(0, 1200);
-
-        // Eliminar HTML
-        cleaned = cleaned.replace(/<[^>]*>/g, '');
-
-        // Quitar scripts peligrosos
-        cleaned = cleaned.replace(/javascript:/gi, '');
-        cleaned = cleaned.replace(/on\w+=/gi, '');
-
-        // Normalizar espacios
-        cleaned = cleaned.replace(/\s+/g, ' ');
-
-        return cleaned.trim();
-    },
-
-    sanitizeUsername(name) {
-        if (!name) return 'Anónimo';
-
-        let cleaned = name.trim().substring(0, 30);
-
-        cleaned = cleaned.replace(/[^a-zA-ZáéíóúñÑüÁÉÍÓÚÜ\s]/g, '');
-
-        return cleaned || 'Anónimo';
-    },
-
-    sanitizeReference(ref) {
-        if (!ref) return 'Lectura del día';
-
-        let cleaned = ref.trim().substring(0, 100);
-
-        cleaned = cleaned.replace(/[^a-zA-Z0-9\s:;.,\-]/g, '');
-
-        return cleaned || 'Lectura del día';
-    },
-
-    validateText(text) {
-        if (!text || text.trim().length === 0) {
-            return { valid: false, message: 'Escribe tu reflexión' };
-        }
-
-        if (text.length < 10) {
-            return { valid: false, message: 'Escribe un poco más (mínimo 10 caracteres)' };
-        }
-
-        if (text.length > 1200) {
-            return { valid: false, message: 'Texto demasiado largo' };
-        }
-
-        return { valid: true };
-    }
-};
 
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
