@@ -2257,3 +2257,75 @@ body.dark-mode .selection-menu-btn:nth-of-type(2):hover {
 body.dark-mode .selection-menu-arrow {
     background: rgba(30, 41, 59, 0.96);
 }
+
+/* ===== COMPORTAMIENTO DURANTE SCROLL (PROFESIONAL) ===== */
+.selection-menu {
+    transition: opacity 0.2s ease, transform 0.2s ease, top 0.15s cubic-bezier(0.4, 0, 0.2, 1), left 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    will-change: transform, top, left;
+}
+
+/* Estado durante scroll activo */
+.selection-menu.is-scrolling {
+    transition: none; /* Sin transición para respuesta inmediata */
+    pointer-events: none; /* No permitir interacción mientras scrollea */
+}
+
+/* Scroll rápido - se vuelve semi-transparente como el nativo */
+.selection-menu-scrolling {
+    opacity: 0.5 !important;
+    backdrop-filter: blur(4px) !important;
+    -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Cuando el menú está fuera de vista */
+.selection-menu[style*="opacity: 0"] {
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+/* Animación de entrada suave */
+.selection-menu {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.95);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1), 
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                top 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+                left 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.selection-menu.visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+}
+
+/* Flecha indicadora mejorada */
+.selection-menu-arrow {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: inherit;
+    backdrop-filter: inherit;
+    -webkit-backdrop-filter: inherit;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    z-index: -1;
+    border-radius: 2px;
+    box-shadow: inherit;
+}
+
+.selection-menu-arrow-top {
+    top: -5px;
+    border-top: inherit;
+    border-left: inherit;
+}
+
+.selection-menu-arrow-bottom {
+    bottom: -5px;
+    border-bottom: inherit;
+    border-right: inherit;
+}
+
+/* Modo oscuro - ajuste de opacidad durante scroll */
+body.dark-mode .selection-menu-scrolling {
+    opacity: 0.6 !important;
+}
