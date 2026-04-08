@@ -2212,7 +2212,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
 
             <div class="main-action">
                 <button class="btn-primary" data-action="share-community-reflection">
-                    ${this.communityFormOpen ? 'Cerrar formulario' : '📝 Compartir mi reflexión'}
+                   ${this.communityFormOpen ? 'Cerrar formulario' : '📢 Comparte Su voz a otros'}
                 </button>
             </div>
 
