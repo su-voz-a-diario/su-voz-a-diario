@@ -277,7 +277,9 @@ body {
     color: var(--text-main);
     text-align: justify;
     letter-spacing: 0.2px;
-    cursor: pointer;
+    cursor: text;
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .reading-text p {
