@@ -2871,34 +2871,73 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
         
-       // Resaltado de texto
-let selectionTimeout;
+      // Añade este código en bindEvents() después de los otros event listeners:
 
-document.addEventListener('selectionchange', () => {
-    clearTimeout(selectionTimeout);
-
-    selectionTimeout = setTimeout(() => {
+// Para móviles: mostrar menú solo cuando el usuario termina de seleccionar
+this.$content.addEventListener('touchend', (e) => {
+    // Pequeño retraso para permitir que la selección se complete
+    setTimeout(() => {
         const selection = window.getSelection();
-
-        if (!selection || selection.isCollapsed) {
-            this.removeSelectionMenu();
-            return;
-        }
-
-        const anchorNode = selection.anchorNode;
-        if (!anchorNode) return;
-
+        if (!selection || selection.isCollapsed) return;
+        
+        const selectedText = selection.toString().trim();
+        if (!selectedText || selectedText.length < 3) return;
+        
         const readingTextEl = document.querySelector('.reading-text');
-        if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
-            this.removeSelectionMenu();
-            return;
+        if (!readingTextEl) return;
+        
+        const anchorNode = selection.anchorNode;
+        if (!anchorNode || !readingTextEl.contains(anchorNode)) return;
+        
+        // Solo mostrar si no está ya visible
+        if (!this.selectionMenuVisible) {
+            const dateStr = readingTextEl.getAttribute('data-reading-date');
+            if (dateStr) {
+                this.showSelectionMenu(selection, dateStr);
+            }
         }
+    }, 100); // Pequeño retraso para asegurar que la selección está completa
+});
 
-        const dateStr = readingTextEl.getAttribute('data-reading-date');
-        if (dateStr) {
-            this.showSelectionMenu(selection, dateStr);
+// Para escritorio: mantener el comportamiento con selectionchange pero con retraso
+let desktopSelectionTimeout;
+document.addEventListener('selectionchange', () => {
+    // Solo para escritorio (no touch)
+    if ('ontouchstart' in window) return; // Es móvil, no hacer nada aquí
+    
+    clearTimeout(desktopSelectionTimeout);
+    
+    const selection = window.getSelection();
+    
+    if (!selection || selection.isCollapsed) {
+        App.removeSelectionMenu();
+        return;
+    }
+    
+    const anchorNode = selection.anchorNode;
+    if (!anchorNode) return;
+    
+    const readingTextEl = document.querySelector('.reading-text');
+    if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
+        App.removeSelectionMenu();
+        return;
+    }
+    
+    const selectedText = selection.toString().trim();
+    if (selectedText.length < 3) return;
+    
+    // En escritorio, mostrar después de 300ms de inactividad
+    desktopSelectionTimeout = setTimeout(() => {
+        const finalSelection = window.getSelection();
+        const finalText = finalSelection ? finalSelection.toString().trim() : '';
+        
+        if (finalText && finalText.length >= 3) {
+            const dateStr = readingTextEl.getAttribute('data-reading-date');
+            if (dateStr) {
+                App.showSelectionMenu(finalSelection, dateStr);
+            }
         }
-    }, 250);
+    }, 300);
 });
 },
     
