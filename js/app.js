@@ -162,6 +162,8 @@ const App = {
     this.checkReminderOnOpen();
     await this.handleRoute();
     this.updateStreakUI();
+    await this.initPushNotifications();
+    this.setupPushListeners();
     
     console.log('[App] Inicialización completada');
 },
@@ -2704,6 +2706,92 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                     }
                 }
             });
+        });
+    },
+
+        // ========================================
+    // PUSH NOTIFICATIONS (NUEVO)
+    // ========================================
+    initPushNotifications: async function() {
+        if (!window.firebaseMessaging) {
+            console.log('[App] Firebase Messaging no disponible');
+            return false;
+        }
+        
+        try {
+            const messaging = window.firebaseMessaging;
+            const registration = await navigator.serviceWorker.ready;
+            
+            const currentToken = await messaging.getToken({
+                vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+                serviceWorkerRegistration: registration
+            });
+            
+            if (currentToken) {
+                console.log('[App] ✅ Token FCM obtenido');
+                if (this.currentUser) {
+                    await this.savePushToken(currentToken);
+                }
+                return true;
+            } else {
+                console.warn('[App] No se pudo obtener token FCM');
+                return false;
+            }
+            
+        } catch (error) {
+            console.error('[App] Error inicializando Push:', error);
+            return false;
+        }
+    },
+
+    savePushToken: async function(token) {
+        try {
+            const userTokensRef = collection(db, 'pushTokens');
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            
+            await setDoc(doc(userTokensRef, this.currentUser.uid), {
+                token: token,
+                platform: isIOS ? 'ios' : 'android',
+                createdAt: serverTimestamp(),
+                lastActive: serverTimestamp(),
+                reminderTime: this.settings.reminderTime,
+                notificationsEnabled: this.settings.notificationsEnabled
+            });
+            
+            console.log('[App] ✅ Token Push guardado en Firestore');
+        } catch (error) {
+            console.error('[App] Error guardando token:', error);
+        }
+    },
+
+    setupPushListeners: function() {
+        if (!window.firebaseMessaging) return;
+        
+        const messaging = window.firebaseMessaging;
+        
+        messaging.onMessage((payload) => {
+            console.log('[App] 📨 Push recibido:', payload);
+            const notification = payload.notification;
+            if (notification) {
+                this.showToast(notification.body || 'Nueva notificación');
+            }
+        });
+        
+        messaging.onTokenRefresh(async () => {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                const newToken = await messaging.getToken({
+                    vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+                    serviceWorkerRegistration: registration
+                });
+                
+                console.log('[App] 🔄 Token actualizado');
+                if (this.currentUser) {
+                    await this.savePushToken(newToken);
+                }
+            } catch (error) {
+                console.error('[App] Error refrescando token:', error);
+            }
         });
     },
     
