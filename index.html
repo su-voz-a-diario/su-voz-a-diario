@@ -144,6 +144,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   import { getFirestore } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   import { getAuth } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+  import { getMessaging } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyATEQ0kmd3HPloNlZ872t8C11jiYitLkUk",
@@ -157,9 +158,11 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
   const auth = getAuth(app);
+  const messaging = getMessaging(app);
 
   window.firebaseDb = db;
   window.firebaseAuth = auth;
+  window.firebaseMessaging = messaging;
 </script>
 
 <script type="module" src="js/app.js"></script>
