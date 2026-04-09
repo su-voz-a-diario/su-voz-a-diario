@@ -199,45 +199,70 @@ cacheDOM: function() {
     // ========================================
     // COMUNICACIÓN CON SERVICE WORKER
     // ========================================
-    setupSWCommunication: function() {
-        if (!('serviceWorker' in navigator)) return;
+   setupSWCommunication: function() {
+    if (!('serviceWorker' in navigator)) {
+        console.warn('[App] Service Worker no soportado');
+        return;
+    }
+    
+    // Escuchar mensajes del Service Worker
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        const { data } = event;
         
-        // Escuchar mensajes del Service Worker
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            const { data } = event;
-            
-            switch (data.type) {
-                case 'CHECK_READ_STATUS':
-                    // El SW pregunta si ya se leyó hoy
-                    const todayStr = this.getTodayDateStr();
-                    if (event.ports && event.ports[0]) {
-                        event.ports[0].postMessage({ 
-                            isReadToday: this.isRead(todayStr) 
-                        });
+        switch (data.type) {
+            case 'CHECK_READ_STATUS':
+                // El SW pregunta si ya se leyó hoy (para notificaciones)
+                const todayStr = this.getTodayDateStr();
+                const isReadToday = this.isRead(todayStr);
+                
+                console.log('[App] SW preguntando estado de lectura. Leído hoy:', isReadToday);
+                
+                if (event.ports && event.ports[0]) {
+                    event.ports[0].postMessage({ 
+                        isReadToday: isReadToday,
+                        timestamp: Date.now()
+                    });
+                }
+                break;
+                
+            case 'NAVIGATE_TO':
+                // Navegar a una ruta específica desde notificación
+                if (data.url) {
+                    const path = data.url.replace('./', '').replace('#', '');
+                    console.log('[App] Navegando a:', path);
+                    this.navigate(path || 'home');
+                    
+                    // Si navegamos a home, resetear la fecha de visualización
+                    if (path === 'home' || !path) {
+                        this.homeViewingDate = null;
                     }
-                    break;
-                    
-                case 'NAVIGATE_TO':
-                    // Navegar a una ruta específica desde notificación
-                    if (data.url) {
-                        const path = data.url.replace('./', '').replace('#', '');
-                        this.navigate(path || 'home');
-                    }
-                    break;
-                    
-                case 'SYNC_COMPLETE':
-                    console.log('[App] Sincronización completada');
-                    this.showToast('Datos sincronizados correctamente');
-                    break;
-                    
-                default:
-                    console.log('[App] Mensaje del SW:', data);
-            }
-        });
-        
-        // Notificar al SW que la app está lista
-        this.sendToSW({ type: 'APP_READY' });
-    },
+                }
+                break;
+                
+            case 'SYNC_COMPLETE':
+                console.log('[App] Sincronización completada');
+                this.showToast('✅ Datos sincronizados');
+                break;
+                
+            case 'NOTIFICATION_TESTED':
+                console.log('[App] Notificación de prueba completada');
+                break;
+                
+            default:
+                console.log('[App] Mensaje del SW:', data.type || data);
+        }
+    });
+    
+    // Notificar al SW que la app está lista
+    this.sendToSW({ type: 'APP_READY' });
+    
+    // Verificar estado del Service Worker
+    if (navigator.serviceWorker.controller) {
+        console.log('[App] SW activo y controlando la página');
+    } else {
+        console.log('[App] SW en proceso de activación...');
+    }
+},
     
     sendToSW: function(message) {
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
@@ -345,16 +370,33 @@ cacheDOM: function() {
         this.settings = { ...defaultSettings, ...savedSettings };
     },
     
-    saveSettings: function() {
+   saveSettings: function() {
+    // Guardar en localStorage
     this.storage.set('su-voz-settings', this.settings);
 
+    // Comunicar cambios al Service Worker
     if (this.settings.notificationsEnabled) {
-        this.sendToSW({
-            type: 'SCHEDULE_NOTIFICATION',
-            time: this.settings.reminderTime
-        });
+        // Asegurar que tenemos permiso antes de programar
+        if ('Notification' in window && Notification.permission === 'granted') {
+            console.log('[App] Enviando SCHEDULE_NOTIFICATION al SW:', this.settings.reminderTime);
+            this.sendToSW({
+                type: 'SCHEDULE_NOTIFICATION',
+                time: this.settings.reminderTime
+            });
+        } else {
+            console.warn('[App] No hay permiso de notificaciones, no se programa recordatorio');
+            // Desactivar el toggle si no hay permiso
+            this.settings.notificationsEnabled = false;
+            this.storage.set('su-voz-settings', this.settings);
+        }
     } else {
+        console.log('[App] Cancelando notificaciones');
         this.sendToSW({ type: 'CANCEL_NOTIFICATIONS' });
+    }
+    
+    // Guardar también la configuración de días (para uso futuro)
+    if (this.settings.reminderDays) {
+        localStorage.setItem('su-voz-reminder-days', JSON.stringify(this.settings.reminderDays));
     }
 },
     
