@@ -473,7 +473,7 @@ bindFloatingToggle: function() {
             if (!this.isRead(todayStr)) {
                 new Notification('📖 Su Voz a Diario', {
                     body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-                    icon: 'icons/icon-192.png',
+                    icon: './icons/icon-192.png'
                     vibrate: [200, 100, 200],
                     data: { url: '/#home' }
                 });
@@ -502,7 +502,7 @@ checkReminderOnOpen: function() {
     if (now >= reminderTime) {
         new Notification('📖 Su Voz a Diario', {
             body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-            icon: 'icons/icon-192.png',
+            icon: './icons/icon-192.png'
         });
 
         localStorage.setItem('su-voz-last-reminder-date', todayStr);
@@ -2538,7 +2538,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                 if (Notification.permission === 'granted') {
                     new Notification('Su Voz a Diario', {
                         body: '¡Las notificaciones funcionan correctamente!',
-                        icon: 'icons/icon-192.png',
+                        icon: './icons/icon-192.png'
                    });
                    this.showToast('Notificación de prueba enviada');
                } else {
