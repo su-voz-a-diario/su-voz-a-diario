@@ -144,7 +144,7 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
   import { getFirestore } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
   import { getAuth } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-  import { getMessaging } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyATEQ0kmd3HPloNlZ872t8C11jiYitLkUk",
@@ -160,9 +160,16 @@
   const auth = getAuth(app);
   const messaging = getMessaging(app);
 
+  // Exponer a window
   window.firebaseDb = db;
   window.firebaseAuth = auth;
   window.firebaseMessaging = messaging;
+  
+  // También exponer las funciones individuales (por si acaso)
+  window.fcmGetToken = getToken;
+  window.fcmOnMessage = onMessage;
+  
+  console.log('[Index] Firebase inicializado correctamente');
 </script>
 
 <script type="module" src="js/app.js"></script>
