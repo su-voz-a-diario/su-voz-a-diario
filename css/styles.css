@@ -1798,6 +1798,11 @@ body.dark-mode .community-reaction-btn.is-active {
     color: #63b3ed;
 }
 
+.community-reaction-btn.is-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
 @media (max-width: 480px) {
     .community-reaction-bar {
         gap: 16px;
