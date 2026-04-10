@@ -19,6 +19,13 @@ import {
 const db = window.firebaseDb;
 const auth = window.firebaseAuth;
 
+function isRunningAsInstalledPWA() {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function isIOSDevice() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -88,11 +95,11 @@ const App = {
     
     // Configuración
     settings: {
-        reminderTime: '08:00',
-        notificationsEnabled: true,
-        autoSaveNotes: true,
-        fontSize: 1.08
-    },
+    reminderTime: '08:00',
+    notificationsEnabled: false,
+    autoSaveNotes: true,
+    fontSize: 1.08
+},
 
     storage: {
     get(key, fallback = null) {
@@ -131,6 +138,8 @@ const App = {
     readingTapDelay: 400,
     selectionMenuVisible: false,
     selectionMenuTimeout: null,
+    pushListenersReady: false,
+    themeListenerReady: false,
     
     // ========================================
     // INICIALIZACIÓN
@@ -151,19 +160,27 @@ const App = {
         this.currentVersion = savedVersion;
     }
        
-    this.initTheme();
+     this.initTheme();
     this.initNotifications();
     this.setupSWCommunication();
     this.bindEvents();
     this.bindFloatingToggle();
     await this.initAuth();
-    await this.loadData();
-    await this.refreshCommunityBadge();
-    this.checkReminderOnOpen();
-    await this.handleRoute();
-    this.updateStreakUI();
-    await this.initPushNotifications();
-    this.setupPushListeners();
+await this.loadData();
+await this.refreshCommunityBadge();
+
+const savedToken = localStorage.getItem('su-voz-fcm-token');
+if (savedToken && this.currentUser && this.settings.notificationsEnabled) {
+    const tokenSaved = await this.savePushToken(savedToken);
+
+    if (tokenSaved) {
+        this.setupPushListeners();
+    }
+}
+
+this.checkReminderOnOpen();
+await this.handleRoute();
+this.updateStreakUI();
     
     console.log('[App] Inicialización completada');
 },
@@ -255,15 +272,15 @@ cacheDOM: function() {
         }
     });
     
-    // Notificar al SW que la app está lista
+   navigator.serviceWorker.ready.then(() => {
     this.sendToSW({ type: 'APP_READY' });
-    
-    // Verificar estado del Service Worker
+
     if (navigator.serviceWorker.controller) {
         console.log('[App] SW activo y controlando la página');
     } else {
-        console.log('[App] SW en proceso de activación...');
+        console.log('[App] SW listo, pero aún sin controller en esta carga');
     }
+});
 },
     
     sendToSW: function(message) {
@@ -362,41 +379,19 @@ cacheDOM: function() {
     // ========================================
     loadSettings: function() {
         const defaultSettings = {
-            reminderTime: '08:00',
-            notificationsEnabled: true,
-            autoSaveNotes: true,
-            fontSize: 1.08
-        };
+    reminderTime: '08:00',
+    notificationsEnabled: false,
+    autoSaveNotes: true,
+    fontSize: 1.08
+};
 
         const savedSettings = this.storage.get('su-voz-settings', {});
         this.settings = { ...defaultSettings, ...savedSettings };
     },
     
    saveSettings: function() {
-    // Guardar en localStorage
     this.storage.set('su-voz-settings', this.settings);
 
-    // Comunicar cambios al Service Worker
-    if (this.settings.notificationsEnabled) {
-        // Asegurar que tenemos permiso antes de programar
-        if ('Notification' in window && Notification.permission === 'granted') {
-            console.log('[App] Enviando SCHEDULE_NOTIFICATION al SW:', this.settings.reminderTime);
-            this.sendToSW({
-                type: 'SCHEDULE_NOTIFICATION',
-                time: this.settings.reminderTime
-            });
-        } else {
-            console.warn('[App] No hay permiso de notificaciones, no se programa recordatorio');
-            // Desactivar el toggle si no hay permiso
-            this.settings.notificationsEnabled = false;
-            this.storage.set('su-voz-settings', this.settings);
-        }
-    } else {
-        console.log('[App] Cancelando notificaciones');
-        this.sendToSW({ type: 'CANCEL_NOTIFICATIONS' });
-    }
-    
-    // Guardar también la configuración de días (para uso futuro)
     if (this.settings.reminderDays) {
         localStorage.setItem('su-voz-reminder-days', JSON.stringify(this.settings.reminderDays));
     }
@@ -451,18 +446,13 @@ bindFloatingToggle: function() {
     // ========================================
     // NOTIFICACIONES (MEJORADAS CON SW)
     // ========================================
-    initNotifications: function() {
+   initNotifications: function() {
     if (!('Notification' in window)) {
         console.log('[App] Notificaciones no soportadas');
         return;
     }
 
-    if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-        this.sendToSW({
-            type: 'SCHEDULE_NOTIFICATION',
-            time: this.settings.reminderTime
-        });
-    }
+    console.log('[App] API de notificaciones disponible');
 },
     
     showDailyReminder: function() {
@@ -653,9 +643,9 @@ getCommunityPostsCached: async function() {
     console.log('[Community] Cargando posts desde Firestore');
     const posts = await this.getCommunityPosts();
     this.communityCache = {
-        posts: posts,
-        timestamp: now
-    };
+    posts,
+    timestamp: now
+};
     return posts;
 },
 
@@ -720,7 +710,31 @@ async addCommunityPost(post) {
 
 async deleteCommunityPost(postId) {
     try {
+        const repliesSnapshot = await getDocs(
+            query(collection(db, "communityReplies"), orderBy("createdAt", "asc"))
+        );
+
+        const reactionSnapshot = await getDocs(collection(db, "communityReactions"));
+
+        const replyDeletes = [];
+        repliesSnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.postId === postId) {
+                replyDeletes.push(deleteDoc(doc(db, "communityReplies", docSnap.id)));
+            }
+        });
+
+        const reactionDeletes = [];
+        reactionSnapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.postId === postId) {
+                reactionDeletes.push(deleteDoc(doc(db, "communityReactions", docSnap.id)));
+            }
+        });
+
+        await Promise.all([...replyDeletes, ...reactionDeletes]);
         await deleteDoc(doc(db, "communityPosts", postId));
+
         return true;
     } catch (error) {
         console.error("Error eliminando post:", error);
@@ -777,10 +791,14 @@ async getRepliesSummary(posts) {
 
 async addCommunityReply(reply) {
     try {
-        const cleanText = (reply.text || '').trim();
+        const cleanText = Sanitizer.sanitizeText(reply.text || '');
 
         if (!cleanText) {
             return { success: false, message: 'Escribe una respuesta' };
+        }
+
+        if (cleanText.length < 3) {
+            return { success: false, message: 'Escribe una respuesta un poco más amplia' };
         }
 
         if (cleanText.length > this.replyCharLimit) {
@@ -1082,10 +1100,11 @@ loadCommunityLastSeen: function() {
 },
 
 saveCommunityLastSeen: function(value) {
-    this.lastSeenCommunityAt = value || null;
+    const normalizedValue = value === null || value === undefined ? null : String(value);
+    this.lastSeenCommunityAt = normalizedValue;
 
-    if (value) {
-        localStorage.setItem(this.getCommunityLastSeenKey(), value);
+    if (normalizedValue !== null) {
+        localStorage.setItem(this.getCommunityLastSeenKey(), normalizedValue);
     } else {
         localStorage.removeItem(this.getCommunityLastSeenKey());
     }
@@ -1093,7 +1112,7 @@ saveCommunityLastSeen: function(value) {
 
 markCommunityAsSeen: async function() {
     try {
-        const posts = await this.getCommunityPosts();
+        const posts = await this.getCommunityPostsCached();
 
         if (!posts.length) {
             this.saveCommunityLastSeen(null);
@@ -1103,9 +1122,7 @@ markCommunityAsSeen: async function() {
         }
 
         const latestPost = posts[0];
-        const latestValue = latestPost.createdAt?.seconds
-            ? String(latestPost.createdAt.seconds)
-            : latestPost.date || null;
+        const latestValue = latestPost.createdAt?.seconds || 0;
 
         this.saveCommunityLastSeen(latestValue);
         this.communityUnreadCount = 0;
@@ -1114,10 +1131,10 @@ markCommunityAsSeen: async function() {
         console.error('[Community] Error marcando como visto:', error);
     }
 },
-
+    
 refreshCommunityBadge: async function() {
     try {
-        const posts = await this.getCommunityPosts();
+        const posts = await this.getCommunityPostsCached();
         const lastSeen = this.lastSeenCommunityAt;
 
         if (!posts.length) {
@@ -1132,14 +1149,13 @@ refreshCommunityBadge: async function() {
             return;
         }
 
+        const lastSeenNumber = Number(lastSeen) || 0;
         let unread = 0;
 
         posts.forEach(post => {
-            const postValue = post.createdAt?.seconds
-                ? String(post.createdAt.seconds)
-                : post.date || '';
+            const postValue = post.createdAt?.seconds || 0;
 
-            if (postValue > lastSeen) {
+            if (postValue > lastSeenNumber) {
                 unread++;
             }
         });
@@ -1570,7 +1586,7 @@ showSelectionMenu: function(selection, dateStr) {
     });
 
     // ===== SISTEMA DE SCROLL INTELIGENTE =====
-    this.setupScrollBehavior(menu, range);
+   this.setupScrollBehavior(menu);
     
     this.selectionMenuVisible = true;
 },
@@ -1623,26 +1639,18 @@ positionSelectionMenu: function(menu, range) {
     this.updateMenuArrow(menu, isSelectionInUpperHalf ? 'bottom' : 'top');
     
     // Guardar la posición relativa para el scroll
-    menu.dataset.preferredPosition = isSelectionInUpperHalf ? 'top' : 'bottom';
-    menu.dataset.lastRect = JSON.stringify({
-        top: rect.top,
-        bottom: rect.bottom,
-        left: rect.left,
-        right: rect.right,
-        width: rect.width,
-        height: rect.height
-    });
+   menu.dataset.preferredPosition = isSelectionInUpperHalf ? 'top' : 'bottom';
+
 },
 
 // ========================================
 // COMPORTAMIENTO DURANTE SCROLL (PROFESIONAL)
 // ========================================
-setupScrollBehavior: function(menu, initialRange) {
+setupScrollBehavior: function(menu) {
     let scrollTimeout;
     let isScrolling = false;
     let scrollTick = false;
     let lastScrollY = window.scrollY;
-    let scrollDirection = null;
     let scrollVelocity = 0;
     let lastScrollTime = Date.now();
     
@@ -1692,7 +1700,6 @@ setupScrollBehavior: function(menu, initialRange) {
         
         // Calcular dirección y velocidad
         const deltaY = currentScrollY - lastScrollY;
-        scrollDirection = deltaY > 0 ? 'down' : 'up';
         scrollVelocity = Math.abs(deltaY) / (now - lastScrollTime) * 16; // px/frame
         
         lastScrollY = currentScrollY;
@@ -2413,7 +2420,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                         <label>⏰ Recordatorio diario</label>
                         <div class="setting-control">
                             <input type="time" id="reminder-time" value="${this.settings.reminderTime}" class="time-input">
-                            <button id="test-notification" class="btn-secondary">Probar</button>
+                            <button id="test-notification" class="btn-secondary">Probar aviso local</button>
                         </div>
                     </div>
                     <div class="setting-item">
@@ -2489,67 +2496,72 @@ const [reactionSummary, repliesSummary] = await Promise.all([
         const importFile = document.getElementById('import-file');
         const themeToggleSettings = document.getElementById('theme-toggle-settings');
         
-        if (reminderTime) {
-            reminderTime.addEventListener('change', (e) => {
-                this.settings.reminderTime = e.target.value;
-                this.saveSettings();
-                this.showToast('Hora de recordatorio actualizada');
-            });
-        }
-        
-        if (notificationsToggle) {
-            notificationsToggle.addEventListener('change', async (e) => {
+if (reminderTime) {
+    reminderTime.addEventListener('change', async (e) => {
+        this.settings.reminderTime = e.target.value;
+        this.saveSettings();
 
-             // ✅ Validar soporte primero
+        const savedToken = localStorage.getItem('su-voz-fcm-token');
+        if (savedToken && this.currentUser && this.settings.notificationsEnabled) {
+            const updated = await this.savePushToken(savedToken);
+
+            if (!updated) {
+                console.warn('[App] No se pudo actualizar el token al cambiar la hora');
+            }
+        }
+
+        this.showToast('Hora de recordatorio actualizada');
+    });
+}
+
+if (notificationsToggle) {
+    notificationsToggle.addEventListener('change', async (e) => {
+        if (e.target.checked) {
+            const ok = await this.enableNotificationsFlow();
+
+            if (!ok) {
+                e.target.checked = false;
+                this.settings.notificationsEnabled = false;
+                this.saveSettings();
+                return;
+            }
+        } else {
+            this.settings.notificationsEnabled = false;
+            this.saveSettings();
+            localStorage.removeItem('su-voz-last-reminder-date');
+
+            const savedToken = localStorage.getItem('su-voz-fcm-token');
+            if (savedToken && this.currentUser) {
+                await this.savePushToken(savedToken);
+            }
+
+            this.showToast('Notificaciones desactivadas');
+        }
+    });
+}
+        if (testNotification) {
+            testNotification.addEventListener('click', async () => {
                 if (!('Notification' in window)) {
-                    this.settings.notificationsEnabled = false;
-                    e.target.checked = false;
-                    this.saveSettings();
                     this.showToast('Este dispositivo no soporta notificaciones');
                     return;
                 }
 
-            this.settings.notificationsEnabled = e.target.checked;
-
-            if (this.settings.notificationsEnabled && Notification.permission !== 'granted') {
-            const permission = await Notification.requestPermission();
-
-                if (permission !== 'granted') {
-                    this.settings.notificationsEnabled = false;
-                    e.target.checked = false;
-                    this.saveSettings();
-                    this.showToast('No se concedió permiso para notificaciones');
-                    return;
+                if (Notification.permission !== 'granted') {
+                    const permission = await Notification.requestPermission();
+                    if (permission !== 'granted') {
+                        this.showToast('No se concedió permiso para notificaciones');
+                        return;
+                    }
                 }
-            }
 
-            this.saveSettings();
-            this.showToast(this.settings.notificationsEnabled ? 'Notificaciones activadas' : 'Notificaciones desactivadas');
-        });
-    }
-        
-        if (testNotification) {
-    testNotification.addEventListener('click', () => {
-        if (!('Notification' in window)) {
-            this.showToast('Este dispositivo no soporta notificaciones');
-            return;
-        }
+                new Notification('Su Voz a Diario', {
+                    body: 'Prueba local de notificación',
+                    icon: './icons/icon-192.png'
+                });
 
-        if (Notification.permission === 'granted') {
-            new Notification('Su Voz a Diario', {
-                body: '¡Las notificaciones funcionan correctamente!',
-                icon: './icons/icon-192.png'
-            });
-            this.showToast('Notificación de prueba enviada');
-        } else {
-            Notification.requestPermission().then(perm => {
-                if (perm === 'granted') {
-                    this.showToast('Permiso concedido. Prueba de nuevo.');
-                }
+                this.showToast('Aviso local enviado');
             });
         }
-    });
-}
         
         if (themeToggleSettings) {
             themeToggleSettings.addEventListener('click', () => {
@@ -2676,17 +2688,17 @@ const [reactionSummary, repliesSummary] = await Promise.all([
 
         this.streak = { current: 0, longest: 0, lastReadDate: null };
         this.settings = {
-            reminderTime: '08:00',
-            notificationsEnabled: true,
-            autoSaveNotes: true,
-            fontSize: 1.08
-        };
+    reminderTime: '08:00',
+    notificationsEnabled: false,
+    autoSaveNotes: true,
+    fontSize: 1.08
+};
 
         this.showToast('🗑️ Todos los datos han sido reiniciados');
         setTimeout(() => location.reload(), 1000);
     },
 
-    initAuth: async function() {
+ initAuth: async function() {
         return new Promise((resolve) => {
             onAuthStateChanged(auth, async (user) => {
                 if (user) {
@@ -2709,73 +2721,120 @@ const [reactionSummary, repliesSummary] = await Promise.all([
         });
     },
 
-        // ========================================
+    enableNotificationsFlow: async function() {
+    if (!('Notification' in window)) {
+        this.showToast('Este dispositivo no soporta notificaciones');
+        return false;
+    }
+
+    if (isIOSDevice() && !isRunningAsInstalledPWA()) {
+        this.showToast('En iPhone, instala la app en pantalla de inicio');
+        return false;
+    }
+
+    let permission = Notification.permission;
+
+    if (permission !== 'granted') {
+        permission = await Notification.requestPermission();
+    }
+
+    if (permission !== 'granted') {
+        this.showToast('No se concedió permiso para notificaciones');
+        return false;
+    }
+
+    this.settings.notificationsEnabled = true;
+    this.saveSettings();
+
+    const ok = await this.initPushNotifications();
+    if (!ok) {
+        this.settings.notificationsEnabled = false;
+        this.saveSettings();
+        this.showToast('No se pudo activar el canal de notificaciones');
+        return false;
+    }
+
+    this.setupPushListeners();
+    this.showToast('Notificaciones activadas');
+    return true;
+},
+
+    // ========================================
     // PUSH NOTIFICATIONS (NUEVO)
     // ========================================
     initPushNotifications: async function() {
-    console.log('[App] Iniciando Push Notifications...');
-    
-    // Verificar si Firebase Messaging está disponible
-    if (!window.firebaseMessaging) {
-        console.warn('[App] Firebase Messaging no disponible - ¿Está inicializado en index.html?');
-        return false;
-    }
-    
-    try {
-        const messaging = window.firebaseMessaging;
+        console.log('[App] Iniciando Push Notifications...');
         
-        // Verificar que el Service Worker esté listo
-        const registration = await navigator.serviceWorker.ready;
-        console.log('[App] Service Worker listo para Push');
-        
-        // Obtener token usando la función importada
-        const currentToken = await window.fcmGetToken(messaging, {
-            vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
-            serviceWorkerRegistration: registration
-        });
-        
-        if (currentToken) {
-            console.log('[App] ✅ Token FCM obtenido:', currentToken.substring(0, 20) + '...');
-            
-            // Guardar token en Firestore
-            if (this.currentUser) {
-                await this.savePushToken(currentToken);
-            }
-            
-            return true;
-        } else {
-            console.warn('[App] No se pudo obtener token FCM - ¿Permiso denegado?');
+        if (!window.firebaseMessaging) {
+            console.warn('[App] Firebase Messaging no disponible - ¿Está inicializado en index.html?');
             return false;
         }
+
+        try {
+            const messaging = window.firebaseMessaging;
+            const registration = await navigator.serviceWorker.ready;
+            console.log('[App] Service Worker listo para Push');
+
+            const currentToken = await window.fcmGetToken(messaging, {
+                vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+                serviceWorkerRegistration: registration
+            });
+
+            if (currentToken) {
+                console.log('[App] ✅ Token FCM obtenido:', currentToken.substring(0, 20) + '...');
+
+                localStorage.setItem('su-voz-fcm-token', currentToken);
+                
+                if (this.currentUser) {
+    const saved = await this.savePushToken(currentToken);
+    if (!saved) {
+        console.warn('[App] Token FCM obtenido pero no se pudo guardar en Firestore');
+        return false;
+    }
+}
+
+return true;
+            } else {
+                console.warn('[App] No se pudo obtener token FCM');
+                return false;
+            }
+
+        } catch (error) {
+            console.error('[App] Error inicializando Push:', error.message);
+            return false;
+        }
+    },
+
+   savePushToken: async function(token) {
+    if (!token || !this.currentUser?.uid) {
+        console.warn('[App] No se pudo guardar token: falta token o usuario');
+        return false;
+    }
+
+   try {
+    const isIOS = isIOSDevice();
+    const tokenRef = doc(db, 'pushTokens', this.currentUser.uid);
+
+    await setDoc(tokenRef, {
+        token,
+        platform: isIOS ? 'ios' : 'web',
+        updatedAt: serverTimestamp(),
+        lastActive: serverTimestamp(),
+        reminderTime: this.settings.reminderTime,
+        notificationsEnabled: this.settings.notificationsEnabled
+    }, { merge: true });
         
+        console.log('[App] ✅ Token Push guardado en Firestore');
+        return true;
     } catch (error) {
-        console.error('[App] Error inicializando Push:', error.message);
-        // No bloqueamos la app por este error
+        console.error('[App] Error guardando token:', error);
         return false;
     }
 },
 
-    savePushToken: async function(token) {
-        try {
-            const userTokensRef = collection(db, 'pushTokens');
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            
-            await setDoc(doc(userTokensRef, this.currentUser.uid), {
-                token: token,
-                platform: isIOS ? 'ios' : 'android',
-                createdAt: serverTimestamp(),
-                lastActive: serverTimestamp(),
-                reminderTime: this.settings.reminderTime,
-                notificationsEnabled: this.settings.notificationsEnabled
-            });
-            
-            console.log('[App] ✅ Token Push guardado en Firestore');
-        } catch (error) {
-            console.error('[App] Error guardando token:', error);
-        }
-    },
-
     setupPushListeners: function() {
+    if (this.pushListenersReady) return;
+
     if (!window.firebaseMessaging || !window.fcmOnMessage) {
         console.warn('[App] Listeners no disponibles');
         return;
@@ -2783,7 +2842,6 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     
     const messaging = window.firebaseMessaging;
     
-    // USAR LA FUNCIÓN IMPORTADA (no messaging.onMessage)
     window.fcmOnMessage(messaging, (payload) => {
         console.log('[App] 📨 Push recibido:', payload);
         if (payload.notification) {
@@ -2791,6 +2849,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
         }
     });
     
+    this.pushListenersReady = true;
     console.log('[App] ✅ Listeners Push configurados');
 },
     
@@ -3159,6 +3218,7 @@ if (deleteReplyBtn) {
             return;
         }
 
+        this.invalidateCommunityCache();
         this.showToast('Respuesta eliminada');
         this.renderCommunity().catch(error => {
             console.error('[Community] Error actualizando respuestas:', error);
@@ -3179,6 +3239,8 @@ if (communityReactionBtn) {
         this.showToast(result.message || 'No se pudo guardar la reacción');
         return;
     }
+
+    this.invalidateCommunityCache();
 
     if ('vibrate' in navigator) {
         navigator.vibrate(15);
@@ -3317,16 +3379,10 @@ this.$content.addEventListener('focusin', (e) => {
         if ('vibrate' in navigator) {
             navigator.vibrate(20);
         }
-
-        this.scheduleRender();
     }
 });
-        
-      // Añade este código en bindEvents() después de los otros event listeners:
 
-// Para móviles: mostrar menú solo cuando el usuario termina de seleccionar
-this.$content.addEventListener('touchend', (e) => {
-    // Pequeño retraso para permitir que la selección se complete
+this.$content.addEventListener('touchend', () => {
     setTimeout(() => {
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed) return;
@@ -3353,8 +3409,7 @@ this.$content.addEventListener('touchend', (e) => {
 // Para escritorio: mantener el comportamiento con selectionchange pero con retraso
 let desktopSelectionTimeout;
 document.addEventListener('selectionchange', () => {
-    // Solo para escritorio (no touch)
-    if ('ontouchstart' in window) return; // Es móvil, no hacer nada aquí
+    if ('ontouchstart' in window) return;
     
     clearTimeout(desktopSelectionTimeout);
     
@@ -3377,7 +3432,6 @@ document.addEventListener('selectionchange', () => {
     const selectedText = selection.toString().trim();
     if (selectedText.length < 3) return;
     
-    // En escritorio, mostrar después de 300ms de inactividad
     desktopSelectionTimeout = setTimeout(() => {
         const finalSelection = window.getSelection();
         const finalText = finalSelection ? finalSelection.toString().trim() : '';
@@ -3417,14 +3471,16 @@ document.addEventListener('selectionchange', () => {
             applyTheme(systemDark);
         }
         
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                const isDark = document.body.classList.contains('dark-mode');
-                applyTheme(!isDark);
-                localStorage.setItem('theme', !isDark ? 'dark' : 'light');
-                this.showToast(!isDark ? 'Modo oscuro activado' : 'Modo claro activado');
-            });
-        }
+        if (toggleBtn && !this.themeListenerReady) {
+    toggleBtn.addEventListener('click', () => {
+        const isDark = document.body.classList.contains('dark-mode');
+        applyTheme(!isDark);
+        localStorage.setItem('theme', !isDark ? 'dark' : 'light');
+        this.showToast(!isDark ? 'Modo oscuro activado' : 'Modo claro activado');
+    });
+
+    this.themeListenerReady = true;
+}
     }
 };
 
