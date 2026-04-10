@@ -2713,36 +2713,47 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     // PUSH NOTIFICATIONS (NUEVO)
     // ========================================
     initPushNotifications: async function() {
-        if (!window.firebaseMessaging) {
-            console.log('[App] Firebase Messaging no disponible');
+    console.log('[App] Iniciando Push Notifications...');
+    
+    // Verificar si Firebase Messaging está disponible
+    if (!window.firebaseMessaging) {
+        console.warn('[App] Firebase Messaging no disponible - ¿Está inicializado en index.html?');
+        return false;
+    }
+    
+    try {
+        const messaging = window.firebaseMessaging;
+        
+        // Verificar que el Service Worker esté listo
+        const registration = await navigator.serviceWorker.ready;
+        console.log('[App] Service Worker listo para Push');
+        
+        // Obtener token usando la función importada
+        const currentToken = await window.fcmGetToken(messaging, {
+            vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+            serviceWorkerRegistration: registration
+        });
+        
+        if (currentToken) {
+            console.log('[App] ✅ Token FCM obtenido:', currentToken.substring(0, 20) + '...');
+            
+            // Guardar token en Firestore
+            if (this.currentUser) {
+                await this.savePushToken(currentToken);
+            }
+            
+            return true;
+        } else {
+            console.warn('[App] No se pudo obtener token FCM - ¿Permiso denegado?');
             return false;
         }
         
-        try {
-            const messaging = window.firebaseMessaging;
-            const registration = await navigator.serviceWorker.ready;
-            
-            const currentToken = await messaging.getToken({
-                vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
-                serviceWorkerRegistration: registration
-            });
-            
-            if (currentToken) {
-                console.log('[App] ✅ Token FCM obtenido');
-                if (this.currentUser) {
-                    await this.savePushToken(currentToken);
-                }
-                return true;
-            } else {
-                console.warn('[App] No se pudo obtener token FCM');
-                return false;
-            }
-            
-        } catch (error) {
-            console.error('[App] Error inicializando Push:', error);
-            return false;
-        }
-    },
+    } catch (error) {
+        console.error('[App] Error inicializando Push:', error.message);
+        // No bloqueamos la app por este error
+        return false;
+    }
+},
 
     savePushToken: async function(token) {
         try {
@@ -2765,35 +2776,23 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     },
 
     setupPushListeners: function() {
-        if (!window.firebaseMessaging) return;
-        
-        const messaging = window.firebaseMessaging;
-        
-        messaging.onMessage((payload) => {
-            console.log('[App] 📨 Push recibido:', payload);
-            const notification = payload.notification;
-            if (notification) {
-                this.showToast(notification.body || 'Nueva notificación');
-            }
-        });
-        
-        messaging.onTokenRefresh(async () => {
-            try {
-                const registration = await navigator.serviceWorker.ready;
-                const newToken = await messaging.getToken({
-                    vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
-                    serviceWorkerRegistration: registration
-                });
-                
-                console.log('[App] 🔄 Token actualizado');
-                if (this.currentUser) {
-                    await this.savePushToken(newToken);
-                }
-            } catch (error) {
-                console.error('[App] Error refrescando token:', error);
-            }
-        });
-    },
+    if (!window.firebaseMessaging || !window.fcmOnMessage) {
+        console.warn('[App] Listeners no disponibles');
+        return;
+    }
+    
+    const messaging = window.firebaseMessaging;
+    
+    // USAR LA FUNCIÓN IMPORTADA (no messaging.onMessage)
+    window.fcmOnMessage(messaging, (payload) => {
+        console.log('[App] 📨 Push recibido:', payload);
+        if (payload.notification) {
+            this.showToast(payload.notification.body || 'Nueva notificación');
+        }
+    });
+    
+    console.log('[App] ✅ Listeners Push configurados');
+},
     
     // ========================================
     // EVENTOS
