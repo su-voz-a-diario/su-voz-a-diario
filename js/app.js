@@ -998,6 +998,37 @@ getReactionIcon: function(type) {
     return icons[type] || '';
 },
 
+setReactionButtonLoading: function(buttonEl, isLoading) {
+    if (!buttonEl) return;
+
+    buttonEl.disabled = isLoading;
+
+    if (isLoading) {
+        buttonEl.classList.add('is-loading');
+    } else {
+        buttonEl.classList.remove('is-loading');
+    }
+},
+
+updateSingleReactionButtonUI: function(buttonEl, shouldActivate) {
+    if (!buttonEl) return;
+
+    const countEl = buttonEl.querySelector('.community-reaction-count');
+    let count = Number(countEl?.textContent || 0);
+
+    if (shouldActivate) {
+        buttonEl.classList.add('is-active');
+        count += 1;
+    } else {
+        buttonEl.classList.remove('is-active');
+        count = Math.max(0, count - 1);
+    }
+
+    if (countEl) {
+        countEl.textContent = String(count);
+    }
+},
+
 getCommunityReactionSummary: async function(posts) {
     const summary = {};
 
@@ -3230,25 +3261,40 @@ if (deleteReplyBtn) {
 
 const communityReactionBtn = e.target.closest('[data-action="community-reaction-toggle"]');
 if (communityReactionBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+
     const postId = communityReactionBtn.getAttribute('data-post-id');
     const reaction = communityReactionBtn.getAttribute('data-reaction');
 
-    const result = await this.toggleCommunityReaction(postId, reaction);
-
-    if (!result.success) {
-        this.showToast(result.message || 'No se pudo guardar la reacción');
+    if (!postId || !reaction) {
         return;
     }
 
-    this.invalidateCommunityCache();
+    const wasActive = communityReactionBtn.classList.contains('is-active');
 
-    if ('vibrate' in navigator) {
-        navigator.vibrate(15);
+    this.setReactionButtonLoading(communityReactionBtn, true);
+
+    try {
+        const result = await this.toggleCommunityReaction(postId, reaction);
+
+        if (!result.success) {
+            this.showToast(result.message || 'No se pudo guardar la reacción');
+            return;
+        }
+
+        this.updateSingleReactionButtonUI(communityReactionBtn, !wasActive);
+
+        if ('vibrate' in navigator) {
+            navigator.vibrate(15);
+        }
+    } catch (error) {
+        console.error('[Community] Error actualizando reacción:', error);
+        this.showToast('No se pudo guardar la reacción');
+    } finally {
+        this.setReactionButtonLoading(communityReactionBtn, false);
     }
 
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error actualizando reacciones:', error);
-    });
     return;
 }
             
