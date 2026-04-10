@@ -26,6 +26,10 @@ function isRunningAsInstalledPWA() {
 function isIOSDevice() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
+
+function isAndroidDevice() {
+    return /Android/i.test(navigator.userAgent);
+}
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -137,7 +141,9 @@ const App = {
     lastReadingTap: 0,
     readingTapDelay: 400,
     selectionMenuVisible: false,
-    selectionMenuTimeout: null,
+    selectionUpdateTimer: null,
+    selectionHideTimer: null,
+    selectionViewportCleanup: null,
     pushListenersReady: false,
     themeListenerReady: false,
     
@@ -1432,8 +1438,82 @@ updateCommunityBadge: function() {
     this.removeSelectionMenu();
     },
 
+    getSelectionSurface: function() {
+    return document.querySelector('.selection-surface');
+},
+
+getSelectionContext: function() {
+    const selection = window.getSelection();
+    const surface = this.getSelectionSurface();
+
+    if (!selection || !surface || selection.rangeCount === 0) return null;
+    if (selection.isCollapsed) return null;
+
+    const text = selection.toString().replace(/\s+/g, ' ').trim();
+    if (!text || text.length < 3) return null;
+
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer;
+
+    if (!surface.contains(commonAncestor)) return null;
+
+    const shell = commonAncestor.nodeType === Node.ELEMENT_NODE
+    ? commonAncestor.closest('.reading-text-shell')
+    : commonAncestor.parentElement?.closest('.reading-text-shell');
+
+    const dateStr = shell?.getAttribute('data-reading-date');
+
+    if (!dateStr) return null;
+
+    return { selection, range, text, dateStr, surface };
+},
+
+getSelectionAnchorRect: function(range) {
+    if (!range) return null;
+
+    const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
+
+    if (rects.length) {
+        return rects[rects.length - 1];
+    }
+
+    const fallback = range.getBoundingClientRect();
+    if (fallback) return fallback;
+
+    return null;
+},
+
+scheduleSelectionMenuUpdate: function() {
+    if (this.selectionUpdateTimer) {
+        clearTimeout(this.selectionUpdateTimer);
+    }
+
+    if (this.selectionHideTimer) {
+        clearTimeout(this.selectionHideTimer);
+        this.selectionHideTimer = null;
+    }
+
+    const delay = isAndroidDevice() ? 90 : 45;
+
+    this.selectionUpdateTimer = setTimeout(() => {
+        const context = this.getSelectionContext();
+
+        if (!context) {
+            this.selectionHideTimer = setTimeout(() => {
+                const finalContext = this.getSelectionContext();
+                if (!finalContext) {
+                    this.removeSelectionMenu();
+                }
+            }, 120);
+            return;
+        }
+
+        this.ensureSelectionMenu(context);
+    }, delay);
+},
+
     restoreHighlightsInDOM: function(dateStr) {
-    const container = document.querySelector('.reading-text');
+    const container = document.querySelector('.selection-surface');
     if (!container) return;
 
     const highlights = this.getHighlights(dateStr);
@@ -1538,304 +1618,219 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 
 // ========================================
 // SISTEMA DE SELECCIÓN PROFESIONAL
-// CON REPOSICIONAMIENTO DINÁMICO EN SCROLL
 // ========================================
 
-showSelectionMenu: function(selection, dateStr) {
-    this.removeSelectionMenu();
+ensureSelectionMenu: function(context) {
+    let menu = document.getElementById('selection-menu');
 
-    if (!selection || selection.rangeCount === 0) return;
+    if (!menu) {
+        menu = document.createElement('div');
+        menu.id = 'selection-menu';
+        menu.className = 'selection-menu';
+        menu.setAttribute('data-selection-active', 'true');
 
-    const selectedText = selection.toString().trim();
-    if (!selectedText || selectedText.length < 3) return;
+        const yellowBtn = document.createElement('button');
+        yellowBtn.className = 'selection-menu-btn';
+        yellowBtn.type = 'button';
+        yellowBtn.innerHTML = '🟡';
+        yellowBtn.title = 'Resaltar en amarillo';
+        yellowBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.saveSelectedHighlight(this.currentSelectedText, 'yellow', this.currentSelectionDate);
+            window.getSelection()?.removeAllRanges();
+            this.removeSelectionMenu();
+        });
 
-    const range = selection.getRangeAt(0);
-    
-    // Guardar referencia al rango para actualizaciones durante scroll
-    this.currentSelectionRange = range;
-    this.currentSelectionDate = dateStr;
-    this.currentSelectedText = selectedText;
+        const blueBtn = document.createElement('button');
+        blueBtn.className = 'selection-menu-btn';
+        blueBtn.type = 'button';
+        blueBtn.innerHTML = '🔵';
+        blueBtn.title = 'Resaltar en azul';
+        blueBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.saveSelectedHighlight(this.currentSelectedText, 'blue', this.currentSelectionDate);
+            window.getSelection()?.removeAllRanges();
+            this.removeSelectionMenu();
+        });
 
-    // Crear el menú
-    const menu = document.createElement('div');
-    menu.id = 'selection-menu';
-    menu.className = 'selection-menu';
-    menu.setAttribute('data-selection-active', 'true');
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'selection-menu-btn';
+        copyBtn.type = 'button';
+        copyBtn.innerHTML = '📋';
+        copyBtn.title = 'Copiar texto';
+        copyBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-    // Botón Amarillo
-    const yellowBtn = document.createElement('button');
-    yellowBtn.className = 'selection-menu-btn';
-    yellowBtn.innerHTML = `🟡`;
-    yellowBtn.title = "Resaltar en amarillo";
-    yellowBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.saveSelectedHighlight(this.currentSelectedText, 'yellow', dateStr);
-        selection.removeAllRanges();
-        this.removeSelectionMenu();
-    };
+            try {
+                await navigator.clipboard.writeText(this.currentSelectedText || '');
+                this.showToast('Texto copiado');
+            } catch (error) {
+                this.showToast('No se pudo copiar');
+            }
 
-    // Botón Azul
-    const blueBtn = document.createElement('button');
-    blueBtn.className = 'selection-menu-btn';
-    blueBtn.innerHTML = `🔵`;
-    blueBtn.title = "Resaltar en azul";
-    blueBtn.onclick = (e) => {
-        e.stopPropagation();
-        this.saveSelectedHighlight(this.currentSelectedText, 'blue', dateStr);
-        selection.removeAllRanges();
-        this.removeSelectionMenu();
-    };
+            window.getSelection()?.removeAllRanges();
+            this.removeSelectionMenu();
+        });
 
-    // Botón Copiar
-    const copyBtn = document.createElement('button');
-    copyBtn.className = 'selection-menu-btn';
-    copyBtn.innerHTML = `📋`;
-    copyBtn.title = "Copiar texto";
-    copyBtn.onclick = async (e) => {
-        e.stopPropagation();
-        try {
-            await navigator.clipboard.writeText(this.currentSelectedText);
-            this.showToast('Texto copiado');
-        } catch {
-            this.showToast('No se pudo copiar');
-        }
-        selection.removeAllRanges();
-        this.removeSelectionMenu();
-    };
+        menu.appendChild(yellowBtn);
+        menu.appendChild(blueBtn);
+        menu.appendChild(copyBtn);
+        document.body.appendChild(menu);
 
-    menu.appendChild(yellowBtn);
-    menu.appendChild(blueBtn);
-    menu.appendChild(copyBtn);
-    document.body.appendChild(menu);
+        requestAnimationFrame(() => {
+            menu.classList.add('visible');
+        });
 
-    // Posicionar inicialmente
-    this.positionSelectionMenu(menu, range);
-    
-    // Mostrar con animación
-    requestAnimationFrame(() => {
-        menu.classList.add('visible');
-    });
+        this.bindSelectionViewportTracking(menu);
+    }
 
-    // ===== SISTEMA DE SCROLL INTELIGENTE =====
-   this.setupScrollBehavior(menu);
-    
+    this.currentSelectionRange = context.range.cloneRange();
+    this.currentSelectionDate = context.dateStr;
+    this.currentSelectedText = context.text;
+
+    this.positionSelectionMenu(menu, context.range);
     this.selectionMenuVisible = true;
 },
 
-// ========================================
-// POSICIONAMIENTO DEL MENÚ
-// ========================================
 positionSelectionMenu: function(menu, range) {
-    const rect = range.getBoundingClientRect();
-    const menuRect = menu.getBoundingClientRect();
-    const viewportHeight = window.innerHeight;
-    const viewportWidth = window.innerWidth;
-    
-    // Calcular el punto medio vertical de la selección
-    const selectionMiddleY = rect.top + (rect.height / 2);
-    
-    // Determinar si la selección está en la mitad superior o inferior
-    const isSelectionInUpperHalf = selectionMiddleY < (viewportHeight / 2);
-    
-    // Márgenes
-    const SAFE_MARGIN = 15;
-    const SYSTEM_MENU_OFFSET = 60;
-    
-    let top, left;
-    
-    // Centrar horizontalmente
-    left = rect.left + (rect.width / 2) - (menuRect.width / 2);
-    left = Math.max(SAFE_MARGIN, Math.min(left, viewportWidth - menuRect.width - SAFE_MARGIN));
-    
-    // Posicionamiento vertical estratégico
-    if (isSelectionInUpperHalf) {
-        top = rect.top - menuRect.height - SAFE_MARGIN;
-        if (top < SAFE_MARGIN) {
-            top = rect.bottom + SYSTEM_MENU_OFFSET;
-        }
-    } else {
-        top = rect.bottom + SAFE_MARGIN;
-        if (top + menuRect.height > viewportHeight - SAFE_MARGIN) {
-            top = rect.top - menuRect.height - SYSTEM_MENU_OFFSET;
-        }
-    }
-    
-    top = Math.max(SAFE_MARGIN, Math.min(top, viewportHeight - menuRect.height - SAFE_MARGIN));
-    
-    // Aplicar posición
-    menu.style.top = `${top + window.scrollY}px`;
-    menu.style.left = `${left + window.scrollX}px`;
-    
-    // Actualizar flecha
-    this.updateMenuArrow(menu, isSelectionInUpperHalf ? 'bottom' : 'top');
-    
-    // Guardar la posición relativa para el scroll
-   menu.dataset.preferredPosition = isSelectionInUpperHalf ? 'top' : 'bottom';
+    const rect = this.getSelectionAnchorRect(range);
+    if (!rect) return;
 
+    const vv = window.visualViewport;
+    const viewportWidth = vv ? vv.width : window.innerWidth;
+    const viewportHeight = vv ? vv.height : window.innerHeight;
+    const viewportLeft = vv ? vv.pageLeft : window.scrollX;
+    const viewportTop = vv ? vv.pageTop : window.scrollY;
+
+    const menuRect = menu.getBoundingClientRect();
+    const safe = 12;
+    const gap = 10;
+
+    let left = rect.left + window.scrollX + (rect.width / 2) - (menuRect.width / 2);
+    left = Math.max(viewportLeft + safe, Math.min(left, viewportLeft + viewportWidth - menuRect.width - safe));
+
+    const spaceAbove = rect.top - safe;
+    const spaceBelow = viewportHeight - rect.bottom - safe;
+
+    let top;
+    let arrowPosition;
+
+    if (spaceBelow >= menuRect.height + gap || spaceBelow >= spaceAbove) {
+        top = rect.bottom + window.scrollY + gap;
+        arrowPosition = 'top';
+    } else {
+        top = rect.top + window.scrollY - menuRect.height - gap;
+        arrowPosition = 'bottom';
+    }
+
+    top = Math.max(viewportTop + safe, Math.min(top, viewportTop + viewportHeight - menuRect.height - safe));
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+
+    this.updateMenuArrow(menu, arrowPosition);
 },
 
-// ========================================
-// COMPORTAMIENTO DURANTE SCROLL (PROFESIONAL)
-// ========================================
-setupScrollBehavior: function(menu) {
-    let scrollTimeout;
-    let isScrolling = false;
-    let scrollTick = false;
-    let lastScrollY = window.scrollY;
-    let scrollVelocity = 0;
-    let lastScrollTime = Date.now();
-    
-    // Función para actualizar posición durante scroll
-    const updateMenuPosition = () => {
-        const selection = window.getSelection();
-        
-        // Verificar si la selección sigue activa
-        if (!selection || selection.rangeCount === 0 || !this.currentSelectionRange) {
-            this.removeSelectionMenu();
-            return;
-        }
-        
-        // Intentar usar el rango guardado
-        let range = this.currentSelectionRange;
-        let rect;
-        
-        try {
-            rect = range.getBoundingClientRect();
-        } catch (e) {
-            // Si el rango ya no es válido, eliminar menú
-            this.removeSelectionMenu();
-            return;
-        }
-        
-        // Si el texto seleccionado ya no es visible (fuera de viewport)
-        const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-        
-        if (!isVisible) {
-            // Ocultar temporalmente si está fuera de vista
-            menu.style.opacity = '0';
-            menu.style.pointerEvents = 'none';
-        } else {
-            // Reposicionar suavemente
-            menu.style.opacity = '';
-            menu.style.pointerEvents = '';
-            this.positionSelectionMenu(menu, range);
-        }
-        
-        scrollTick = false;
+bindSelectionViewportTracking: function(menu) {
+    if (this.selectionViewportCleanup) {
+        this.selectionViewportCleanup();
+        this.selectionViewportCleanup = null;
+    }
+
+    let rafId = null;
+
+    const update = () => {
+        if (rafId) return;
+
+        rafId = requestAnimationFrame(() => {
+            rafId = null;
+
+const context = this.getSelectionContext();
+if (!context) {
+    this.removeSelectionMenu();
+    return;
+}
+
+this.currentSelectionRange = context.range.cloneRange();
+this.currentSelectionDate = context.dateStr;
+this.currentSelectedText = context.text;
+
+this.positionSelectionMenu(menu, context.range);
+        });
     };
-    
-    // Scroll handler optimizado con requestAnimationFrame
-    const scrollHandler = () => {
-        const now = Date.now();
-        const currentScrollY = window.scrollY;
-        
-        // Calcular dirección y velocidad
-        const deltaY = currentScrollY - lastScrollY;
-        scrollVelocity = Math.abs(deltaY) / (now - lastScrollTime) * 16; // px/frame
-        
-        lastScrollY = currentScrollY;
-        lastScrollTime = now;
-        
-        // Si el scroll es muy rápido, ocultar temporalmente (como el nativo)
-        if (scrollVelocity > 2) {
-            menu.classList.add('selection-menu-scrolling');
-            menu.style.transition = 'none';
-        } else {
-            menu.classList.remove('selection-menu-scrolling');
-            menu.style.transition = '';
-        }
-        
-        if (!scrollTick) {
-            requestAnimationFrame(updateMenuPosition);
-            scrollTick = true;
-        }
-        
-        // Marcar que está scrolleando
-        if (!isScrolling) {
-            isScrolling = true;
-            menu.classList.add('is-scrolling');
-        }
-        
-        // Clear timeout existente
-        clearTimeout(scrollTimeout);
-        
-        // Al detener el scroll, restaurar estado normal
-        scrollTimeout = setTimeout(() => {
-            isScrolling = false;
-            menu.classList.remove('is-scrolling');
-            menu.classList.remove('selection-menu-scrolling');
-            menu.style.transition = '';
-            
-            // Reposicionar una última vez para asegurar precisión
-            const selection = window.getSelection();
-            if (selection && selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0);
-                this.positionSelectionMenu(menu, range);
-            }
-        }, 150); // 150ms después de detener el scroll
-    };
-    
-    // Click fuera para cerrar
-    const clickOutsideHandler = (e) => {
+
+    const onPointerDownOutside = (e) => {
         if (!menu.contains(e.target)) {
-            const selection = window.getSelection();
-            if (!selection.toString().trim()) {
+            const context = this.getSelectionContext();
+            if (!context) {
                 this.removeSelectionMenu();
             }
         }
     };
-    
-    // Guardar handlers para limpiarlos después
-    this.scrollHandler = scrollHandler;
-    this.clickOutsideHandler = clickOutsideHandler;
-    
-    // Agregar event listeners
-    window.addEventListener('scroll', scrollHandler, { passive: true });
-    document.addEventListener('click', clickOutsideHandler);
-    
-    // Guardar referencia para limpieza
-    menu.cleanup = () => {
-        window.removeEventListener('scroll', scrollHandler);
-        document.removeEventListener('click', clickOutsideHandler);
-        clearTimeout(scrollTimeout);
+
+    window.addEventListener('scroll', update, { passive: true });
+
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('scroll', update, { passive: true });
+        window.visualViewport.addEventListener('resize', update, { passive: true });
+    }
+
+    document.addEventListener('pointerdown', onPointerDownOutside, true);
+
+    this.selectionViewportCleanup = () => {
+        window.removeEventListener('scroll', update);
+
+        if (window.visualViewport) {
+            window.visualViewport.removeEventListener('scroll', update);
+            window.visualViewport.removeEventListener('resize', update);
+        }
+
+        document.removeEventListener('pointerdown', onPointerDownOutside, true);
+
+        if (rafId) {
+            cancelAnimationFrame(rafId);
+            rafId = null;
+        }
     };
 },
 
-// ========================================
-// ACTUALIZAR FLECHA DEL MENÚ
-// ========================================
 updateMenuArrow: function(menu, position) {
-    // Eliminar flecha existente
     const existingArrow = menu.querySelector('.selection-menu-arrow');
     if (existingArrow) existingArrow.remove();
-    
+
     const arrow = document.createElement('div');
     arrow.className = `selection-menu-arrow selection-menu-arrow-${position}`;
     menu.appendChild(arrow);
 },
 
-// ========================================
-// ELIMINAR MENÚ DE SELECCIÓN (MEJORADO)
-// ========================================
 removeSelectionMenu: function() {
     const menu = document.getElementById('selection-menu');
     if (menu) {
-        // Ejecutar limpieza de event listeners
-        if (menu.cleanup) {
-            menu.cleanup();
-        }
         menu.remove();
     }
-    
+
+    if (this.selectionViewportCleanup) {
+        this.selectionViewportCleanup();
+        this.selectionViewportCleanup = null;
+    }
+
+    if (this.selectionUpdateTimer) {
+        clearTimeout(this.selectionUpdateTimer);
+        this.selectionUpdateTimer = null;
+    }
+
+    if (this.selectionHideTimer) {
+        clearTimeout(this.selectionHideTimer);
+        this.selectionHideTimer = null;
+    }
+
     this.selectionMenuVisible = false;
     this.currentSelectionRange = null;
     this.currentSelectedText = null;
     this.currentSelectionDate = null;
-    
-    if (this.selectionMenuTimeout) {
-        clearTimeout(this.selectionMenuTimeout);
-        this.selectionMenuTimeout = null;
-    }
 },
     
     // ========================================
@@ -2104,8 +2099,10 @@ const introVideoHtml = showIntroVideo ? `
                 <div class="reading-card">
                     <div class="section-title">${readingLabel}</div>
                     <h2 class="reading-reference">${reading.reference}</h2>
-                    <div class="reading-text" data-reading-date="${reading.date}">
-                        ${readingText}
+                    <div class="reading-text-shell" data-reading-date="${reading.date}">
+                        <div class="reading-text selection-surface" data-selection-surface="true">
+                            ${readingText}
+                        </div>
                     </div>
                </div>
             
@@ -2933,15 +2930,20 @@ return true;
        this.$content.addEventListener('click', async (e) => {
             // Activar modo lectura solo si se hace clic directo en el bloque,
             // no cuando se está seleccionando texto
-            const readingEl = e.target.closest('.reading-text');
-            if (readingEl) {
+            const readingEl = e.target.closest('.selection-surface');
+                if (readingEl) {
                 const selection = window.getSelection();
                 if (selection && selection.toString().trim()) {
                 return;
                 }
 
-                const now = Date.now();
-                const date = readingEl.getAttribute('data-reading-date');
+                if (this.selectionMenuVisible) {
+                return;
+                }
+
+                 const now = Date.now();
+                const shell = readingEl.closest('.reading-text-shell');
+                const date = shell ? shell.getAttribute('data-reading-date') : null;
 
                 if (now - this.lastReadingTap < this.readingTapDelay) {
                 this.readingMode = !this.readingMode;
@@ -2959,8 +2961,8 @@ return true;
             }
             
             if (e.target.closest('[data-action="exit-reading-mode"]')) {
-                const readingEl = document.querySelector('.reading-text');
-                const date = readingEl ? readingEl.getAttribute('data-reading-date') : null;
+                const readingShell = document.querySelector('.reading-text-shell');
+                const date = readingShell ? readingShell.getAttribute('data-reading-date') : null;
                 this.readingMode = false;
                 document.body.classList.remove('reading-mode');
                 if (date) this.rerenderCurrentReadingView(date);
@@ -3428,68 +3430,30 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
 
-this.$content.addEventListener('touchend', () => {
-    setTimeout(() => {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed) return;
-        
-        const selectedText = selection.toString().trim();
-        if (!selectedText || selectedText.length < 3) return;
-        
-        const readingTextEl = document.querySelector('.reading-text');
-        if (!readingTextEl) return;
-        
-        const anchorNode = selection.anchorNode;
-        if (!anchorNode || !readingTextEl.contains(anchorNode)) return;
-        
-        // Solo mostrar si no está ya visible
-        if (!this.selectionMenuVisible) {
-            const dateStr = readingTextEl.getAttribute('data-reading-date');
-            if (dateStr) {
-                this.showSelectionMenu(selection, dateStr);
-            }
-        }
-    }, 100); // Pequeño retraso para asegurar que la selección está completa
+document.addEventListener('selectionchange', () => {
+    const surface = this.getSelectionSurface();
+    if (!surface) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) {
+        this.removeSelectionMenu();
+        return;
+    }
+
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer;
+
+    if (!surface.contains(commonAncestor)) {
+        this.removeSelectionMenu();
+        return;
+    }
+
+    this.scheduleSelectionMenuUpdate();
 });
 
-// Para escritorio: mantener el comportamiento con selectionchange pero con retraso
-let desktopSelectionTimeout;
-document.addEventListener('selectionchange', () => {
-    if ('ontouchstart' in window) return;
-    
-    clearTimeout(desktopSelectionTimeout);
-    
-    const selection = window.getSelection();
-    
-    if (!selection || selection.isCollapsed) {
-        App.removeSelectionMenu();
-        return;
-    }
-    
-    const anchorNode = selection.anchorNode;
-    if (!anchorNode) return;
-    
-    const readingTextEl = document.querySelector('.reading-text');
-    if (!readingTextEl || !readingTextEl.contains(anchorNode)) {
-        App.removeSelectionMenu();
-        return;
-    }
-    
-    const selectedText = selection.toString().trim();
-    if (selectedText.length < 3) return;
-    
-    desktopSelectionTimeout = setTimeout(() => {
-        const finalSelection = window.getSelection();
-        const finalText = finalSelection ? finalSelection.toString().trim() : '';
-        
-        if (finalText && finalText.length >= 3) {
-            const dateStr = readingTextEl.getAttribute('data-reading-date');
-            if (dateStr) {
-                App.showSelectionMenu(finalSelection, dateStr);
-            }
-        }
-    }, 300);
-});
+document.addEventListener('pointerup', () => {
+    this.scheduleSelectionMenuUpdate();
+}, true);
 },
     
     initTheme: function() {
