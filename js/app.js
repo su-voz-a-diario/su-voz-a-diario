@@ -466,20 +466,20 @@ bindFloatingToggle: function() {
 },
     
     showDailyReminder: function() {
-        if (!('Notification' in window)) return;
+    if (!('Notification' in window)) return;
 
-        if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-            const todayStr = this.getTodayDateStr();
-            if (!this.isRead(todayStr)) {
-                new Notification('📖 Su Voz a Diario', {
-                    body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-                    icon: './icons/icon-192.png',
-                    vibrate: [200, 100, 200],
-                    data: { url: '/#home' }
-                });
-            }
+    if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
+        const todayStr = this.getTodayDateStr();
+        if (!this.isRead(todayStr)) {
+            new Notification('📖 Su Voz a Diario', {
+                body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
+                icon: './icons/icon-192.png',
+                vibrate: [200, 100, 200],
+                data: { url: '/#home' }
+            });
         }
-    },
+    }
+},
 
 checkReminderOnOpen: function() {
     if (!this.settings.notificationsEnabled) return;
@@ -2529,27 +2529,27 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     }
         
         if (testNotification) {
-            testNotification.addEventListener('click', () => {
-                if (!('Notification' in window)) {
-                    this.showToast('Este dispositivo no soporta notificaciones');
-                    return;
-                }
+    testNotification.addEventListener('click', () => {
+        if (!('Notification' in window)) {
+            this.showToast('Este dispositivo no soporta notificaciones');
+            return;
+        }
 
-                if (Notification.permission === 'granted') {
-                    new Notification('Su Voz a Diario', {
-                        body: '¡Las notificaciones funcionan correctamente!',
-                        icon: './icons/icon-192.png',
-                   });
-                   this.showToast('Notificación de prueba enviada');
-               } else {
-                   Notification.requestPermission().then(perm => {
-                        if (perm === 'granted') {
-                            this.showToast('Permiso concedido. Prueba de nuevo.');
-                        }
-                    });
+        if (Notification.permission === 'granted') {
+            new Notification('Su Voz a Diario', {
+                body: '¡Las notificaciones funcionan correctamente!',
+                icon: './icons/icon-192.png'
+            });
+            this.showToast('Notificación de prueba enviada');
+        } else {
+            Notification.requestPermission().then(perm => {
+                if (perm === 'granted') {
+                    this.showToast('Permiso concedido. Prueba de nuevo.');
                 }
             });
         }
+    });
+}
         
         if (themeToggleSettings) {
             themeToggleSettings.addEventListener('click', () => {
