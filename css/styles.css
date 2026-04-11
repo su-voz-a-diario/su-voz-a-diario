@@ -24,29 +24,29 @@
 /* Tema oscuro por sistema (se sobrescribe con clases) */
 @media (prefers-color-scheme: dark) {
     :root {
-        --primary: #e2e8f0;
-        --primary-light: #cbd5e0;
-        --accent: #63b3ed;
-        --accent-hover: #4299e1;
-        --bg-color: #0f172a;
-        --surface-color: #1e293b;
+        --primary: #e5e7eb;
+        --primary-light: #cbd5e1;
+        --accent: #60a5fa;
+        --accent-hover: #3b82f6;
+        --bg-color: #05070b;
+        --surface-color: #0f1115;
         --text-main: #f8fafc;
-        --text-muted: #94a3b8;
-        --border-color: #334155;
+        --text-muted: #9ca3af;
+        --border-color: #1f2937;
     }
 }
 
 /* Clases para tema manual */
 body.dark-mode {
-    --primary: #e2e8f0;
-    --primary-light: #cbd5e0;
-    --accent: #63b3ed;
-    --accent-hover: #4299e1;
-    --bg-color: #0f172a;
-    --surface-color: #1e293b;
+    --primary: #e5e7eb;
+    --primary-light: #cbd5e1;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --bg-color: #05070b;
+    --surface-color: #0f1115;
     --text-main: #f8fafc;
-    --text-muted: #94a3b8;
-    --border-color: #334155;
+    --text-muted: #9ca3af;
+    --border-color: #1f2937;
 }
 
 body.light-mode {
