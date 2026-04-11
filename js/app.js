@@ -2429,7 +2429,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                         <label>⏰ Recordatorio diario</label>
                         <div class="setting-control">
                             <input type="time" id="reminder-time" value="${this.settings.reminderTime}" class="time-input">
-                            <button id="test-notification" class="btn-secondary">Probar aviso local</button>
+                            <button id="test-notification" class="btn-secondary">Probar push remoto</button>
                         </div>
                     </div>
                     <div class="setting-item">
@@ -2549,9 +2549,9 @@ if (notificationsToggle) {
     });
 }
 
-        if (testNotification) {
-    testNotification.addEventListener('click', async () => {
-        this.showToast('La prueba local fue desactivada. Las pruebas serán por push real.');
+       if (testNotification) {
+    testNotification.addEventListener('click', () => {
+        this.showToast('La prueba manual ahora se hace desde Firebase con push remoto.');
     });
 }
         
