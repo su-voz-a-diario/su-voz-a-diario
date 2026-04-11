@@ -1,5 +1,5 @@
-const CACHE_NAME = 'su-voz-v7';
-const DYNAMIC_CACHE = 'su-voz-dynamic-v3';
+const CACHE_NAME = 'su-voz-v8';
+const DYNAMIC_CACHE = 'su-voz-dynamic-v4';
 
 const STATIC_ASSETS = [
   './',
@@ -13,10 +13,28 @@ const STATIC_ASSETS = [
   './icons/icon-128.png',
   './icons/icon-144.png',
   './icons/icon-152.png',
+  './icons/icon-180.png',
   './icons/icon-192.png',
   './icons/icon-384.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/splash.png'
 ];
+
+// Firebase compat en Service Worker.
+// Firebase documenta compat en SW cuando no estás bundling el worker.
+importScripts('https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyATEQ0kmd3HPloNlZ872t8C11jiYitLkUk",
+  authDomain: "su-voz-a-diario.firebaseapp.com",
+  projectId: "su-voz-a-diario",
+  storageBucket: "su-voz-a-diario.firebasestorage.app",
+  messagingSenderId: "372912228994",
+  appId: "1:372912228994:web:f252b44bdbd00d7c56429b"
+});
+
+const messaging = firebase.messaging();
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -35,6 +53,7 @@ self.addEventListener('activate', event => {
             if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
               return caches.delete(key);
             }
+            return Promise.resolve();
           })
         )
       ),
@@ -69,26 +88,31 @@ async function cacheFirstStrategy(request) {
   if (cached) return cached;
 
   const response = await fetch(request);
-  if (response?.ok) await cache.put(request, response.clone());
+  if (response && response.ok) {
+    await cache.put(request, response.clone());
+  }
   return response;
 }
 
 async function networkFirstStrategy(request) {
   try {
     const response = await fetch(request);
-    if (response?.ok) {
+    if (response && response.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       await cache.put(request, response.clone());
     }
     return response;
-  } catch {
+  } catch (error) {
     const cache = await caches.open(DYNAMIC_CACHE);
     const cached = await cache.match(request);
     if (cached) return cached;
 
     return new Response(
       JSON.stringify({ error: 'Sin conexión' }),
-      { status: 503, headers: { 'Content-Type': 'application/json' } }
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      }
     );
   }
 }
@@ -99,42 +123,112 @@ async function staleWhileRevalidateStrategy(request) {
 
   const networkFetch = fetch(request)
     .then(response => {
-      if (response?.ok) cache.put(request, response.clone());
+      if (response && response.ok) {
+        cache.put(request, response.clone());
+      }
       return response;
     })
-    .catch(() => undefined);
+    .catch(() => null);
 
-  return cached || networkFetch;
+  if (cached) return cached;
+
+  const networkResponse = await networkFetch;
+  if (networkResponse) return networkResponse;
+
+  return new Response('Sin conexión', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
 }
 
+// Background messages con Firebase Messaging
+messaging.onBackgroundMessage((payload) => {
+  console.log('[sw] Background push recibido:', payload);
+
+  const title =
+    payload?.notification?.title ||
+    payload?.data?.title ||
+    'Su Voz a Diario';
+
+  const body =
+    payload?.notification?.body ||
+    payload?.data?.body ||
+    'Tienes una nueva notificación';
+
+  const url =
+    payload?.data?.url ||
+    payload?.fcmOptions?.link ||
+    './#home';
+
+  const tag =
+    payload?.data?.tag ||
+    `notif-${Date.now()}`;
+
+  const options = {
+    body,
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-72.png',
+    data: { url },
+    tag,
+    renotify: false,
+    requireInteraction: false
+  };
+
+  self.registration.showNotification(title, options);
+});
+
+// Fallback para push genérico no-Firebase
 self.addEventListener('push', event => {
   if (!event.data) return;
 
   let data = {};
   try {
     data = event.data.json();
-  } catch {
+  } catch (error) {
     data = {};
   }
 
-  const title = data.notification?.title || 'Su Voz a Diario';
-  const body = data.notification?.body || '¿Ya escuchaste Su voz hoy?';
-  const link = data.webpush?.fcm_options?.link || 'https://su-voz-a-diario.github.io/su-voz-a-diario/#home';
+  const title =
+    data?.notification?.title ||
+    data?.title ||
+    'Su Voz a Diario';
+
+  const body =
+    data?.notification?.body ||
+    data?.body ||
+    'Tienes una nueva notificación';
+
+  const url =
+    data?.data?.url ||
+    data?.url ||
+    './#home';
+
+  const tag =
+    data?.data?.tag ||
+    data?.tag ||
+    `notif-${Date.now()}`;
 
   const options = {
     body,
     icon: './icons/icon-192.png',
     badge: './icons/icon-72.png',
-    data: { url: link },
-    tag: 'daily-reminder'
+    data: { url },
+    tag,
+    renotify: false,
+    requireInteraction: false
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
 });
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const targetUrl = event.notification?.data?.url || 'https://su-voz-a-diario.github.io/su-voz-a-diario/#home';
+
+  const rawUrl = event.notification?.data?.url || './#home';
+  const targetUrl = new URL(rawUrl, self.location.origin).href;
+
   event.waitUntil(openAppAndNavigate(targetUrl));
 });
 
@@ -145,9 +239,17 @@ async function openAppAndNavigate(url) {
   });
 
   for (const client of clientsList) {
-    if ('focus' in client) {
+    const clientUrl = client.url || '';
+    const sameApp = clientUrl.startsWith(self.location.origin);
+
+    if (sameApp && 'focus' in client) {
       await client.focus();
-      return client.navigate ? client.navigate(url) : undefined;
+
+      if ('navigate' in client) {
+        return client.navigate(url);
+      }
+
+      return;
     }
   }
 
