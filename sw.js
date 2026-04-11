@@ -1,5 +1,5 @@
-const CACHE_NAME = 'su-voz-v8';
-const DYNAMIC_CACHE = 'su-voz-dynamic-v4';
+const CACHE_NAME = 'su-voz-v9';
+const DYNAMIC_CACHE = 'su-voz-dynamic-v5';
 
 const STATIC_ASSETS = [
   './',
@@ -257,3 +257,5 @@ async function openAppAndNavigate(url) {
     return self.clients.openWindow(url);
   }
 }
+
+console.log('[SW NUEVO] sw.js v9 cargado correctamente');
