@@ -1578,15 +1578,15 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
         return;
     }
 
-    const cleanText = selectedText.trim();
+    const cleanText = selectedText.replace(/\s+/g, ' ').trim();
     const highlights = this.getHighlights(dateStr);
 
-    const alreadyExists = highlights.some(item =>
+    const existsSameColor = highlights.some(item =>
         item.text === cleanText && item.color === color
     );
 
-    if (alreadyExists) {
-        this.showToast(`Ese texto ya está resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+    if (existsSameColor) {
+        this.removeSelectedHighlight(cleanText, dateStr, color);
         return;
     }
 
@@ -1594,7 +1594,59 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 
     this.saveHighlights(dateStr, highlights);
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
-    this.scheduleRender();
+    window.getSelection()?.removeAllRanges();
+    this.removeSelectionMenu();
+    this.rerenderCurrentReadingView(dateStr);
+},
+
+getSelectionHighlightState: function(selectedText, dateStr) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
+    const highlights = this.getHighlights(dateStr);
+
+    const matching = highlights.filter(item => item.text === cleanText);
+
+    return {
+        exists: matching.length > 0,
+        colors: [...new Set(matching.map(item => item.color))]
+    };
+},
+
+removeSelectedHighlight: function(selectedText, dateStr, color = null) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
+
+    if (!cleanText || cleanText.length < 3) {
+        this.showToast('Selecciona un texto válido');
+        return;
+    }
+
+    const highlights = this.getHighlights(dateStr);
+    const filtered = highlights.filter(item => {
+        if (item.text !== cleanText) return true;
+        if (color && item.color !== color) return true;
+        return false;
+    });
+
+    if (filtered.length === highlights.length) {
+        this.showToast('Ese texto no tiene un resaltado guardado');
+        return;
+    }
+
+    if (filtered.length === 0) {
+        this.storage.remove(this.getHighlightsKey(dateStr));
+        this.sendToSW({ type: 'HIGHLIGHTS_UPDATED', date: dateStr });
+    } else {
+        this.saveHighlights(dateStr, filtered);
+    }
+
+    this.showToast(
+        color
+            ? `Resaltado ${color === 'yellow' ? 'amarillo' : 'azul'} eliminado`
+            : 'Resaltado eliminado'
+    );
+
+    window.getSelection()?.removeAllRanges();
+    this.removeSelectionMenu();
+    this.rerenderCurrentReadingView(dateStr);
 },
 
 // ========================================
@@ -1603,6 +1655,8 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 
 ensureSelectionMenu: function(context) {
     let menu = document.getElementById('selection-menu');
+
+    const highlightState = this.getSelectionHighlightState(context.text, context.dateStr);
 
     if (!menu) {
         menu = document.createElement('div');
@@ -1615,6 +1669,7 @@ ensureSelectionMenu: function(context) {
         yellowBtn.type = 'button';
         yellowBtn.innerHTML = '🟡';
         yellowBtn.title = 'Resaltar en amarillo';
+        yellowBtn.setAttribute('data-role', 'highlight-yellow');
         yellowBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1628,6 +1683,7 @@ ensureSelectionMenu: function(context) {
         blueBtn.type = 'button';
         blueBtn.innerHTML = '🔵';
         blueBtn.title = 'Resaltar en azul';
+        blueBtn.setAttribute('data-role', 'highlight-blue');
         blueBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1641,6 +1697,7 @@ ensureSelectionMenu: function(context) {
         copyBtn.type = 'button';
         copyBtn.innerHTML = '📋';
         copyBtn.title = 'Copiar texto';
+        copyBtn.setAttribute('data-role', 'copy');
         copyBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -1656,9 +1713,36 @@ ensureSelectionMenu: function(context) {
             this.removeSelectionMenu();
         });
 
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'selection-menu-btn selection-menu-btn-danger';
+        removeBtn.type = 'button';
+        removeBtn.innerHTML = '✕';
+        removeBtn.title = 'Quitar resaltado';
+        removeBtn.setAttribute('data-role', 'remove-highlight');
+        removeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const state = this.getSelectionHighlightState(this.currentSelectedText, this.currentSelectionDate);
+
+            if (!state.exists) {
+                this.showToast('Ese texto no tiene resaltado');
+                return;
+            }
+
+            if (state.colors.length === 1) {
+                this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate, state.colors[0]);
+                return;
+            }
+
+            this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate);
+        });
+
         menu.appendChild(yellowBtn);
         menu.appendChild(blueBtn);
         menu.appendChild(copyBtn);
+        menu.appendChild(removeBtn);
+
         document.body.appendChild(menu);
 
         requestAnimationFrame(() => {
@@ -1671,6 +1755,29 @@ ensureSelectionMenu: function(context) {
     this.currentSelectionRange = context.range.cloneRange();
     this.currentSelectionDate = context.dateStr;
     this.currentSelectedText = context.text;
+
+    const yellowBtn = menu.querySelector('[data-role="highlight-yellow"]');
+    const blueBtn = menu.querySelector('[data-role="highlight-blue"]');
+    const removeBtn = menu.querySelector('[data-role="remove-highlight"]');
+
+    if (yellowBtn) {
+        yellowBtn.classList.toggle('is-active', highlightState.colors.includes('yellow'));
+    }
+
+    if (blueBtn) {
+        blueBtn.classList.toggle('is-active', highlightState.colors.includes('blue'));
+    }
+
+    if (removeBtn) {
+        removeBtn.style.display = highlightState.exists ? 'inline-flex' : 'none';
+
+        if (highlightState.colors.length === 1) {
+            const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
+            removeBtn.title = `Quitar resaltado ${colorName}`;
+        } else {
+            removeBtn.title = 'Quitar resaltado';
+        }
+    }
 
     this.positionSelectionMenu(menu, context.range);
     this.selectionMenuVisible = true;
@@ -2134,13 +2241,9 @@ const introVideoHtml = showIntroVideo ? `
                 }
             </div>
             
-            <div class="action-group">
-                <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">📤 Compartir lectura</button>
-                ${this.hasHighlights(reading.date)
-                    ? `<button class="btn-secondary" data-action="clear-highlights" data-date="${reading.date}">✨ Quitar resaltados</button>`
-                    : ''
-                }
-            </div>
+           <div class="action-group">
+    <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">📤 Compartir lectura</button>
+</div>
             
             ${this.readingMode ? `
                 <button class="exit-reading-btn" data-action="exit-reading-mode">✕ Salir del modo lectura</button>
@@ -3299,17 +3402,6 @@ const pdfBtn = e.target.closest('[data-action="export-pdf"]');
 if (pdfBtn) {
     const date = pdfBtn.getAttribute('data-date');
     this.exportReflectionPDF(date);
-    return;
-}
-
-// Quitar resaltados
-const clearBtn = e.target.closest('[data-action="clear-highlights"]');
-if (clearBtn) {
-    const date = clearBtn.getAttribute('data-date');
-    this.storage.remove(this.getHighlightsKey(date));
-    this.removeHighlightButton();
-    this.rerenderCurrentReadingView(date);
-    this.showToast('Resaltados eliminados');
     return;
 }
 
