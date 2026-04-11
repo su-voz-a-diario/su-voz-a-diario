@@ -266,4 +266,4 @@ async function openAppAndNavigate(url) {
   }
 }
 
-console.log('[SW NUEVO] sw.js v9 cargado correctamente');
+console.log('[SW NUEVO] sw.js v10 cargado correctamente');
