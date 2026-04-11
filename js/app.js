@@ -176,10 +176,10 @@ await this.loadData();
 await this.refreshCommunityBadge();
 
 const savedToken = localStorage.getItem('su-voz-fcm-token');
-if (savedToken && this.currentUser && this.settings.notificationsEnabled) {
-    const tokenSaved = await this.savePushToken(savedToken);
+if (savedToken && this.currentUser) {
+    await this.savePushToken(savedToken);
 
-    if (tokenSaved) {
+    if (this.settings.notificationsEnabled) {
         this.setupPushListeners();
     }
 }
@@ -401,6 +401,23 @@ cacheDOM: function() {
     if (this.settings.reminderDays) {
         localStorage.setItem('su-voz-reminder-days', JSON.stringify(this.settings.reminderDays));
     }
+},
+
+getDeviceId: function() {
+    let deviceId = localStorage.getItem('su-voz-device-id');
+
+    if (!deviceId) {
+        deviceId = crypto.randomUUID();
+        localStorage.setItem('su-voz-device-id', deviceId);
+    }
+
+    return deviceId;
+},
+
+getPlatformLabel: function() {
+    if (isIOSDevice()) return 'ios';
+    if (isAndroidDevice()) return 'android';
+    return 'web';
 },
     
     loadFontSize: function() {
@@ -2749,9 +2766,14 @@ if (notificationsToggle) {
         });
     },
 
-    enableNotificationsFlow: async function() {
+enableNotificationsFlow: async function() {
     if (!('Notification' in window)) {
         this.showToast('Este dispositivo no soporta notificaciones');
+        return false;
+    }
+
+    if (!('serviceWorker' in navigator)) {
+        this.showToast('Este dispositivo no soporta Service Worker');
         return false;
     }
 
@@ -2771,15 +2793,21 @@ if (notificationsToggle) {
         return false;
     }
 
-    this.settings.notificationsEnabled = true;
-    this.saveSettings();
-
     const ok = await this.initPushNotifications();
+
     if (!ok) {
         this.settings.notificationsEnabled = false;
         this.saveSettings();
         this.showToast('No se pudo activar el canal de notificaciones');
         return false;
+    }
+
+    this.settings.notificationsEnabled = true;
+    this.saveSettings();
+
+    const savedToken = localStorage.getItem('su-voz-fcm-token');
+    if (savedToken && this.currentUser) {
+        await this.savePushToken(savedToken);
     }
 
     this.setupPushListeners();
@@ -2790,69 +2818,68 @@ if (notificationsToggle) {
     // ========================================
     // PUSH NOTIFICATIONS (NUEVO)
     // ========================================
-    initPushNotifications: async function() {
-        console.log('[App] Iniciando Push Notifications...');
-        
-        if (!window.firebaseMessaging) {
-            console.warn('[App] Firebase Messaging no disponible - ¿Está inicializado en index.html?');
-            return false;
-        }
+initPushNotifications: async function() {
+    console.log('[App] Iniciando Push Notifications...');
 
-        try {
-            const messaging = window.firebaseMessaging;
-            const registration = await navigator.serviceWorker.ready;
-            console.log('[App] Service Worker listo para Push');
-
-            const currentToken = await window.fcmGetToken(messaging, {
-                vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
-                serviceWorkerRegistration: registration
-            });
-
-            if (currentToken) {
-                console.log('[App] ✅ Token FCM obtenido:', currentToken.substring(0, 20) + '...');
-
-                localStorage.setItem('su-voz-fcm-token', currentToken);
-                
-                if (this.currentUser) {
-    const saved = await this.savePushToken(currentToken);
-    if (!saved) {
-        console.warn('[App] Token FCM obtenido pero no se pudo guardar en Firestore');
+    if (!window.firebaseMessaging || !window.fcmGetToken) {
+        console.warn('[App] Firebase Messaging no disponible');
         return false;
     }
-}
 
-return true;
-            } else {
-                console.warn('[App] No se pudo obtener token FCM');
-                return false;
-            }
+    try {
+        const messaging = window.firebaseMessaging;
+        const registration = await navigator.serviceWorker.ready;
 
-        } catch (error) {
-            console.error('[App] Error inicializando Push:', error.message);
+        if (!registration) {
+            console.warn('[App] No hay Service Worker listo para Push');
             return false;
         }
-    },
 
-   savePushToken: async function(token) {
+        console.log('[App] Service Worker listo para Push');
+
+        const currentToken = await window.fcmGetToken(messaging, {
+            vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+            serviceWorkerRegistration: registration
+        });
+
+        if (!currentToken) {
+            console.warn('[App] No se pudo obtener token FCM');
+            return false;
+        }
+
+        console.log('[App] Token FCM obtenido correctamente');
+        localStorage.setItem('su-voz-fcm-token', currentToken);
+
+        return true;
+    } catch (error) {
+        console.error('[App] Error inicializando Push:', error);
+        return false;
+    }
+},
+
+savePushToken: async function(token) {
     if (!token || !this.currentUser?.uid) {
         console.warn('[App] No se pudo guardar token: falta token o usuario');
         return false;
     }
 
-   try {
-    const isIOS = isIOSDevice();
-    const tokenRef = doc(db, 'pushTokens', this.currentUser.uid);
+    try {
+        const deviceId = this.getDeviceId();
+        const tokenRef = doc(db, 'pushTokens', deviceId);
 
-    await setDoc(tokenRef, {
-        token,
-        platform: isIOS ? 'ios' : 'web',
-        updatedAt: serverTimestamp(),
-        lastActive: serverTimestamp(),
-        reminderTime: this.settings.reminderTime,
-        notificationsEnabled: this.settings.notificationsEnabled
-    }, { merge: true });
-        
-        console.log('[App] ✅ Token Push guardado en Firestore');
+        await setDoc(tokenRef, {
+            token,
+            uid: this.currentUser.uid,
+            deviceId,
+            platform: this.getPlatformLabel(),
+            userAgent: navigator.userAgent || '',
+            reminderTime: this.settings.reminderTime,
+            notificationsEnabled: !!this.settings.notificationsEnabled,
+            lastActive: serverTimestamp(),
+            updatedAt: serverTimestamp()
+        }, { merge: true });
+
+        console.log('[App] Token Push guardado en Firestore');
         return true;
     } catch (error) {
         console.error('[App] Error guardando token:', error);
