@@ -74,7 +74,6 @@ body {
     color: var(--text-main);
     line-height: 1.5;
     padding-bottom: calc(var(--nav-height) + 58px);
-    overflow-x: hidden;
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -117,7 +116,7 @@ body {
 
 .floating-controls {
     position: fixed;
-    top: 65px;
+    top: calc(env(safe-area-inset-top) + 65px);
     left: 6px;
     z-index: 1200;
     display: flex;
@@ -321,15 +320,20 @@ body {
     margin-bottom: 0;
 }
 
-.reading-card > :not(.reading-text-shell),
 .main-action,
 .action-group,
 .home-reading-bar,
-.note-box,
 .reading-date-header,
 .badge-progress,
 .section-title,
-.reading-reference {
+.reading-reference,
+.btn-primary,
+.btn-secondary,
+.home-reading-bar-btn,
+.exit-reading-btn,
+.floating-btn,
+.floating-toggle-btn,
+.floating-streak {
     -webkit-user-select: none;
     user-select: none;
 }
@@ -576,18 +580,14 @@ body.dark-mode .badge-corona {
 }
 
 .action-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
     margin: 8px 0 20px 0;
 }
 
 .action-group .btn-secondary:first-child {
-    grid-column: span 2;
-}
-
-.action-group .btn-secondary[data-action="clear-highlights"] {
-    grid-column: span 2;
+    width: 100%;
 }
 
 /* ========================================
@@ -1252,42 +1252,6 @@ body.dark-mode .toast-message {
 }
 
 /* ========================================
-   RESALTADOS
-   ======================================== */
-.user-highlight {
-    border-radius: 4px;
-    padding: 0 2px;
-    transition: background-color 0.3s ease;
-}
-
-.highlight-btn {
-    position: absolute;
-    z-index: 9999;
-    background: linear-gradient(135deg, var(--accent), var(--accent-hover));
-    color: white;
-    border: none;
-    border-radius: 999px;
-    padding: 10px 14px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
-    backdrop-filter: blur(6px);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.highlight-btn:active {
-    transform: scale(0.95);
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-}
-
-body.dark-mode .highlight-btn {
-    background: linear-gradient(135deg, #63b3ed, #4299e1);
-    color: #0f172a;
-}
-
-/* ========================================
    MODO LECTURA
    ======================================== */
 body.reading-mode .main-action,
@@ -1467,10 +1431,6 @@ body.dark-mode .community-badge {
     .note-actions {
         grid-template-columns: 1fr 1fr;
     }
-    
-    .action-group {
-        grid-template-columns: 1fr 1fr;
-    }
 }
 
 @media (max-width: 480px) {
@@ -1500,9 +1460,9 @@ body.dark-mode .community-badge {
     }
 
     .floating-controls {
-        top: 65px;
-        left: 6px;
-        gap: 6px;
+    top: calc(env(safe-area-inset-top) + 65px);
+    left: 6px;
+    gap: 6px;
     }
 
     .floating-btn,
@@ -1652,28 +1612,6 @@ body.dark-mode .about-feature {
     padding: 12px;
 }
 
-.user-highlight-yellow {
-    background: rgba(255, 230, 120, 0.5);
-    border-radius: 4px;
-    padding: 0 2px;
-    color: inherit;
-}
-
-.user-highlight-blue {
-    background: rgba(120, 190, 255, 0.32);
-    border-radius: 4px;
-    padding: 0 2px;
-    color: inherit;
-}
-
-body.dark-mode .user-highlight-yellow {
-    background: rgba(255, 210, 80, 0.5);    /* Más visible en modo oscuro */
-}
-
-body.dark-mode .user-highlight-blue {
-    background: rgba(90, 160, 255, 0.4);    /* Más visible en modo oscuro */
-}
-
 .april-message {
     position: fixed;
     inset: 0;
@@ -1776,20 +1714,11 @@ body.dark-mode .user-highlight-blue {
 
 .community-reaction-btn.is-active {
     color: var(--accent);
-    text-shadow: 0 0 10px rgba(49, 130, 206, 0.22);
+    text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .community-reaction-btn.is-active .community-reaction-icon {
-    filter: drop-shadow(0 0 6px rgba(49, 130, 206, 0.28));
-}
-
-body.dark-mode .community-reaction-btn.is-active {
-    color: #63b3ed;
-    text-shadow: 0 0 10px rgba(99, 179, 237, 0.22);
-}
-
-body.dark-mode .community-reaction-btn.is-active .community-reaction-icon {
-    filter: drop-shadow(0 0 6px rgba(99, 179, 237, 0.3));
+    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 28%, transparent));
 }
 
 .community-reaction-icon {
@@ -1827,10 +1756,6 @@ body.dark-mode .community-reaction-row {
 
 body.dark-mode .community-reaction-btn {
     color: #94a3b8;
-}
-
-body.dark-mode .community-reaction-btn.is-active {
-    color: #63b3ed;
 }
 
 .community-reaction-btn.is-loading {
@@ -2153,26 +2078,25 @@ body.dark-mode .community-reply-item {
    ======================================== */
 .selection-menu {
     position: absolute;
-    z-index: 10000;
-    display: flex;
+    z-index: 9999;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
-    background: rgba(255, 255, 255, 0.96);
+    gap: 0.45rem;
+    padding: 0.42rem 0.5rem;
     border-radius: 999px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    background: rgba(22, 28, 36, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 10px 30px rgba(0, 0, 0, 0.24),
+        0 2px 10px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     opacity: 0;
-    transform: translateY(-8px) scale(0.95);
-    transition:
-        opacity 0.2s ease,
-        transform 0.2s ease,
-        top 0.15s cubic-bezier(0.4, 0, 0.2, 1),
-        left 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(6px) scale(0.96);
     pointer-events: none;
-    will-change: transform, top, left;
+    transition:
+        opacity 0.18s ease,
+        transform 0.18s ease;
 }
 
 .selection-menu.visible {
@@ -2182,76 +2106,241 @@ body.dark-mode .community-reply-item {
 }
 
 .selection-menu-btn {
-    display: flex;
+    width: 2.35rem;
+    height: 2.35rem;
+    border: none;
+    border-radius: 999px;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    padding: 0;
-    border: none;
-    border-radius: 50%;
-    background: #f1f5f9;
-    color: #1e293b;
-    font-size: 24px;
-    line-height: 1;
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+    font-size: 1rem;
     cursor: pointer;
-    flex-shrink: 0;
-    transition: all 0.18s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    transition:
+        transform 0.15s ease,
+        background-color 0.15s ease,
+        box-shadow 0.15s ease,
+        opacity 0.15s ease;
 }
 
 .selection-menu-btn:hover {
-    background: #e2e8f0;
-    transform: scale(1.08);
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.selection-menu-btn[data-role="highlight-yellow"]:hover {
+    background: rgba(255, 214, 10, 0.18);
+}
+
+.selection-menu-btn[data-role="highlight-blue"]:hover {
+    background: rgba(59, 130, 246, 0.18);
+}
+
+body.light-mode .selection-menu-btn[data-role="highlight-yellow"]:hover {
+    background: rgba(250, 204, 21, 0.18);
+}
+
+body.light-mode .selection-menu-btn[data-role="highlight-blue"]:hover {
+    background: rgba(96, 165, 250, 0.18);
+}
+
+body.dark-mode .selection-menu-btn[data-role="highlight-yellow"]:hover {
+    background: rgba(255, 214, 10, 0.14);
+}
+
+body.dark-mode .selection-menu-btn[data-role="highlight-blue"]:hover {
+    background: rgba(59, 130, 246, 0.16);
 }
 
 .selection-menu-btn:active {
-    transform: scale(0.95);
+    transform: scale(0.94);
 }
 
-.selection-menu-btn:first-of-type:hover {
-    background: #fef3c7;
+.selection-menu-btn:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.35);
+    outline-offset: 2px;
 }
 
-.selection-menu-btn:nth-of-type(2):hover {
-    background: #dbeafe;
+/* ========================================
+   ESTADO ACTIVO DE COLORES
+======================================== */
+.selection-menu-btn.is-active {
+    background: rgba(255, 255, 255, 0.2);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
-.selection-menu-btn:last-of-type {
-    font-size: 20px;
+.selection-menu-btn[data-role="highlight-yellow"].is-active {
+    background: rgba(255, 214, 10, 0.22);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 214, 10, 0.35),
+        0 0 0 1px rgba(255, 214, 10, 0.08);
 }
 
+.selection-menu-btn[data-role="highlight-blue"].is-active {
+    background: rgba(59, 130, 246, 0.22);
+    box-shadow:
+        inset 0 0 0 1px rgba(96, 165, 250, 0.35),
+        0 0 0 1px rgba(96, 165, 250, 0.08);
+}
+
+/* ========================================
+   BOTÓN DE QUITAR RESALTADO
+======================================== */
+.selection-menu-btn-danger {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0.96rem;
+    font-weight: 700;
+}
+
+.selection-menu-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.18);
+}
+
+.selection-menu-btn-danger:active {
+    transform: scale(0.94);
+}
+
+/* ========================================
+   ESTADO CARGA / DESHABILITADO
+======================================== */
+.selection-menu-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ========================================
+   FLECHA DEL MENÚ
+======================================== */
 .selection-menu-arrow {
     position: absolute;
-    width: 10px;
-    height: 10px;
-    left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    background: inherit;
-    border: inherit;
+    width: 0.72rem;
+    height: 0.72rem;
+    background: rgba(22, 28, 36, 0.96);
+    transform: rotate(45deg);
     border-radius: 2px;
     z-index: -1;
 }
 
 .selection-menu-arrow-top {
-    top: -5px;
-    border-right: none;
-    border-bottom: none;
+    top: -0.28rem;
+    left: 50%;
+    margin-left: -0.36rem;
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .selection-menu-arrow-bottom {
-    bottom: -5px;
-    border-left: none;
-    border-top: none;
+    bottom: -0.28rem;
+    left: 50%;
+    margin-left: -0.36rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.selection-menu.is-scrolling {
-    transition: none;
-    pointer-events: none;
+/* ========================================
+   AJUSTES PARA TEMA CLARO
+======================================== */
+body.light-mode .selection-menu {
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.16),
+        0 2px 10px rgba(15, 23, 42, 0.08);
 }
 
-.selection-menu-scrolling {
-    opacity: 0.55 !important;
+body.light-mode .selection-menu-btn {
+    background: rgba(15, 23, 42, 0.06);
+    color: #1e293b;
+}
+
+body.light-mode .selection-menu-btn:hover {
+    background: rgba(15, 23, 42, 0.1);
+}
+
+body.light-mode .selection-menu-btn.is-active {
+    background: rgba(15, 23, 42, 0.12);
+}
+
+body.light-mode .selection-menu-btn[data-role="highlight-yellow"].is-active {
+    background: rgba(250, 204, 21, 0.26);
+    box-shadow:
+        inset 0 0 0 1px rgba(202, 138, 4, 0.28),
+        0 0 0 1px rgba(202, 138, 4, 0.06);
+}
+
+body.light-mode .selection-menu-btn[data-role="highlight-blue"].is-active {
+    background: rgba(96, 165, 250, 0.24);
+    box-shadow:
+        inset 0 0 0 1px rgba(37, 99, 235, 0.24),
+        0 0 0 1px rgba(37, 99, 235, 0.05);
+}
+
+body.light-mode .selection-menu-btn-danger {
+    background: rgba(15, 23, 42, 0.05);
+    color: #334155;
+}
+
+body.light-mode .selection-menu-btn-danger:hover {
+    background: rgba(239, 68, 68, 0.14);
+    color: #b91c1c;
+}
+
+body.light-mode .selection-menu-arrow {
+    background: rgba(255, 255, 255, 0.96);
+}
+
+body.light-mode .selection-menu-arrow-top {
+    border-left: 1px solid rgba(15, 23, 42, 0.08);
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+body.light-mode .selection-menu-arrow-bottom {
+    border-right: 1px solid rgba(15, 23, 42, 0.08);
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+/* ========================================
+   MÓVIL
+======================================== */
+@media (max-width: 640px) {
+    .selection-menu {
+        gap: 0.38rem;
+        padding: 0.38rem 0.45rem;
+    }
+
+    .selection-menu-btn {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: 0.96rem;
+    }
+}
+
+mark.user-highlight {
+    padding: 0.08em 0.12em;
+    border-radius: 0.3em;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+mark.user-highlight-yellow {
+    background: rgba(250, 204, 21, 0.35);
+    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.18);
+}
+
+mark.user-highlight-blue {
+    background: rgba(96, 165, 250, 0.28);
+    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.16);
+}
+
+body.dark-mode mark.user-highlight-yellow {
+    background: rgba(250, 204, 21, 0.28);
+}
+
+body.dark-mode mark.user-highlight-blue {
+    background: rgba(59, 130, 246, 0.3);
 }
 
 body.dark-mode .selection-menu {
@@ -2269,48 +2358,51 @@ body.dark-mode .selection-menu-btn:hover {
     background: #475569;
 }
 
-body.dark-mode .selection-menu-btn:first-of-type:hover {
-    background: #5a4a1a;
-}
-
-body.dark-mode .selection-menu-btn:nth-of-type(2):hover {
-    background: #1a3a5a;
+body.dark-mode .selection-menu-btn-danger {
+    background: rgba(255, 255, 255, 0.06);
+    color: #f8fafc;
 }
 
 body.dark-mode .selection-menu-arrow {
     background: rgba(30, 41, 59, 0.96);
 }
 
-body.dark-mode .selection-menu-scrolling {
-    opacity: 0.65 !important;
+body.dark-mode .selection-menu-arrow-top {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .selection-menu-arrow-bottom {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 480px) {
     .selection-menu {
-        padding: 7px 9px;
-        gap: 5px;
+        padding: 0.4rem 0.48rem;
+        gap: 0.34rem;
     }
 
     .selection-menu-btn {
-        width: 52px;
-        height: 52px;
-        font-size: 26px;
+        width: 2.45rem;
+        height: 2.45rem;
+        font-size: 1rem;
     }
 
-    .selection-menu-btn:last-of-type {
-        font-size: 22px;
+    .selection-menu-btn-danger {
+        font-size: 0.98rem;
     }
 }
 
 @media (max-width: 380px) {
     .selection-menu-btn {
-        width: 46px;
-        height: 46px;
-        font-size: 22px;
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 0.94rem;
     }
 
-    .selection-menu-btn:last-of-type {
-        font-size: 19px;
+    .selection-menu-btn-danger {
+        font-size: 0.92rem;
     }
 }
 
