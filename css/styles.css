@@ -2354,23 +2354,23 @@ mark.user-highlight {
 }
 
 mark.user-highlight-yellow {
-    background: rgba(250, 204, 21, 0.12);
-    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.10);
+    background: rgba(250, 204, 21, 0.18);
+    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.14);
 }
 
 mark.user-highlight-blue {
-    background: rgba(96, 165, 250, 0.12);
-    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.10);
+    background: rgba(96, 165, 250, 0.18);
+    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.14);
 }
 
 body.dark-mode mark.user-highlight-yellow {
-    background: rgba(250, 204, 21, 0.10);
-    box-shadow: inset 0 -1px 0 rgba(250, 204, 21, 0.08);
+    background: rgba(250, 204, 21, 0.16);
+    box-shadow: inset 0 -1px 0 rgba(250, 204, 21, 0.12);
 }
 
 body.dark-mode mark.user-highlight-blue {
-    background: rgba(96, 165, 250, 0.10);
-    box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.08);
+    background: rgba(96, 165, 250, 0.16);
+    box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.12);
 }
 
 body.dark-mode .selection-menu {
