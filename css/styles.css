@@ -304,32 +304,30 @@ body {
 
 .reading-text::selection,
 .reading-text *::selection {
-    background: rgba(59, 130, 246, 0.28);
-    color: #0f172a;
+    background: rgba(59, 130, 246, 0.18);
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
 }
 
 .reading-text::-moz-selection,
 .reading-text *::-moz-selection {
-    background: rgba(59, 130, 246, 0.28);
-    color: #0f172a;
+    background: rgba(59, 130, 246, 0.18);
+    color: #0f172a !important;
 }
 
 body.dark-mode .reading-text::selection,
-body.dark-mode .reading-text *::selection,
-body.dark-mode mark.user-highlight::selection,
-body.dark-mode mark.user-highlight *::selection {
-    background: rgba(96, 165, 250, 0.32);
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff;
+body.dark-mode .reading-text *::selection {
+    background: rgba(147, 197, 253, 0.18);
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
 }
 
 body.dark-mode .reading-text::-moz-selection,
-body.dark-mode .reading-text *::-moz-selection,
-body.dark-mode mark.user-highlight::-moz-selection,
-body.dark-mode mark.user-highlight *::-moz-selection {
-    background: rgba(96, 165, 250, 0.32);
-    color: #ffffff !important;
+body.dark-mode .reading-text *::-moz-selection {
+    background: rgba(147, 197, 253, 0.18);
+    color: #f8fafc !important;
 }
+
 .reading-text p,
 .reading-text span,
 .reading-text strong,
@@ -2351,30 +2349,60 @@ mark.user-highlight {
     padding: 0.08em 0.12em;
     border-radius: 0.3em;
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    color: inherit !important;
+    -webkit-text-fill-color: currentColor !important;
 }
 
 mark.user-highlight-yellow {
-    background: rgba(250, 204, 21, 0.35);
-    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.18);
+    background: rgba(250, 204, 21, 0.12);
+    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.10);
 }
 
 mark.user-highlight-blue {
-    background: rgba(96, 165, 250, 0.28);
-    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.16);
+    background: rgba(96, 165, 250, 0.12);
+    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.10);
 }
 
 body.dark-mode mark.user-highlight-yellow {
-    background: rgba(250, 204, 21, 0.28);
+    background: rgba(250, 204, 21, 0.10);
+    box-shadow: inset 0 -1px 0 rgba(250, 204, 21, 0.08);
 }
 
 body.dark-mode mark.user-highlight-blue {
-    background: rgba(59, 130, 246, 0.3);
+    background: rgba(96, 165, 250, 0.10);
+    box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.08);
 }
 
 body.dark-mode .selection-menu {
     background: rgba(30, 41, 59, 0.96);
     border-color: rgba(255, 255, 255, 0.1);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-mode .reading-text mark::selection,
+body.dark-mode .reading-text mark *::selection {
+    background: rgba(147, 197, 253, 0.18) !important;
+    color: #f8fafc !important;
+    -webkit-text-fill-color: #f8fafc !important;
+}
+
+body.dark-mode .reading-text mark::-moz-selection,
+body.dark-mode .reading-text mark *::-moz-selection {
+    background: rgba(147, 197, 253, 0.18) !important;
+    color: #f8fafc !important;
+}
+
+.reading-text mark::selection,
+.reading-text mark *::selection {
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+.reading-text mark::-moz-selection,
+.reading-text mark *::-moz-selection {
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #0f172a !important;
 }
 
 body.dark-mode .selection-menu-btn {
