@@ -302,6 +302,34 @@ body {
     margin: 0;
 }
 
+.reading-text::selection,
+.reading-text *::selection {
+    background: rgba(59, 130, 246, 0.28);
+    color: #0f172a;
+}
+
+.reading-text::-moz-selection,
+.reading-text *::-moz-selection {
+    background: rgba(59, 130, 246, 0.28);
+    color: #0f172a;
+}
+
+body.dark-mode .reading-text::selection,
+body.dark-mode .reading-text *::selection,
+body.dark-mode mark.user-highlight::selection,
+body.dark-mode mark.user-highlight *::selection {
+    background: rgba(96, 165, 250, 0.32);
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff;
+}
+
+body.dark-mode .reading-text::-moz-selection,
+body.dark-mode .reading-text *::-moz-selection,
+body.dark-mode mark.user-highlight::-moz-selection,
+body.dark-mode mark.user-highlight *::-moz-selection {
+    background: rgba(96, 165, 250, 0.32);
+    color: #ffffff !important;
+}
 .reading-text p,
 .reading-text span,
 .reading-text strong,
