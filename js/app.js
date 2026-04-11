@@ -2352,13 +2352,13 @@ const [reactionSummary, repliesSummary] = await Promise.all([
 
                                 ${this.renderReplyBlock(post, replies)}
 
-                                    ${post.ownerUid === this.currentUser?.uid ? `
-                                <div class="community-actions">
-                                <button class="btn-secondary danger" data-action="delete-community-post" data-id="${post.id}">
-                                    🗑️ Eliminar
-                            </button>
-                            </div>
-                        ` : ''}
+                                  ${post.ownerUid === this.currentUser?.uid ? `
+    <div class="community-actions">
+        <button class="community-delete-main" data-action="delete-community-post" data-id="${post.id}">
+            🗑️ Eliminar
+        </button>
+    </div>
+` : ''}
                         </div>
                     `;
                 }).join('') : `
