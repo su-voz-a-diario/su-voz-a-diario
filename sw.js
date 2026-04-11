@@ -1,5 +1,5 @@
-const CACHE_NAME = 'su-voz-v9';
-const DYNAMIC_CACHE = 'su-voz-dynamic-v5';
+const CACHE_NAME = 'su-voz-v10';
+const DYNAMIC_CACHE = 'su-voz-dynamic-v6';
 
 const STATIC_ASSETS = [
   './',
@@ -29,11 +29,27 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
-      .then(() => self.skipWaiting())
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+
+    for (const asset of STATIC_ASSETS) {
+      try {
+        const request = new Request(asset, { cache: 'no-cache' });
+        const response = await fetch(request);
+
+        if (!response.ok) {
+          console.warn('[SW] No se pudo precachear:', asset, response.status);
+          continue;
+        }
+
+        await cache.put(request, response.clone());
+      } catch (error) {
+        console.warn('[SW] Error precacheando:', asset, error);
+      }
+    }
+
+    await self.skipWaiting();
+  })());
 });
 
 self.addEventListener('activate', event => {
