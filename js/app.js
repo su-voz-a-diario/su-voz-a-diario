@@ -1429,22 +1429,27 @@ getSelectionContext: function() {
     const text = selection.toString().replace(/\s+/g, ' ').trim();
     if (!text || text.length < 3) return null;
 
-   const range = selection.getRangeAt(0);
-const commonAncestor = range.commonAncestorContainer;
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer;
 
-const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
-    ? commonAncestor
-    : commonAncestor.parentElement;
+    const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
+        ? commonAncestor
+        : commonAncestor.parentElement;
 
-if (!ancestorElement || !surface.contains(ancestorElement)) return null;
+    if (!ancestorElement || !surface.contains(ancestorElement)) return null;
 
-const shell = ancestorElement.closest('.reading-text-shell');
-
+    const shell = ancestorElement.closest('.reading-text-shell');
     const dateStr = shell?.getAttribute('data-reading-date');
 
     if (!dateStr) return null;
 
-    return { selection, range, text, dateStr, surface };
+    return {
+        selection,
+        range: range.cloneRange(),
+        text,
+        dateStr,
+        surface
+    };
 },
 
 getSelectionAnchorRect: function(range) {
@@ -1472,18 +1477,13 @@ scheduleSelectionMenuUpdate: function() {
         this.selectionHideTimer = null;
     }
 
-    const delay = isAndroidDevice() ? 90 : 45;
+    const delay = isIOSDevice() ? 180 : isAndroidDevice() ? 140 : 40;
 
     this.selectionUpdateTimer = setTimeout(() => {
         const context = this.getSelectionContext();
 
         if (!context) {
-            this.selectionHideTimer = setTimeout(() => {
-                const finalContext = this.getSelectionContext();
-                if (!finalContext) {
-                    this.removeSelectionMenu();
-                }
-            }, 120);
+            this.removeSelectionMenu();
             return;
         }
 
@@ -1847,14 +1847,16 @@ this.positionSelectionMenu(menu, context.range);
         });
     };
 
-    const onPointerDownOutside = (e) => {
-        if (!menu.contains(e.target)) {
+const onPointerDownOutside = (e) => {
+    if (!menu.contains(e.target)) {
+        setTimeout(() => {
             const context = this.getSelectionContext();
             if (!context) {
                 this.removeSelectionMenu();
             }
-        }
-    };
+        }, 30);
+    }
+};
 
     window.addEventListener('scroll', update, { passive: true });
 
@@ -3533,27 +3535,21 @@ document.addEventListener('selectionchange', () => {
     if (!surface) return;
 
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) {
+
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
         this.removeSelectionMenu();
-        return;
     }
-
-    const range = selection.getRangeAt(0);
-const commonAncestor = range.commonAncestorContainer;
-
-const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
-    ? commonAncestor
-    : commonAncestor.parentElement;
-
-if (!ancestorElement || !surface.contains(ancestorElement)) {
-    this.removeSelectionMenu();
-    return;
-}
-
-    this.scheduleSelectionMenuUpdate();
 });
 
 document.addEventListener('pointerup', () => {
+    this.scheduleSelectionMenuUpdate();
+}, true);
+
+document.addEventListener('touchend', () => {
+    this.scheduleSelectionMenuUpdate();
+}, true);
+
+document.addEventListener('mouseup', () => {
     this.scheduleSelectionMenuUpdate();
 }, true);
 },
