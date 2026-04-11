@@ -2902,8 +2902,6 @@ savePushToken: async function(token) {
         
         // Eventos del contenido
        this.$content.addEventListener('click', async (e) => {
-            // Activar modo lectura solo si se hace clic directo en el bloque,
-            // no cuando se está seleccionando texto
             const readingEl = e.target.closest('.selection-surface');
                 if (readingEl) {
                 const selection = window.getSelection();
@@ -2933,6 +2931,28 @@ savePushToken: async function(token) {
 
                 return;
             }
+
+           const noteSection = e.target.closest('.note-section');
+    if (noteSection) {
+        const textarea = noteSection.querySelector('.note-textarea');
+        if (!textarea) return;
+
+        this.activeNoteField = textarea.getAttribute('data-field') || null;
+
+        this.$content.querySelectorAll('.note-section').forEach(section => {
+            section.classList.remove('active');
+        });
+
+        this.$content.querySelectorAll('.note-textarea').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        noteSection.classList.add('active');
+        textarea.classList.add('active');
+        textarea.focus();
+
+        return;
+    }
             
             if (e.target.closest('[data-action="exit-reading-mode"]')) {
                 const readingShell = document.querySelector('.reading-text-shell');
@@ -3395,12 +3415,27 @@ this.$content.addEventListener('focusin', (e) => {
     const field = textarea.getAttribute('data-field');
     if (!field) return;
 
-    if (this.activeNoteField !== field) {
-        this.activeNoteField = field;
+    this.activeNoteField = field;
 
-        if ('vibrate' in navigator) {
-            navigator.vibrate(20);
-        }
+    // Quitar active de todas las secciones y textareas
+    this.$content.querySelectorAll('.note-section').forEach(section => {
+        section.classList.remove('active');
+    });
+
+    this.$content.querySelectorAll('.note-textarea').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Activar solo la sección actual
+    const currentSection = textarea.closest('.note-section');
+    if (currentSection) {
+        currentSection.classList.add('active');
+    }
+
+    textarea.classList.add('active');
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(20);
     }
 });
 
