@@ -8,16 +8,8 @@ const STATIC_ASSETS = [
   './js/app.js',
   './manifest.json',
   './data/readings.json',
-  './icons/icon-72.png',
-  './icons/icon-96.png',
-  './icons/icon-128.png',
-  './icons/icon-144.png',
-  './icons/icon-152.png',
-  './icons/icon-180.png',
   './icons/icon-192.png',
-  './icons/icon-384.png',
-  './icons/icon-512.png',
-  './icons/splash.png'
+  './icons/icon-512.png'
 ];
 
 // Firebase compat en Service Worker.
