@@ -160,6 +160,7 @@ const App = {
     this.loadFontSize();
     this.loadControlsState();
     this.loadCommunityLastSeen();
+    localStorage.removeItem('su-voz-last-reminder-date');
        
     const savedVersion = localStorage.getItem('current-version');
     if (savedVersion) {
@@ -184,7 +185,6 @@ if (savedToken && this.currentUser) {
     }
 }
 
-this.checkReminderOnOpen();
 await this.handleRoute();
 this.updateStreakUI();
     
@@ -469,7 +469,7 @@ bindFloatingToggle: function() {
     // ========================================
     // NOTIFICACIONES (MEJORADAS CON SW)
     // ========================================
-   initNotifications: function() {
+initNotifications: function() {
     if (!('Notification' in window)) {
         console.log('[App] Notificaciones no soportadas');
         return;
@@ -478,48 +478,12 @@ bindFloatingToggle: function() {
     console.log('[App] API de notificaciones disponible');
 },
     
-    showDailyReminder: function() {
-    if (!('Notification' in window)) return;
-
-    if (this.settings.notificationsEnabled && Notification.permission === 'granted') {
-        const todayStr = this.getTodayDateStr();
-        if (!this.isRead(todayStr)) {
-            new Notification('📖 Su Voz a Diario', {
-                body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-                icon: './icons/icon-192.png',
-                vibrate: [200, 100, 200],
-                data: { url: '/#home' }
-            });
-        }
-    }
+showDailyReminder: function() {
+    console.log('[App] showDailyReminder desactivado: ahora se usarán push remotos');
 },
 
 checkReminderOnOpen: function() {
-    if (!this.settings.notificationsEnabled) return;
-    if (!('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-
-    const todayStr = this.getTodayDateStr();
-
-    if (this.isRead(todayStr)) return;
-
-    const alreadyShown = localStorage.getItem('su-voz-last-reminder-date');
-    if (alreadyShown === todayStr) return;
-
-    const [hour, minute] = (this.settings.reminderTime || '08:00').split(':').map(Number);
-
-    const now = new Date();
-    const reminderTime = new Date();
-    reminderTime.setHours(hour, minute, 0, 0);
-
-    if (now >= reminderTime) {
-        new Notification('📖 Su Voz a Diario', {
-            body: '¿Ya escuchaste Su voz hoy? Tómate un momento para escucharle.',
-            icon: './icons/icon-192.png'
-        });
-
-        localStorage.setItem('su-voz-last-reminder-date', todayStr);
-    }
+    console.log('[App] checkReminderOnOpen desactivado: ahora se usarán push remotos');
 },
     
     // ========================================
@@ -2584,29 +2548,12 @@ if (notificationsToggle) {
         }
     });
 }
+
         if (testNotification) {
-            testNotification.addEventListener('click', async () => {
-                if (!('Notification' in window)) {
-                    this.showToast('Este dispositivo no soporta notificaciones');
-                    return;
-                }
-
-                if (Notification.permission !== 'granted') {
-                    const permission = await Notification.requestPermission();
-                    if (permission !== 'granted') {
-                        this.showToast('No se concedió permiso para notificaciones');
-                        return;
-                    }
-                }
-
-                new Notification('Su Voz a Diario', {
-                    body: 'Prueba local de notificación',
-                    icon: './icons/icon-192.png'
-                });
-
-                this.showToast('Aviso local enviado');
-            });
-        }
+    testNotification.addEventListener('click', async () => {
+        this.showToast('La prueba local fue desactivada. Las pruebas serán por push real.');
+    });
+}
         
         if (themeToggleSettings) {
             themeToggleSettings.addEventListener('click', () => {
