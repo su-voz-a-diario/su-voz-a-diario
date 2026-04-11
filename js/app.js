@@ -2785,7 +2785,7 @@ initPushNotifications: async function() {
         console.log('[App] Service Worker listo para Push');
 
         const currentToken = await window.fcmGetToken(messaging, {
-            vapidKey: 'BEZwr3qHRWvEeEFjsd2aMKqQjcunxXtznMYIBNrek5b-FiLXRK-WChKUpsaVS8c4YiL_BQKO8nQ6GQGmW8-8Bx4',
+            vapidKey: 'BMU6FRL_k8YmCub9rDQhDZosJTYzwIB-6J-yXSXlGluWGgzNH0DxT-Zbgph9ofFJR2ge9lE7pNlywLFmjF_zjmA',
             serviceWorkerRegistration: registration
         });
 
