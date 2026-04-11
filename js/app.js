@@ -1721,9 +1721,11 @@ ensureSelectionMenu: function(context) {
             const state = this.getSelectionHighlightState(this.currentSelectedText, this.currentSelectionDate);
 
             if (!state.exists) {
-                this.showToast('Ese texto no tiene resaltado');
-                return;
-            }
+    this.showToast('No se encontró un resaltado guardado para esa selección');
+    window.getSelection()?.removeAllRanges();
+    this.removeSelectionMenu();
+    return;
+}
 
             if (state.colors.length === 1) {
                 this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate, state.colors[0]);
@@ -1764,15 +1766,15 @@ ensureSelectionMenu: function(context) {
     }
 
     if (removeBtn) {
-        removeBtn.style.display = highlightState.exists ? 'inline-flex' : 'none';
+    removeBtn.style.display = 'inline-flex';
 
-        if (highlightState.colors.length === 1) {
-            const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
-            removeBtn.title = `Quitar resaltado ${colorName}`;
-        } else {
-            removeBtn.title = 'Quitar resaltado';
-        }
+    if (highlightState.colors.length === 1) {
+        const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
+        removeBtn.title = `Quitar resaltado ${colorName}`;
+    } else {
+        removeBtn.title = 'Quitar resaltado';
     }
+}
 
     this.positionSelectionMenu(menu, context.range);
     this.selectionMenuVisible = true;
