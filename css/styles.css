@@ -1027,21 +1027,46 @@ body.dark-mode .note-privacy {
 }
 
 .community-actions {
-    margin-top: 14px;
+    margin-top: 10px;
     display: flex;
     justify-content: flex-end;
 }
 
-.community-actions .btn-secondary {
-    width: auto;
-    min-height: 42px;
-    padding: 10px 14px;
-    font-size: 0.85rem;
+.community-delete-main {
+    border: 1px solid rgba(231, 76, 60, 0.38);
+    background: transparent;
+    color: var(--danger);
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 6px 10px;
     border-radius: 10px;
+    min-height: auto;
+    width: auto;
+    box-shadow: none;
+    opacity: 0.82;
+    transition: opacity 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
-.community-actions .btn-secondary:hover {
-    transform: none;
+.community-delete-main:hover {
+    opacity: 1;
+    background: rgba(231, 76, 60, 0.08);
+    border-color: rgba(231, 76, 60, 0.55);
+}
+
+.community-delete-main:active {
+    transform: scale(0.98);
+}
+
+body.dark-mode .community-delete-main {
+    background: transparent;
+    color: #ff8a80;
+    border-color: rgba(255, 138, 128, 0.32);
+}
+
+body.dark-mode .community-delete-main:hover {
+    background: rgba(255, 138, 128, 0.08);
+    border-color: rgba(255, 138, 128, 0.5);
 }
 
 /* ========================================
