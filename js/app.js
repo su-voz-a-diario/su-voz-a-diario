@@ -1414,10 +1414,6 @@ updateCommunityBadge: function() {
     escapeRegExp: function(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
-    
-    removeHighlightButton: function() {
-    this.removeSelectionMenu();
-    },
 
     getSelectionSurface: function() {
     return document.querySelector('.selection-surface');
@@ -1433,14 +1429,16 @@ getSelectionContext: function() {
     const text = selection.toString().replace(/\s+/g, ' ').trim();
     if (!text || text.length < 3) return null;
 
-    const range = selection.getRangeAt(0);
-    const commonAncestor = range.commonAncestorContainer;
+   const range = selection.getRangeAt(0);
+const commonAncestor = range.commonAncestorContainer;
 
-    if (!surface.contains(commonAncestor)) return null;
+const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
+    ? commonAncestor
+    : commonAncestor.parentElement;
 
-    const shell = commonAncestor.nodeType === Node.ELEMENT_NODE
-    ? commonAncestor.closest('.reading-text-shell')
-    : commonAncestor.parentElement?.closest('.reading-text-shell');
+if (!ancestorElement || !surface.contains(ancestorElement)) return null;
+
+const shell = ancestorElement.closest('.reading-text-shell');
 
     const dateStr = shell?.getAttribute('data-reading-date');
 
@@ -1493,8 +1491,9 @@ scheduleSelectionMenuUpdate: function() {
     }, delay);
 },
 
-    restoreHighlightsInDOM: function(dateStr) {
-    const container = document.querySelector('.selection-surface');
+restoreHighlightsInDOM: function(dateStr) {
+    const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
+    const container = shell ? shell.querySelector('.selection-surface') : null;
     if (!container) return;
 
     const highlights = this.getHighlights(dateStr);
@@ -1541,9 +1540,9 @@ highlightTextInElement: function(container, text, color = 'yellow') {
             matches.push({
                 node,
                 index,
-                length: text.length
+                length: searchText.length
             });
-            startIndex = index + text.length;
+            startIndex = index + searchText.length;
         }
     }
 
@@ -1674,8 +1673,6 @@ ensureSelectionMenu: function(context) {
             e.preventDefault();
             e.stopPropagation();
             this.saveSelectedHighlight(this.currentSelectedText, 'yellow', this.currentSelectionDate);
-            window.getSelection()?.removeAllRanges();
-            this.removeSelectionMenu();
         });
 
         const blueBtn = document.createElement('button');
@@ -1688,8 +1685,6 @@ ensureSelectionMenu: function(context) {
             e.preventDefault();
             e.stopPropagation();
             this.saveSelectedHighlight(this.currentSelectedText, 'blue', this.currentSelectionDate);
-            window.getSelection()?.removeAllRanges();
-            this.removeSelectionMenu();
         });
 
         const copyBtn = document.createElement('button');
@@ -3542,12 +3537,16 @@ document.addEventListener('selectionchange', () => {
     }
 
     const range = selection.getRangeAt(0);
-    const commonAncestor = range.commonAncestorContainer;
+const commonAncestor = range.commonAncestorContainer;
 
-    if (!surface.contains(commonAncestor)) {
-        this.removeSelectionMenu();
-        return;
-    }
+const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
+    ? commonAncestor
+    : commonAncestor.parentElement;
+
+if (!ancestorElement || !surface.contains(ancestorElement)) {
+    this.removeSelectionMenu();
+    return;
+}
 
     this.scheduleSelectionMenuUpdate();
 });
