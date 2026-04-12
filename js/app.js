@@ -136,16 +136,17 @@ const App = {
 },
     
     // Estado de render y controles
-    renderScheduled: false,
-    controlsCollapsed: false,
-    lastReadingTap: 0,
-    readingTapDelay: 400,
-    selectionMenuVisible: false,
-    selectionUpdateTimer: null,
-    selectionHideTimer: null,
-    selectionViewportCleanup: null,
-    pushListenersReady: false,
-    themeListenerReady: false,
+renderScheduled: false,
+controlsCollapsed: false,
+lastReadingTap: 0,
+readingTapDelay: 400,
+selectionMenuVisible: false,
+selectionUpdateTimer: null,
+selectionHideTimer: null,
+selectionViewportCleanup: null,
+selectionForceRetryTimer: null,
+pushListenersReady: false,
+themeListenerReady: false,
     
     // ========================================
     // INICIALIZACIÓN
@@ -1467,9 +1468,10 @@ getSelectionAnchorRect: function(range) {
     return null;
 },
 
-scheduleSelectionMenuUpdate: function() {
+scheduleSelectionMenuUpdate: function(forceRetry = false) {
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
+        this.selectionUpdateTimer = null;
     }
 
     if (this.selectionHideTimer) {
@@ -1477,17 +1479,38 @@ scheduleSelectionMenuUpdate: function() {
         this.selectionHideTimer = null;
     }
 
+    if (this.selectionForceRetryTimer) {
+    clearTimeout(this.selectionForceRetryTimer);
+    this.selectionForceRetryTimer = null;
+    }
+
+    if (this.selectionForceRetryTimer) {
+        clearTimeout(this.selectionForceRetryTimer);
+        this.selectionForceRetryTimer = null;
+    }
+
     const delay = isIOSDevice() ? 180 : isAndroidDevice() ? 140 : 40;
 
-    this.selectionUpdateTimer = setTimeout(() => {
+    const runUpdate = (retryCount = 0) => {
         const context = this.getSelectionContext();
 
-        if (!context) {
-            this.removeSelectionMenu();
+        if (context) {
+            this.ensureSelectionMenu(context);
             return;
         }
 
-        this.ensureSelectionMenu(context);
+        if (forceRetry && isAndroidDevice() && retryCount < 8) {
+            this.selectionForceRetryTimer = setTimeout(() => {
+                runUpdate(retryCount + 1);
+            }, 60);
+            return;
+        }
+
+        this.removeSelectionMenu();
+    };
+
+    this.selectionUpdateTimer = setTimeout(() => {
+        runUpdate(0);
     }, delay);
 },
 
@@ -3542,15 +3565,15 @@ document.addEventListener('selectionchange', () => {
 });
 
 document.addEventListener('pointerup', () => {
-    this.scheduleSelectionMenuUpdate();
+    this.scheduleSelectionMenuUpdate(true);
 }, true);
 
 document.addEventListener('touchend', () => {
-    this.scheduleSelectionMenuUpdate();
+    this.scheduleSelectionMenuUpdate(true);
 }, true);
 
 document.addEventListener('mouseup', () => {
-    this.scheduleSelectionMenuUpdate();
+    this.scheduleSelectionMenuUpdate(true);
 }, true);
 },
     
