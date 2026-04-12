@@ -145,6 +145,7 @@ selectionUpdateTimer: null,
 selectionHideTimer: null,
 selectionViewportCleanup: null,
 selectionForceRetryTimer: null,
+isSelecting: false,
 pushListenersReady: false,
 themeListenerReady: false,
     
@@ -1469,19 +1470,11 @@ getSelectionAnchorRect: function(range) {
 },
 
 scheduleSelectionMenuUpdate: function(forceRetry = false) {
+    if (this.isSelecting) return;
+
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
         this.selectionUpdateTimer = null;
-    }
-
-    if (this.selectionHideTimer) {
-        clearTimeout(this.selectionHideTimer);
-        this.selectionHideTimer = null;
-    }
-
-    if (this.selectionForceRetryTimer) {
-    clearTimeout(this.selectionForceRetryTimer);
-    this.selectionForceRetryTimer = null;
     }
 
     if (this.selectionForceRetryTimer) {
@@ -1489,9 +1482,9 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
         this.selectionForceRetryTimer = null;
     }
 
-    const delay = isIOSDevice() ? 180 : isAndroidDevice() ? 140 : 40;
+    const delay = isIOSDevice() ? 120 : isAndroidDevice() ? 180 : 40;
 
-    const runUpdate = (retryCount = 0) => {
+    const run = (retry = 0) => {
         const context = this.getSelectionContext();
 
         if (context) {
@@ -1499,10 +1492,10 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
             return;
         }
 
-        if (forceRetry && isAndroidDevice() && retryCount < 8) {
+        if (forceRetry && isAndroidDevice() && retry < 6) {
             this.selectionForceRetryTimer = setTimeout(() => {
-                runUpdate(retryCount + 1);
-            }, 60);
+                run(retry + 1);
+            }, 70);
             return;
         }
 
@@ -1510,7 +1503,7 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
     };
 
     this.selectionUpdateTimer = setTimeout(() => {
-        runUpdate(0);
+        run(0);
     }, delay);
 },
 
@@ -2132,6 +2125,8 @@ restoreCalendarPosition: function() {
     },
 
     rerenderCurrentReadingView: function(dateStr = null) {
+    if (this.isSelecting) return;
+        
     if (this.currentView === 'home') {
         this.renderHome();
         return;
@@ -3034,6 +3029,8 @@ savePushToken: async function(token) {
                 return;
                 }
 
+                if (this.isSelecting) return;
+
                 if (this.selectionMenuVisible) {
                 return;
                 }
@@ -3553,28 +3550,32 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
 
-document.addEventListener('selectionchange', () => {
-    const surface = this.getSelectionSurface();
-    if (!surface) return;
+document.addEventListener('touchstart', () => {
+    this.isSelecting = true;
+}, true);
 
+document.addEventListener('pointerdown', () => {
+    this.isSelecting = true;
+}, true);
+
+document.addEventListener('selectionchange', () => {
     const selection = window.getSelection();
 
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        this.removeSelectionMenu();
-    }
+    if (!selection || selection.isCollapsed) return;
+
+    this.isSelecting = true;
 });
 
-document.addEventListener('pointerup', () => {
-    this.scheduleSelectionMenuUpdate(true);
-}, true);
+const finishSelection = () => {
+    setTimeout(() => {
+        this.isSelecting = false;
+        this.scheduleSelectionMenuUpdate(true);
+    }, isAndroidDevice() ? 120 : 60);
+};
 
-document.addEventListener('touchend', () => {
-    this.scheduleSelectionMenuUpdate(true);
-}, true);
-
-document.addEventListener('mouseup', () => {
-    this.scheduleSelectionMenuUpdate(true);
-}, true);
+document.addEventListener('touchend', finishSelection, true);
+document.addEventListener('pointerup', finishSelection, true);
+document.addEventListener('mouseup', finishSelection, true);
 },
     
     initTheme: function() {
