@@ -135,7 +135,7 @@ const App = {
     }
 },
     
-    // Estado de render y controles
+// Estado de render y controles
 renderScheduled: false,
 controlsCollapsed: false,
 lastReadingTap: 0,
@@ -145,6 +145,8 @@ selectionUpdateTimer: null,
 selectionHideTimer: null,
 selectionViewportCleanup: null,
 selectionForceRetryTimer: null,
+selectionPositionRaf: null,
+selectionLastPlacement: null,
 isSelecting: false,
 pushListenersReady: false,
 themeListenerReady: false,
@@ -664,9 +666,9 @@ scrollToLastPost: function() {
     setTimeout(() => {
         const posts = document.querySelectorAll('.community-card');
         if (posts.length > 0) {
-            const lastPost = posts[posts.length - 1];
-            lastPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            console.log('[Community] Scroll al último post');
+            const newestPost = posts[0];
+            newestPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log('[Community] Scroll al post más reciente');
         }
         this.shouldScrollToLastPost = false;
     }, 150);
@@ -1470,8 +1472,6 @@ getSelectionAnchorRect: function(range) {
 },
 
 scheduleSelectionMenuUpdate: function(forceRetry = false) {
-    if (this.isSelecting) return;
-
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
         this.selectionUpdateTimer = null;
@@ -1482,9 +1482,9 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
         this.selectionForceRetryTimer = null;
     }
 
-    const delay = isIOSDevice() ? 120 : isAndroidDevice() ? 180 : 40;
+    const delay = isIOSDevice() ? 110 : isAndroidDevice() ? 150 : 30;
 
-    const run = (retry = 0) => {
+    const runUpdate = (retry = 0) => {
         const context = this.getSelectionContext();
 
         if (context) {
@@ -1492,9 +1492,9 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
             return;
         }
 
-        if (forceRetry && isAndroidDevice() && retry < 6) {
+        if (forceRetry && isAndroidDevice() && retry < 8) {
             this.selectionForceRetryTimer = setTimeout(() => {
-                run(retry + 1);
+                runUpdate(retry + 1);
             }, 70);
             return;
         }
@@ -1503,7 +1503,7 @@ scheduleSelectionMenuUpdate: function(forceRetry = false) {
     };
 
     this.selectionUpdateTimer = setTimeout(() => {
-        run(0);
+        runUpdate(0);
     }, delay);
 },
 
@@ -1803,35 +1803,54 @@ positionSelectionMenu: function(menu, range) {
     const vv = window.visualViewport;
     const viewportWidth = vv ? vv.width : window.innerWidth;
     const viewportHeight = vv ? vv.height : window.innerHeight;
-    const viewportLeft = vv ? vv.pageLeft : window.scrollX;
-    const viewportTop = vv ? vv.pageTop : window.scrollY;
+    const viewportLeft = vv ? vv.offsetLeft + window.scrollX : window.scrollX;
+    const viewportTop = vv ? vv.offsetTop + window.scrollY : window.scrollY;
 
     const menuRect = menu.getBoundingClientRect();
     const safe = 12;
     const gap = 10;
 
     let left = rect.left + window.scrollX + (rect.width / 2) - (menuRect.width / 2);
-    left = Math.max(viewportLeft + safe, Math.min(left, viewportLeft + viewportWidth - menuRect.width - safe));
+    left = Math.max(
+        viewportLeft + safe,
+        Math.min(left, viewportLeft + viewportWidth - menuRect.width - safe)
+    );
 
-    const spaceAbove = rect.top - safe;
-    const spaceBelow = viewportHeight - rect.bottom - safe;
+    const selectionCenterY = rect.top + window.scrollY + (rect.height / 2);
+    const viewportCenterY = viewportTop + (viewportHeight / 2);
+
+    const preferAbove = selectionCenterY > viewportCenterY;
 
     let top;
     let arrowPosition;
 
-    if (spaceBelow >= menuRect.height + gap || spaceBelow >= spaceAbove) {
-        top = rect.bottom + window.scrollY + gap;
-        arrowPosition = 'top';
-    } else {
+    if (preferAbove) {
         top = rect.top + window.scrollY - menuRect.height - gap;
         arrowPosition = 'bottom';
+
+        if (top < viewportTop + safe) {
+            top = rect.bottom + window.scrollY + gap;
+            arrowPosition = 'top';
+        }
+    } else {
+        top = rect.bottom + window.scrollY + gap;
+        arrowPosition = 'top';
+
+        if (top + menuRect.height > viewportTop + viewportHeight - safe) {
+            top = rect.top + window.scrollY - menuRect.height - gap;
+            arrowPosition = 'bottom';
+        }
     }
 
-    top = Math.max(viewportTop + safe, Math.min(top, viewportTop + viewportHeight - menuRect.height - safe));
+    top = Math.max(
+        viewportTop + safe,
+        Math.min(top, viewportTop + viewportHeight - menuRect.height - safe)
+    );
 
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
 
+    this.selectionLastPlacement = { left, top, arrowPosition };
     this.updateMenuArrow(menu, arrowPosition);
 },
 
@@ -1841,61 +1860,61 @@ bindSelectionViewportTracking: function(menu) {
         this.selectionViewportCleanup = null;
     }
 
-    let rafId = null;
+    const schedulePositionUpdate = () => {
+        if (this.selectionPositionRaf) return;
 
-    const update = () => {
-        if (rafId) return;
+        this.selectionPositionRaf = requestAnimationFrame(() => {
+            this.selectionPositionRaf = null;
 
-        rafId = requestAnimationFrame(() => {
-            rafId = null;
-
-const context = this.getSelectionContext();
-if (!context) {
-    this.removeSelectionMenu();
-    return;
-}
-
-this.currentSelectionRange = context.range.cloneRange();
-this.currentSelectionDate = context.dateStr;
-this.currentSelectedText = context.text;
-
-this.positionSelectionMenu(menu, context.range);
-        });
-    };
-
-const onPointerDownOutside = (e) => {
-    if (!menu.contains(e.target)) {
-        setTimeout(() => {
             const context = this.getSelectionContext();
             if (!context) {
                 this.removeSelectionMenu();
+                return;
             }
-        }, 30);
-    }
-};
 
-    window.addEventListener('scroll', update, { passive: true });
+            this.currentSelectionRange = context.range.cloneRange();
+            this.currentSelectionDate = context.dateStr;
+            this.currentSelectedText = context.text;
+
+            this.positionSelectionMenu(menu, context.range);
+        });
+    };
+
+    const onPointerDownOutside = (e) => {
+        if (!menu.contains(e.target)) {
+            setTimeout(() => {
+                const context = this.getSelectionContext();
+                if (!context) {
+                    this.removeSelectionMenu();
+                }
+            }, 30);
+        }
+    };
+
+    window.addEventListener('scroll', schedulePositionUpdate, { passive: true });
+    window.addEventListener('resize', schedulePositionUpdate, { passive: true });
 
     if (window.visualViewport) {
-        window.visualViewport.addEventListener('scroll', update, { passive: true });
-        window.visualViewport.addEventListener('resize', update, { passive: true });
+        window.visualViewport.addEventListener('scroll', schedulePositionUpdate, { passive: true });
+        window.visualViewport.addEventListener('resize', schedulePositionUpdate, { passive: true });
     }
 
     document.addEventListener('pointerdown', onPointerDownOutside, true);
 
     this.selectionViewportCleanup = () => {
-        window.removeEventListener('scroll', update);
+        window.removeEventListener('scroll', schedulePositionUpdate);
+        window.removeEventListener('resize', schedulePositionUpdate);
 
         if (window.visualViewport) {
-            window.visualViewport.removeEventListener('scroll', update);
-            window.visualViewport.removeEventListener('resize', update);
+            window.visualViewport.removeEventListener('scroll', schedulePositionUpdate);
+            window.visualViewport.removeEventListener('resize', schedulePositionUpdate);
         }
 
         document.removeEventListener('pointerdown', onPointerDownOutside, true);
 
-        if (rafId) {
-            cancelAnimationFrame(rafId);
-            rafId = null;
+        if (this.selectionPositionRaf) {
+            cancelAnimationFrame(this.selectionPositionRaf);
+            this.selectionPositionRaf = null;
         }
     };
 },
@@ -1930,6 +1949,17 @@ removeSelectionMenu: function() {
         this.selectionHideTimer = null;
     }
 
+    if (this.selectionForceRetryTimer) {
+        clearTimeout(this.selectionForceRetryTimer);
+        this.selectionForceRetryTimer = null;
+    }
+
+    if (this.selectionPositionRaf) {
+        cancelAnimationFrame(this.selectionPositionRaf);
+        this.selectionPositionRaf = null;
+    }
+
+    this.selectionLastPlacement = null;
     this.selectionMenuVisible = false;
     this.currentSelectionRange = null;
     this.currentSelectedText = null;
@@ -1977,7 +2007,9 @@ removeSelectionMenu: function() {
     this.saveCommunityScrollPosition();
     }
     
-    this.resetReadingMode();
+   this.resetReadingMode();
+    this.removeSelectionMenu();
+    this.isSelecting = false;
     if (this.currentView === 'calendar' && view !== 'calendar') {
     this.saveCalendarScroll();
     }
@@ -2124,9 +2156,10 @@ restoreCalendarPosition: function() {
         this.renderViewContent(reading, false);
     },
 
-    rerenderCurrentReadingView: function(dateStr = null) {
-    if (this.isSelecting) return;
-        
+rerenderCurrentReadingView: function(dateStr = null) {
+    const selection = window.getSelection();
+    if (this.isSelecting && selection && !selection.isCollapsed) return;
+
     if (this.currentView === 'home') {
         this.renderHome();
         return;
@@ -3024,12 +3057,10 @@ savePushToken: async function(token) {
        this.$content.addEventListener('click', async (e) => {
             const readingEl = e.target.closest('.selection-surface');
                 if (readingEl) {
-                const selection = window.getSelection();
-                if (selection && selection.toString().trim()) {
-                return;
-                }
-
-                if (this.isSelecting) return;
+    const selection = window.getSelection();
+if (selection && selection.toString().trim()) {
+    return;
+}
 
                 if (this.selectionMenuVisible) {
                 return;
@@ -3550,31 +3581,76 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
 
-document.addEventListener('touchstart', () => {
-    this.isSelecting = true;
+document.addEventListener('touchstart', (e) => {
+    if (e.target.closest('.selection-surface')) {
+        this.isSelecting = true;
+    }
 }, true);
 
-document.addEventListener('pointerdown', () => {
-    this.isSelecting = true;
+document.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.selection-surface')) {
+        this.isSelecting = true;
+    }
 }, true);
 
 document.addEventListener('selectionchange', () => {
     const selection = window.getSelection();
+    const surface = this.getSelectionSurface();
 
-    if (!selection || selection.isCollapsed) return;
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+        this.isSelecting = false;
+        this.removeSelectionMenu();
+        return;
+    }
 
-    this.isSelecting = true;
+    if (!surface) {
+    this.isSelecting = false;
+    this.removeSelectionMenu();
+    return;
+}
+
+    const range = selection.getRangeAt(0);
+    const commonAncestor = range.commonAncestorContainer;
+    const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
+        ? commonAncestor
+        : commonAncestor.parentElement;
+
+    if (!ancestorElement || !surface.contains(ancestorElement)) {
+        this.isSelecting = false;
+        this.removeSelectionMenu();
+    }
 });
 
 const finishSelection = () => {
     setTimeout(() => {
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+            this.isSelecting = false;
+            this.removeSelectionMenu();
+            return;
+        }
+
+        const surface = this.getSelectionSurface();
+        const range = selection.getRangeAt(0);
+        const commonAncestor = range.commonAncestorContainer;
+        const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
+            ? commonAncestor
+            : commonAncestor.parentElement;
+
+        if (!surface || !ancestorElement || !surface.contains(ancestorElement)) {
+            this.isSelecting = false;
+            this.removeSelectionMenu();
+            return;
+        }
+
         this.isSelecting = false;
         this.scheduleSelectionMenuUpdate(true);
     }, isAndroidDevice() ? 120 : 60);
 };
 
-document.addEventListener('touchend', finishSelection, true);
 document.addEventListener('pointerup', finishSelection, true);
+document.addEventListener('touchend', finishSelection, true);
 document.addEventListener('mouseup', finishSelection, true);
 },
     
