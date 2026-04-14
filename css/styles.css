@@ -1564,11 +1564,11 @@ body.reading-mode .reading-text {
     bottom: 0;
     left: 0;
     right: 0;
-    height: var(--nav-height);
+    height: calc(var(--nav-height) + env(safe-area-inset-bottom));
     background-color: var(--surface-color);
     display: flex;
-    justify-content: space-around;
-    align-items: center;
+    justify-content: space-between;
+    align-items: stretch;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
     z-index: 10;
     padding-bottom: env(safe-area-inset-bottom);
@@ -1581,13 +1581,16 @@ body.reading-mode .reading-text {
     color: var(--text-muted);
     font-family: var(--font-ui);
     display: flex;
+    flex: 1 1 0;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    width: auto;
     height: 100%;
     cursor: pointer;
     transition: color 0.2s;
+    padding: 0;
 }
 
 .nav-btn span {
@@ -1608,6 +1611,8 @@ body.reading-mode .reading-text {
 .nav-btn-community {
     position: relative;
     display: flex;
+    flex: 1 1 0;
+    min-width: 0;
     flex-direction: column;
     align-items: center;
 }
