@@ -62,15 +62,6 @@ async function testBibleConnection() {
     }
 }
 
-async function testBibleConnection() {
-    try {
-        const result = await apiBibleFetch(`/bibles/${API_BIBLE_ID}/books`);
-        console.log('LIBROS NBLA:', result.data);
-    } catch (error) {
-        console.error('Fallo API.Bible:', error);
-    }
-}
-
 async function getBibleChapter(bookId, chapterNumber) {
     const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
 
