@@ -153,6 +153,16 @@ body {
     transition: background-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
 }
 
+.header-settings-btn.active {
+    background: rgba(49, 130, 206, 0.12);
+    color: var(--accent);
+}
+
+body.dark-mode .header-settings-btn.active {
+    background: rgba(96, 165, 250, 0.14);
+    color: var(--accent);
+}
+
 .header-settings-btn svg {
     width: 18px;
     height: 18px;
