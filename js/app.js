@@ -44,6 +44,76 @@ const App = {
     currentView: 'home',
     today: new Date(),
     currentVersion: 'rvr60',
+    bibleBooks: [
+    { id: 'gen', name: 'Génesis', chapters: 50 },
+    { id: 'exo', name: 'Éxodo', chapters: 40 },
+    { id: 'lev', name: 'Levítico', chapters: 27 },
+    { id: 'num', name: 'Números', chapters: 36 },
+    { id: 'deu', name: 'Deuteronomio', chapters: 34 },
+    { id: 'jos', name: 'Josué', chapters: 24 },
+    { id: 'jdg', name: 'Jueces', chapters: 21 },
+    { id: 'rut', name: 'Rut', chapters: 4 },
+    { id: '1sa', name: '1 Samuel', chapters: 31 },
+    { id: '2sa', name: '2 Samuel', chapters: 24 },
+    { id: '1ki', name: '1 Reyes', chapters: 22 },
+    { id: '2ki', name: '2 Reyes', chapters: 25 },
+    { id: '1ch', name: '1 Crónicas', chapters: 29 },
+    { id: '2ch', name: '2 Crónicas', chapters: 36 },
+    { id: 'ezr', name: 'Esdras', chapters: 10 },
+    { id: 'neh', name: 'Nehemías', chapters: 13 },
+    { id: 'est', name: 'Ester', chapters: 10 },
+    { id: 'job', name: 'Job', chapters: 42 },
+    { id: 'psa', name: 'Salmos', chapters: 150 },
+    { id: 'pro', name: 'Proverbios', chapters: 31 },
+    { id: 'ecc', name: 'Eclesiastés', chapters: 12 },
+    { id: 'sng', name: 'Cantares', chapters: 8 },
+    { id: 'isa', name: 'Isaías', chapters: 66 },
+    { id: 'jer', name: 'Jeremías', chapters: 52 },
+    { id: 'lam', name: 'Lamentaciones', chapters: 5 },
+    { id: 'ezk', name: 'Ezequiel', chapters: 48 },
+    { id: 'dan', name: 'Daniel', chapters: 12 },
+    { id: 'hos', name: 'Oseas', chapters: 14 },
+    { id: 'jol', name: 'Joel', chapters: 3 },
+    { id: 'amo', name: 'Amós', chapters: 9 },
+    { id: 'oba', name: 'Abdías', chapters: 1 },
+    { id: 'jon', name: 'Jonás', chapters: 4 },
+    { id: 'mic', name: 'Miqueas', chapters: 7 },
+    { id: 'nam', name: 'Nahúm', chapters: 3 },
+    { id: 'hab', name: 'Habacuc', chapters: 3 },
+    { id: 'zep', name: 'Sofonías', chapters: 3 },
+    { id: 'hag', name: 'Hageo', chapters: 2 },
+    { id: 'zec', name: 'Zacarías', chapters: 14 },
+    { id: 'mal', name: 'Malaquías', chapters: 4 },
+    { id: 'mat', name: 'Mateo', chapters: 28 },
+    { id: 'mrk', name: 'Marcos', chapters: 16 },
+    { id: 'luk', name: 'Lucas', chapters: 24 },
+    { id: 'jhn', name: 'Juan', chapters: 21 },
+    { id: 'act', name: 'Hechos', chapters: 28 },
+    { id: 'rom', name: 'Romanos', chapters: 16 },
+    { id: '1co', name: '1 Corintios', chapters: 16 },
+    { id: '2co', name: '2 Corintios', chapters: 13 },
+    { id: 'gal', name: 'Gálatas', chapters: 6 },
+    { id: 'eph', name: 'Efesios', chapters: 6 },
+    { id: 'php', name: 'Filipenses', chapters: 4 },
+    { id: 'col', name: 'Colosenses', chapters: 4 },
+    { id: '1th', name: '1 Tesalonicenses', chapters: 5 },
+    { id: '2th', name: '2 Tesalonicenses', chapters: 3 },
+    { id: '1ti', name: '1 Timoteo', chapters: 6 },
+    { id: '2ti', name: '2 Timoteo', chapters: 4 },
+    { id: 'tit', name: 'Tito', chapters: 3 },
+    { id: 'phm', name: 'Filemón', chapters: 1 },
+    { id: 'heb', name: 'Hebreos', chapters: 13 },
+    { id: 'jas', name: 'Santiago', chapters: 5 },
+    { id: '1pe', name: '1 Pedro', chapters: 5 },
+    { id: '2pe', name: '2 Pedro', chapters: 3 },
+    { id: '1jn', name: '1 Juan', chapters: 5 },
+    { id: '2jn', name: '2 Juan', chapters: 1 },
+    { id: '3jn', name: '3 Juan', chapters: 1 },
+    { id: 'jud', name: 'Judas', chapters: 1 },
+    { id: 'rev', name: 'Apocalipsis', chapters: 22 }
+    ],
+    selectedBibleBook: null,
+    selectedBibleChapter: null,
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
@@ -2035,6 +2105,8 @@ removeSelectionMenu: function() {
     this.renderHome();
 } else if (view === 'bible') {
     this.renderBible();
+} else if (view === 'bible-reading') {
+    this.renderBibleReading();
 } else if (view === 'calendar') {
     this.renderCalendar();
 } else if (view === 'community') {
@@ -2047,6 +2119,8 @@ removeSelectionMenu: function() {
 } else if (view === 'reading' && param) {
     this.renderReading(param);
 } else {
+    this.currentView = 'home';
+    this.updateNavUI();
     this.renderHome();
 }
 },
@@ -2054,7 +2128,7 @@ removeSelectionMenu: function() {
    updateNavUI: function() {
     const navBtns = [
     { btn: this.$navHome, views: ['home', 'reading'] },
-    { btn: this.$navBible, views: ['bible'] },
+    { btn: this.$navBible, views: ['bible', 'bible-reading'] },
     { btn: this.$navCalendar, views: ['calendar'] },
     { btn: this.$navCommunity, views: ['community'] },
     { btn: this.$navStats, views: ['stats'] }
@@ -2341,10 +2415,94 @@ const introVideoHtml = showIntroVideo ? `
     },
 
 renderBible: function() {
+    if (!this.selectedBibleBook) {
+        this.$content.innerHTML = `
+            <div class="bible-view">
+                <div class="bible-header-card">
+                    <div class="bible-title">📖 Biblia</div>
+                    <div class="bible-subtitle">Selecciona un libro para explorar sus capítulos</div>
+                </div>
+
+                <div class="bible-books-grid">
+                    ${this.bibleBooks.map(book => `
+                        <button
+                            class="bible-book-card"
+                            type="button"
+                            data-action="open-bible-book"
+                            data-book-id="${book.id}"
+                        >
+                            <span class="bible-book-name">${this.escapeHtml(book.name)}</span>
+                            <span class="bible-book-meta">${book.chapters} capítulos</span>
+                        </button>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        return;
+    }
+
+    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+
+    if (!book) {
+    this.selectedBibleBook = null;
+    this.selectedBibleChapter = null;
+    this.renderBible();
+    return;
+}
+
+    const chapters = Array.from({ length: book.chapters }, (_, i) => i + 1);
+
     this.$content.innerHTML = `
-        <div class="empty-state">
-            <h3>📖 Biblia</h3>
-            <p>Estamos preparando esta sección para que puedas navegar por libros, capítulos y versículos.</p>
+        <div class="bible-view">
+            <div class="bible-header-card">
+                <button
+                    class="btn-secondary bible-back-btn"
+                    type="button"
+                    data-action="back-to-bible-books"
+                >
+                    ← Volver a libros
+                </button>
+
+                <div class="bible-title">${this.escapeHtml(book.name)}</div>
+                <div class="bible-subtitle">Selecciona un capítulo</div>
+            </div>
+
+            <div class="bible-chapters-grid">
+                ${chapters.map(chapter => `
+                    <button
+                        class="bible-chapter-btn"
+                        type="button"
+                        data-action="open-bible-chapter"
+                        data-book-id="${book.id}"
+                        data-chapter="${chapter}"
+                    >
+                        ${chapter}
+                    </button>
+                `).join('')}
+            </div>
+        </div>
+    `;
+},
+
+renderBibleReading: function() {
+    const book = this.bibleBooks.find(b => b.id === this.selectedBibleBook);
+
+    if (!book || !this.selectedBibleChapter) {
+        this.navigate('bible');
+        return;
+    }
+
+    this.$content.innerHTML = `
+        <div class="bible-reading-view">
+            <button class="btn-secondary" data-action="back-to-bible-books">
+                ← Volver
+            </button>
+
+            <h2>${this.escapeHtml(book.name)} ${this.selectedBibleChapter}</h2>
+
+            <div class="reading-text">
+                Aquí irá el texto bíblico después
+            </div>
         </div>
     `;
 },
@@ -3033,7 +3191,11 @@ savePushToken: async function(token) {
 }
 
 if (this.$navBible) {
-    this.$navBible.addEventListener('click', () => this.navigate('bible'));
+    this.$navBible.addEventListener('click', () => {
+        this.selectedBibleBook = null;
+        this.selectedBibleChapter = null;
+        this.navigate('bible');
+    });
 }
 
 if (this.$navCalendar) {
@@ -3113,6 +3275,39 @@ if (selection && selection.toString().trim()) {
                 return;
             }
 
+  const openBibleBookBtn = e.target.closest('[data-action="open-bible-book"]');
+if (openBibleBookBtn) {
+    const bookId = openBibleBookBtn.getAttribute('data-book-id');
+    this.selectedBibleBook = bookId;
+    this.renderBible();
+    return;
+}
+
+const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
+if (backToBibleBooksBtn) {
+    if (this.selectedBibleChapter) {
+        this.selectedBibleChapter = null;
+        this.navigate('bible');
+    } else {
+        this.selectedBibleBook = null;
+        this.selectedBibleChapter = null;
+        this.navigate('bible');
+    }
+    return;
+}
+
+const openBibleChapterBtn = e.target.closest('[data-action="open-bible-chapter"]');
+if (openBibleChapterBtn) {
+    const bookId = openBibleChapterBtn.getAttribute('data-book-id');
+    const chapter = Number(openBibleChapterBtn.getAttribute('data-chapter'));
+
+    this.selectedBibleBook = bookId;
+    this.selectedBibleChapter = chapter;
+
+    this.navigate('bible-reading');
+    return;
+}
+           
            const noteSection = e.target.closest('.note-section');
     if (noteSection) {
         const textarea = noteSection.querySelector('.note-textarea');
