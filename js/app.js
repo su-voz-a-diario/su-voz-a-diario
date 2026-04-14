@@ -198,10 +198,11 @@ this.updateStreakUI();
 cacheDOM: function() {
     this.$content = document.getElementById('app-content');
     this.$navHome = document.getElementById('nav-home');
+    this.$navBible = document.getElementById('nav-bible');
     this.$navCalendar = document.getElementById('nav-calendar');
     this.$navStats = document.getElementById('nav-stats');
-    this.$navSettings = document.getElementById('nav-settings');
     this.$navCommunity = document.getElementById('nav-community');
+    this.$headerSettingsBtn = document.getElementById('header-settings-btn');
     this.$communityBadge = document.getElementById('community-badge');
     this.$streakIndicator = document.getElementById('streak-indicator');
     this.$streakCount = document.getElementById('streak-count');
@@ -2032,6 +2033,8 @@ removeSelectionMenu: function() {
         this.homeViewingDate = this.getTodayDateStr();
     }
     this.renderHome();
+} else if (view === 'bible') {
+    this.renderBible();
 } else if (view === 'calendar') {
     this.renderCalendar();
 } else if (view === 'community') {
@@ -2050,12 +2053,12 @@ removeSelectionMenu: function() {
     
    updateNavUI: function() {
     const navBtns = [
-        { btn: this.$navHome, views: ['home', 'reading'] },
-        { btn: this.$navCalendar, views: ['calendar'] },
-        { btn: this.$navCommunity, views: ['community'] },
-        { btn: this.$navStats, views: ['stats'] },
-        { btn: this.$navSettings, views: ['settings'] }
-    ];
+    { btn: this.$navHome, views: ['home', 'reading'] },
+    { btn: this.$navBible, views: ['bible'] },
+    { btn: this.$navCalendar, views: ['calendar'] },
+    { btn: this.$navCommunity, views: ['community'] },
+    { btn: this.$navStats, views: ['stats'] }
+];
     
     navBtns.forEach(({ btn, views }) => {
         if (btn) {
@@ -2336,6 +2339,15 @@ const introVideoHtml = showIntroVideo ? `
         div.textContent = text;
         return div.innerHTML;
     },
+
+renderBible: function() {
+    this.$content.innerHTML = `
+        <div class="empty-state">
+            <h3>📖 Biblia</h3>
+            <p>Estamos preparando esta sección para que puedas navegar por libros, capítulos y versículos.</p>
+        </div>
+    `;
+},
     
    renderCalendar: function() {
     if (this.data.length === 0) {
@@ -3014,15 +3026,31 @@ savePushToken: async function(token) {
     bindEvents: function() {
         // Navegación
         if (this.$navHome) {
-            this.$navHome.addEventListener('click', () => {
-             this.homeViewingDate = null;
-            this.navigate('home');
-            });
-        }
-        if (this.$navCalendar) this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
-        if (this.$navStats) this.$navStats.addEventListener('click', () => this.navigate('stats'));
-        if (this.$navSettings) this.$navSettings.addEventListener('click', () => this.navigate('settings'));
-        if (this.$navCommunity) this.$navCommunity.addEventListener('click', () => this.navigate('community'));
+    this.$navHome.addEventListener('click', () => {
+        this.homeViewingDate = null;
+        this.navigate('home');
+    });
+}
+
+if (this.$navBible) {
+    this.$navBible.addEventListener('click', () => this.navigate('bible'));
+}
+
+if (this.$navCalendar) {
+    this.$navCalendar.addEventListener('click', () => this.navigate('calendar'));
+}
+
+if (this.$navStats) {
+    this.$navStats.addEventListener('click', () => this.navigate('stats'));
+}
+
+if (this.$navCommunity) {
+    this.$navCommunity.addEventListener('click', () => this.navigate('community'));
+}
+
+if (this.$headerSettingsBtn) {
+    this.$headerSettingsBtn.addEventListener('click', () => this.navigate('settings'));
+}
         window.addEventListener('popstate', () => {
             this.handleRoute().catch(error => {
             console.error('[Route] Error en popstate:', error);
