@@ -2157,7 +2157,7 @@ removeSelectionMenu: function() {
 } else if (view === 'bible') {
     this.renderBible();
 } else if (view === 'bible-reading') {
-    this.renderBibleReading();
+    await this.renderBibleReading();
 } else if (view === 'calendar') {
     this.renderCalendar();
 } else if (view === 'community') {
@@ -2535,7 +2535,7 @@ renderBible: function() {
     `;
 },
 
-renderBibleReading: function() {
+renderBibleReading: async function() {
     const book = this.bibleBooks.find(b => b.id === this.selectedBibleBook);
 
     if (!book || !this.selectedBibleChapter) {
@@ -2552,10 +2552,44 @@ renderBibleReading: function() {
             <h2>${this.escapeHtml(book.name)} ${this.selectedBibleChapter}</h2>
 
             <div class="reading-text">
-                Aquí irá el texto bíblico después
+                Cargando capítulo...
             </div>
         </div>
     `;
+
+    try {
+        const chapterData = await getBibleChapter(book.id, this.selectedBibleChapter);
+
+        this.$content.innerHTML = `
+            <div class="bible-reading-view">
+                <button class="btn-secondary" data-action="back-to-bible-books">
+                    ← Volver
+                </button>
+
+                <h2>${this.escapeHtml(chapterData.reference || `${book.name} ${this.selectedBibleChapter}`)}</h2>
+
+                <div class="reading-text">
+                    ${chapterData.content || 'No se pudo cargar el contenido.'}
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Error cargando capítulo bíblico:', error);
+
+        this.$content.innerHTML = `
+            <div class="bible-reading-view">
+                <button class="btn-secondary" data-action="back-to-bible-books">
+                    ← Volver
+                </button>
+
+                <h2>${this.escapeHtml(book.name)} ${this.selectedBibleChapter}</h2>
+
+                <div class="empty-state">
+                    No se pudo cargar este capítulo.
+                </div>
+            </div>
+        `;
+    }
 },
     
    renderCalendar: function() {
