@@ -53,15 +53,6 @@ async function apiBibleFetch(path) {
     return data;
 } 
 
-async function testBibleConnection() {
-    try {
-        const result = await apiBibleFetch(`/bibles/${API_BIBLE_ID}/books`);
-        console.log('LIBROS NBLA:', result.data);
-    } catch (error) {
-        console.error('Fallo API.Bible:', error);
-    }
-}
-
 async function getBibleChapter(bookId, chapterNumber) {
     const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
 
@@ -70,15 +61,6 @@ async function getBibleChapter(bookId, chapterNumber) {
     );
 
     return result.data;
-}
-
-async function testSingleChapter() {
-    try {
-        const result = await getBibleChapter('JHN', 1);
-        console.log('CAPITULO JUAN 1:', result);
-    } catch (error) {
-        console.error('Fallo capítulo:', error);
-    }
 }
 
 /**
@@ -165,6 +147,7 @@ const App = {
     ],
     selectedBibleBook: null,
     selectedBibleChapter: null,
+    currentBibleChapterData: null,
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
@@ -2284,12 +2267,17 @@ restoreCalendarPosition: function() {
         this.renderViewContent(reading, false);
     },
 
-rerenderCurrentReadingView: function(dateStr = null) {
+rerenderCurrentReadingView: async function(dateStr = null) {
     const selection = window.getSelection();
     if (this.isSelecting && selection && !selection.isCollapsed) return;
 
     if (this.currentView === 'home') {
         this.renderHome();
+        return;
+    }
+
+    if (this.currentView === 'bible-reading') {
+        await this.renderBibleReading();
         return;
     }
 
@@ -2536,9 +2524,11 @@ renderBible: function() {
 },
 
 renderBibleReading: async function() {
-    const book = this.bibleBooks.find(b => b.id === this.selectedBibleBook);
+    const requestedBookId = this.selectedBibleBook;
+    const requestedChapter = this.selectedBibleChapter;
+    const requestedBook = this.bibleBooks.find(b => b.id === requestedBookId);
 
-    if (!book || !this.selectedBibleChapter) {
+    if (!requestedBook || !requestedChapter) {
         this.navigate('bible');
         return;
     }
@@ -2549,16 +2539,27 @@ renderBibleReading: async function() {
                 ← Volver
             </button>
 
-            <h2>${this.escapeHtml(book.name)} ${this.selectedBibleChapter}</h2>
+            <h2>${this.escapeHtml(requestedBook.name)} ${requestedChapter}</h2>
 
-            <div class="reading-text">
+            <div class="loading">
+                <div class="spinner"></div>
                 Cargando capítulo...
             </div>
         </div>
     `;
 
     try {
-        const chapterData = await getBibleChapter(book.id, this.selectedBibleChapter);
+        const chapterData = await getBibleChapter(requestedBookId, requestedChapter);
+
+        if (
+            this.currentView !== 'bible-reading' ||
+            this.selectedBibleBook !== requestedBookId ||
+            this.selectedBibleChapter !== requestedChapter
+        ) {
+            return;
+        }
+
+        this.currentBibleChapterData = chapterData;
 
         this.$content.innerHTML = `
             <div class="bible-reading-view">
@@ -2566,15 +2567,45 @@ renderBibleReading: async function() {
                     ← Volver
                 </button>
 
-                <h2>${this.escapeHtml(chapterData.reference || `${book.name} ${this.selectedBibleChapter}`)}</h2>
+                <h2>${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}</h2>
 
-                <div class="reading-text">
-                    ${chapterData.content || 'No se pudo cargar el contenido.'}
+                <div class="bible-nav-bar">
+                    <button
+                        class="btn-secondary"
+                        data-action="bible-prev-chapter"
+                        ${requestedChapter > 1 ? '' : 'disabled'}
+                    >
+                        ← Anterior
+                    </button>
+
+                    <button
+                        class="btn-secondary"
+                        data-action="bible-next-chapter"
+                        ${requestedChapter < requestedBook.chapters ? '' : 'disabled'}
+                    >
+                        Siguiente →
+                    </button>
+                </div>
+
+                <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
+                    <div class="reading-text selection-surface" data-selection-surface="true">
+                        ${chapterData.content || '<p>No se pudo cargar el contenido.</p>'}
+                    </div>
                 </div>
             </div>
         `;
+
+        this.restoreHighlightsInDOM(`bible-${requestedBookId}-${requestedChapter}`);
     } catch (error) {
         console.error('Error cargando capítulo bíblico:', error);
+
+        if (
+            this.currentView !== 'bible-reading' ||
+            this.selectedBibleBook !== requestedBookId ||
+            this.selectedBibleChapter !== requestedChapter
+        ) {
+            return;
+        }
 
         this.$content.innerHTML = `
             <div class="bible-reading-view">
@@ -2582,10 +2613,11 @@ renderBibleReading: async function() {
                     ← Volver
                 </button>
 
-                <h2>${this.escapeHtml(book.name)} ${this.selectedBibleChapter}</h2>
+                <h2>${this.escapeHtml(requestedBook.name)} ${requestedChapter}</h2>
 
                 <div class="empty-state">
-                    No se pudo cargar este capítulo.
+                    <h3>⚠️ No se pudo cargar el capítulo</h3>
+                    <p>Intenta nuevamente.</p>
                 </div>
             </div>
         `;
@@ -3382,6 +3414,25 @@ if (backToBibleBooksBtn) {
 }
 
 const openBibleChapterBtn = e.target.closest('[data-action="open-bible-chapter"]');
+const prevChapterBtn = e.target.closest('[data-action="bible-prev-chapter"]');
+if (prevChapterBtn) {
+    if (this.selectedBibleChapter > 1) {
+        this.selectedBibleChapter -= 1;
+        this.navigate('bible-reading');
+    }
+    return;
+}
+
+const nextChapterBtn = e.target.closest('[data-action="bible-next-chapter"]');
+if (nextChapterBtn) {
+    const currentBook = this.bibleBooks.find(b => b.id === this.selectedBibleBook);
+
+    if (currentBook && this.selectedBibleChapter < currentBook.chapters) {
+        this.selectedBibleChapter += 1;
+        this.navigate('bible-reading');
+    }
+    return;
+}
 if (openBibleChapterBtn) {
     const bookId = openBibleChapterBtn.getAttribute('data-book-id');
     const chapter = Number(openBibleChapterBtn.getAttribute('data-chapter'));
@@ -4113,9 +4164,7 @@ const Sanitizer = {
 };
 
 // Inicializar la app
-document.addEventListener('DOMContentLoaded', async () => {
-    await testSingleChapter();
-
+document.addEventListener('DOMContentLoaded', () => {
     App.init().catch(error => {
         console.error('[App] Error al inicializar:', error);
     });
