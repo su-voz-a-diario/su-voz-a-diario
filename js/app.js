@@ -31,7 +31,7 @@ function isAndroidDevice() {
     return /Android/i.test(navigator.userAgent);
 }
 
-const API_BIBLE_KEY = '7K0vufvAsJa8nu0eqaipy';
+const API_BIBLE_KEY = 'Y88btYy9BAJg7e1ocp6p3';
 const API_BIBLE_BASE = 'https://api.scripture.api.bible/v1';
 const API_BIBLE_ID = ''; // aquí luego pondremos el id real de tu Biblia
 
