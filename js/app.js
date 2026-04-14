@@ -62,6 +62,34 @@ async function testBibleConnection() {
     }
 }
 
+async function testBibleConnection() {
+    try {
+        const result = await apiBibleFetch(`/bibles/${API_BIBLE_ID}/books`);
+        console.log('LIBROS NBLA:', result.data);
+    } catch (error) {
+        console.error('Fallo API.Bible:', error);
+    }
+}
+
+async function getBibleChapter(bookId, chapterNumber) {
+    const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
+
+    const result = await apiBibleFetch(
+        `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`
+    );
+
+    return result.data;
+}
+
+async function testSingleChapter() {
+    try {
+        const result = await getBibleChapter('JHN', 1);
+        console.log('CAPITULO JUAN 1:', result);
+    } catch (error) {
+        console.error('Fallo capítulo:', error);
+    }
+}
+
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -4061,12 +4089,11 @@ const Sanitizer = {
 
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        await testBibleConnection();
-        await App.init();
-    } catch (error) {
+    await testSingleChapter();
+
+    App.init().catch(error => {
         console.error('[App] Error al inicializar:', error);
-    }
+    });
 });
 
 window.addEventListener('load', () => {
