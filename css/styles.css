@@ -91,8 +91,17 @@ body {
 }
 
 .compact-header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     padding: 12px 16px 6px;
+    text-align: left;
+}
+
+.app-header-main {
+    flex: 1;
+    min-width: 0;
 }
 
 .compact-header h1 {
@@ -112,6 +121,49 @@ body {
     text-transform: uppercase;
     color: var(--text-muted);
     opacity: 0.85;
+}
+
+.header-settings-btn {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+    transition: background-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+
+.header-settings-btn svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+    stroke: currentColor;
+}
+
+.header-settings-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.header-settings-btn:active {
+    transform: scale(0.95);
+    opacity: 0.75;
+}
+
+.header-settings-btn:focus-visible {
+    outline: 2px solid rgba(49, 130, 206, 0.35);
+    outline-offset: 2px;
+}
+
+body.dark-mode .header-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .floating-controls {
@@ -1473,7 +1525,8 @@ body.dark-mode .community-badge {
     }
 
     .compact-header {
-        padding: 10px 12px 4px;
+    padding: 10px 12px 4px;
+    gap: 10px;
     }
 
     .compact-header h1 {
@@ -1481,8 +1534,21 @@ body.dark-mode .community-badge {
     }
 
     .compact-header p {
-        font-size: 0.76rem;
-        margin-top: 4px;
+    font-size: 0.76rem;
+    margin-top: 4px;
+    letter-spacing: 0.14em;
+    }
+
+    .header-settings-btn {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        min-height: 38px;
+    }
+
+    .header-settings-btn svg {
+        width: 21px;
+        height: 21px;
     }
 
     .floating-controls {
