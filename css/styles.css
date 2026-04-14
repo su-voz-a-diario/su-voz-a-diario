@@ -184,18 +184,18 @@ body.dark-mode .header-settings-btn:hover {
     min-height: 42px;
     padding: 0;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(22, 33, 53, 0.92);
-    color: #fff;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--text-main);
     font-size: 1rem;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     cursor: pointer;
     transition: all 0.18s ease;
 }
@@ -212,18 +212,18 @@ body.dark-mode .header-settings-btn:hover {
     min-height: 42px;
     padding: 0;
     border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    background: rgba(22, 33, 53, 0.88);
-    color: #fff;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--text-main);
     font-size: 0.78rem;
     font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     text-align: center;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     cursor: pointer;
     transition: opacity 0.22s ease, transform 0.22s ease;
 }
@@ -250,9 +250,10 @@ body.dark-mode .header-settings-btn:hover {
 }
 
 .floating-streak {
-    background: linear-gradient(135deg, #ff8c1a, #ffb347);
-    color: #fff;
+    background: linear-gradient(135deg, #ff9f43, #ffc36b);
+    color: #ffffff;
     font-weight: 700;
+    border-color: rgba(255, 159, 67, 0.28);
 }
 
 .floating-btn.version-btn {
@@ -325,9 +326,9 @@ body.dark-mode .header-settings-btn:hover {
     position: relative;
     padding: 2px 2px;
     border-radius: 14px;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
+    -webkit-user-select: auto;
+    user-select: auto;
+    -webkit-touch-callout: default;
 }
 
 .reading-text-shell::before,
@@ -666,6 +667,162 @@ body.dark-mode .badge-corona {
 
 .action-group .btn-secondary:first-child {
     width: 100%;
+}
+
+/* ========================================
+   BIBLIA
+   ======================================== */
+.bible-view,
+.bible-reading-view {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.bible-header-card {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bible-title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1.2;
+}
+
+.bible-subtitle {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.bible-back-btn {
+    display: inline-flex;
+    width: fit-content;
+    min-height: 44px;
+    padding: 10px 14px;
+    justify-content: flex-start;
+    align-self: flex-start;
+}
+
+.bible-books-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+}
+
+.bible-book-card {
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-main);
+    border-radius: 14px;
+    padding: 16px 12px;
+    min-height: 92px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.bible-book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    border-color: rgba(49, 130, 206, 0.28);
+}
+
+.bible-book-card:active {
+    transform: scale(0.98);
+}
+
+.bible-book-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.3;
+}
+
+.bible-book-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.bible-chapters-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.bible-chapter-btn {
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-main);
+    border-radius: 12px;
+    min-height: 54px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.bible-chapter-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(49, 130, 206, 0.35);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+}
+
+.bible-chapter-btn:active {
+    transform: scale(0.98);
+}
+
+.bible-reading-view h2 {
+    font-family: var(--font-reading);
+    font-size: 1.45rem;
+    color: var(--primary);
+    text-align: center;
+    margin: 2px 0 4px;
+}
+
+.bible-reading-view .reading-text {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 18px 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 480px) {
+    .bible-books-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .bible-chapters-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+
+    .bible-book-card {
+        min-height: 84px;
+        padding: 14px 10px;
+    }
+
+    .bible-chapter-btn {
+        min-height: 50px;
+        font-size: 0.95rem;
+    }
 }
 
 /* ========================================
@@ -1312,7 +1469,6 @@ input:checked + .slider:before {
     z-index: 10000;
     transition: transform 0.3s ease;
     pointer-events: none;
-    white-space: nowrap;
     max-width: 90vw;
     white-space: normal;
     text-align: center;
@@ -1611,11 +1767,22 @@ body.dark-mode .floating-streak {
     background: rgba(99, 179, 237, 0.15);
     border: 1px solid rgba(99, 179, 237, 0.25);
     color: #ffffff;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
 
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+body.dark-mode .floating-streak {
+    background: linear-gradient(135deg, #ff9f43, #ffc36b);
+    color: #ffffff;
+    border-color: rgba(255, 159, 67, 0.28);
+}
 
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+body.light-mode .floating-toggle-btn,
+body.light-mode .floating-btn {
+    background: rgba(255, 255, 255, 0.88);
+    color: #1a202c;
+    border: 1px solid rgba(226, 232, 240, 0.95);
 }
 
 /* ========================================
@@ -2114,14 +2281,14 @@ body.dark-mode .community-reply-form {
     flex-direction: column;
     gap: 8px;
     padding-left: 10px;
-    border-left: 2px solid rgba(255, 255, 255, 0.05);
+    border-left: 2px solid rgba(148, 163, 184, 0.22);
 }
 
 .community-reply-item {
     margin-left: 0;
     padding: 8px 10px;
     border-left: none;
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(15, 23, 42, 0.03);
     border-radius: 10px;
     transform: scale(0.97);
 }
@@ -2439,66 +2606,6 @@ body.dark-mode mark.user-highlight-blue {
     box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.12);
 }
 
-body.dark-mode .selection-menu {
-    background: rgba(30, 41, 59, 0.96);
-    border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-}
-
-body.dark-mode .reading-text mark::selection,
-body.dark-mode .reading-text mark *::selection {
-    background: rgba(147, 197, 253, 0.18) !important;
-    color: #f8fafc !important;
-    -webkit-text-fill-color: #f8fafc !important;
-}
-
-body.dark-mode .reading-text mark::-moz-selection,
-body.dark-mode .reading-text mark *::-moz-selection {
-    background: rgba(147, 197, 253, 0.18) !important;
-    color: #f8fafc !important;
-}
-
-.reading-text mark::selection,
-.reading-text mark *::selection {
-    background: rgba(59, 130, 246, 0.18) !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-}
-
-.reading-text mark::-moz-selection,
-.reading-text mark *::-moz-selection {
-    background: rgba(59, 130, 246, 0.18) !important;
-    color: #0f172a !important;
-}
-
-body.dark-mode .selection-menu-btn {
-    background: #334155;
-    color: #e2e8f0;
-}
-
-body.dark-mode .selection-menu-btn:hover {
-    background: #475569;
-}
-
-body.dark-mode .selection-menu-btn-danger {
-    background: rgba(255, 255, 255, 0.06);
-    color: #f8fafc;
-}
-
-body.dark-mode .selection-menu-arrow {
-    background: rgba(30, 41, 59, 0.96);
-}
-
-body.dark-mode .selection-menu-arrow-top {
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-body.dark-mode .selection-menu-arrow-bottom {
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
 @media (max-width: 480px) {
     .selection-menu {
         padding: 0.4rem 0.48rem;
@@ -2537,7 +2644,12 @@ body.dark-mode .selection-menu-arrow-bottom {
 
 .skeleton-header {
     height: 80px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(
+        90deg,
+        rgba(226, 232, 240, 0.7) 25%,
+        rgba(241, 245, 249, 0.95) 50%,
+        rgba(226, 232, 240, 0.7) 75%
+    );
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s infinite;
     border-radius: 12px;
@@ -2546,7 +2658,12 @@ body.dark-mode .selection-menu-arrow-bottom {
 
 .skeleton-card {
     height: 200px;
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(
+        90deg,
+        rgba(226, 232, 240, 0.7) 25%,
+        rgba(241, 245, 249, 0.95) 50%,
+        rgba(226, 232, 240, 0.7) 75%
+    );
     background-size: 200% 100%;
     animation: skeleton-loading 1.5s infinite;
     border-radius: 12px;
@@ -2563,8 +2680,23 @@ body.dark-mode .selection-menu-arrow-bottom {
 }
 
 /* Modo oscuro para skeleton */
-.dark-mode .skeleton-header,
-.dark-mode .skeleton-card {
-    background: linear-gradient(90deg, #2a2a2a 25%, #3a3a3a 50%, #2a2a2a 75%);
+body.dark-mode .skeleton-header,
+body.dark-mode .skeleton-card {
+    background: linear-gradient(
+        90deg,
+        rgba(31, 41, 55, 0.72) 25%,
+        rgba(51, 65, 85, 0.92) 50%,
+        rgba(31, 41, 55, 0.72) 75%
+    );
     background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
 }
