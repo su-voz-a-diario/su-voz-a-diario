@@ -30,6 +30,38 @@ function isIOSDevice() {
 function isAndroidDevice() {
     return /Android/i.test(navigator.userAgent);
 }
+
+const API_BIBLE_KEY = '7K0vufvAsJa8nu0eqaipy';
+const API_BIBLE_BASE = 'https://api.scripture.api.bible/v1';
+const API_BIBLE_ID = ''; // aquí luego pondremos el id real de tu Biblia
+
+async function apiBibleFetch(path) {
+    const response = await fetch(`${API_BIBLE_BASE}${path}`, {
+        method: 'GET',
+        headers: {
+            'api-key': API_BIBLE_KEY
+        }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        console.error('API.Bible error:', data);
+        throw new Error(data?.message || 'Error al consultar API.Bible');
+    }
+
+    return data;
+} 
+
+async function testBibleConnection() {
+    try {
+        const result = await apiBibleFetch('/bibles');
+        console.log('BIBLES DISPONIBLES:', result.data);
+    } catch (error) {
+        console.error('Fallo API.Bible:', error);
+    }
+}
+
 /**
  * Su Voz a Diario - App de estudio de la palabra de Dios.
  * Versión 2.1 con integración completa con Service Worker
@@ -4028,10 +4060,13 @@ const Sanitizer = {
 };
 
 // Inicializar la app
-document.addEventListener('DOMContentLoaded', () => {
-    App.init().catch(error => {
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await testBibleConnection();
+        await App.init();
+    } catch (error) {
         console.error('[App] Error al inicializar:', error);
-    });
+    }
 });
 
 window.addEventListener('load', () => {
