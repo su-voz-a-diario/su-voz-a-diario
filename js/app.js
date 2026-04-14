@@ -159,6 +159,8 @@ const App = {
     openReplyPostId: null,
     replyDrafts: {},
     replyCharLimit: 300,
+    currentView: 'home',
+    previousView: null,
     
     calendarInitialized: false,
     calendarScrollTop: 0,
@@ -2106,6 +2108,7 @@ removeSelectionMenu: function() {
     const parts = hash.split('/');
     const view = parts[0];
     const param = parts[1] || null;
+    const oldView = this.currentView;
 
     // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
     if (this.currentView === 'community' && view !== 'community') {
@@ -2118,8 +2121,12 @@ removeSelectionMenu: function() {
     if (this.currentView === 'calendar' && view !== 'calendar') {
     this.saveCalendarScroll();
     }
-    this.currentView = view;
-    this.updateNavUI();
+    if (view !== 'settings' && oldView !== 'settings') {
+    this.previousView = oldView;
+}
+
+this.currentView = view;
+this.updateNavUI();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
         btn.classList.toggle(
@@ -2159,14 +2166,14 @@ removeSelectionMenu: function() {
 }
 },
     
-   updateNavUI: function() {
+updateNavUI: function() {
     const navBtns = [
-    { btn: this.$navHome, views: ['home', 'reading'] },
-    { btn: this.$navBible, views: ['bible', 'bible-reading'] },
-    { btn: this.$navCalendar, views: ['calendar'] },
-    { btn: this.$navCommunity, views: ['community'] },
-    { btn: this.$navStats, views: ['stats'] }
-];
+        { btn: this.$navHome, views: ['home', 'reading'] },
+        { btn: this.$navBible, views: ['bible', 'bible-reading'] },
+        { btn: this.$navCalendar, views: ['calendar'] },
+        { btn: this.$navCommunity, views: ['community'] },
+        { btn: this.$navStats, views: ['stats'] }
+    ];
     
     navBtns.forEach(({ btn, views }) => {
         if (btn) {
@@ -2177,6 +2184,10 @@ removeSelectionMenu: function() {
             }
         }
     });
+
+    if (this.$headerSettingsBtn) {
+        this.$headerSettingsBtn.classList.toggle('active', this.currentView === 'settings');
+    }
 },
     
     formatDateEs: function(dateStr) {
@@ -3328,7 +3339,17 @@ if (this.$navCommunity) {
 }
 
 if (this.$headerSettingsBtn) {
-    this.$headerSettingsBtn.addEventListener('click', () => this.navigate('settings'));
+    this.$headerSettingsBtn.addEventListener('click', () => {
+
+        if (this.currentView === 'settings') {
+            const fallback = this.previousView || 'home';
+            this.navigate(fallback);
+            return;
+        }
+
+        this.previousView = this.currentView;
+        this.navigate('settings');
+    });
 }
         window.addEventListener('popstate', () => {
             this.handleRoute().catch(error => {
