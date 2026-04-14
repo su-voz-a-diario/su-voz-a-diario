@@ -33,7 +33,7 @@ function isAndroidDevice() {
 
 const API_BIBLE_KEY = 'Y88btYy9BAJg7e1ocp6p3';
 const API_BIBLE_BASE = 'https://rest.api.bible/v1';
-const API_BIBLE_ID = ''; // aquí luego pondremos el id real de tu Biblia
+const API_BIBLE_ID = '';
 
 async function apiBibleFetch(path) {
     const response = await fetch(`${API_BIBLE_BASE}${path}`, {
