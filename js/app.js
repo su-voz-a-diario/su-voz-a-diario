@@ -33,7 +33,7 @@ function isAndroidDevice() {
 
 const API_BIBLE_KEY = 'Y88btYy9BAJg7e1ocp6p3';
 const API_BIBLE_BASE = 'https://rest.api.bible/v1';
-const API_BIBLE_ID = '';
+const API_BIBLE_ID = 'ce11b813f9a27e20-01';
 
 async function apiBibleFetch(path) {
     const response = await fetch(`${API_BIBLE_BASE}${path}`, {
@@ -55,9 +55,8 @@ async function apiBibleFetch(path) {
 
 async function testBibleConnection() {
     try {
-        const result = await apiBibleFetch('/bibles');
-        const spanishBibles = result.data.filter(bible => bible.language?.id === 'spa');
-        console.log('BIBLIAS EN ESPAÑOL:', spanishBibles);
+        const result = await apiBibleFetch(`/bibles/${API_BIBLE_ID}/books`);
+        console.log('LIBROS NBLA:', result.data);
     } catch (error) {
         console.error('Fallo API.Bible:', error);
     }
