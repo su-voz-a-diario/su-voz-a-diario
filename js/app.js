@@ -56,7 +56,8 @@ async function apiBibleFetch(path) {
 async function testBibleConnection() {
     try {
         const result = await apiBibleFetch('/bibles');
-        console.log('BIBLES DISPONIBLES:', result.data);
+        const spanishBibles = result.data.filter(bible => bible.language?.id === 'spa');
+        console.log('BIBLIAS EN ESPAÑOL:', spanishBibles);
     } catch (error) {
         console.error('Fallo API.Bible:', error);
     }
