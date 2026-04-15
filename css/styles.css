@@ -1551,14 +1551,25 @@ body.dark-mode .toast-message {
    ======================================== */
 body.reading-mode .main-action,
 body.reading-mode .action-group,
-body.reading-mode .bottom-nav,
-body.reading-mode .app-header,
 body.reading-mode .floating-controls,
 body.reading-mode .home-reading-bar {
     opacity: 0;
     transform: translateY(10px);
     pointer-events: none;
     transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+body.reading-mode .bottom-nav {
+    opacity: 0;
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+body.reading-mode .app-header {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
 }
 
 body.reading-mode .reading-card {
@@ -2777,6 +2788,43 @@ body.dark-mode .skeleton-card {
         rgba(31, 41, 55, 0.72) 75%
     );
     background-size: 200% 100%;
+}
+
+body.reading-scroll-compact .app-header {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+}
+
+body.reading-scroll-compact .compact-header {
+    min-height: 52px;
+    padding: 8px 14px 7px;
+}
+
+body.reading-scroll-compact .compact-header h1 {
+    font-size: 1.02rem;
+    line-height: 1.05;
+}
+
+body.reading-scroll-compact .compact-header p {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0;
+}
+
+body.reading-scroll-compact .header-settings-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.92);
+}
+
+body.reading-scroll-compact .floating-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-12px);
 }
 
 @media (prefers-reduced-motion: reduce) {
