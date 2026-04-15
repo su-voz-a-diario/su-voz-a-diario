@@ -82,17 +82,31 @@ body {
    HEADER Y NAVEGACIÓN
    ======================================== */
 .app-header {
-    background-color: var(--surface-color);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
     z-index: 1100;
+    background-color: var(--surface-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    padding-top: env(safe-area-inset-top);
+    min-height: calc(72px + env(safe-area-inset-top));
     transition:
         background-color 0.22s ease,
         transform 0.22s ease,
         min-height 0.22s ease,
         box-shadow 0.22s ease,
-        opacity 0.22s ease;
+        opacity 0.22s ease,
+        padding-top 0.22s ease;
+}
+
+.app-header::before {
+    content: "";
+    position: absolute;
+    top: calc(env(safe-area-inset-top) * -1);
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--surface-color);
+    pointer-events: none;
 }
 
 .compact-header {
@@ -114,7 +128,7 @@ body {
     gap: 2px;
     min-width: 0;
     text-align: center;
-    transition: gap 0.22s ease;
+    transition: gap 0.22s ease, transform 0.22s ease;
 }
 
 .compact-header h1 {
@@ -138,6 +152,7 @@ body {
     opacity: 0.85;
     text-align: center;
     max-height: 24px;
+    overflow: hidden;
     transition:
         opacity 0.18s ease,
         max-height 0.18s ease,
@@ -192,52 +207,18 @@ body.dark-mode .header-settings-btn.active {
     background: rgba(0, 0, 0, 0.05);
 }
 
+body.dark-mode .header-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .header-settings-btn:active {
-    transform: scale(0.95);
+    transform: translateY(-50%) scale(0.95);
     opacity: 0.75;
 }
 
 .header-settings-btn:focus-visible {
     outline: 2px solid rgba(49, 130, 206, 0.35);
     outline-offset: 2px;
-}
-
-body.dark-mode .header-settings-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-}
-
-body.reading-scroll-compact .app-header {
-    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
-}
-
-body.reading-scroll-compact .compact-header {
-    min-height: 52px;
-    padding: 8px 14px 7px;
-}
-
-body.reading-scroll-compact .compact-header h1 {
-    font-size: 1.02rem;
-    line-height: 1.05;
-}
-
-body.reading-scroll-compact .compact-header p {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    margin: 0;
-    font-size: 0;
-}
-
-body.reading-scroll-compact .header-settings-btn {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-50%) scale(0.92);
-}
-
-body.reading-scroll-compact .floating-controls {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-12px);
 }
 
 .floating-controls {
@@ -1677,11 +1658,6 @@ body.reading-mode .reading-text {
 .nav-btn svg {
     width: 22px;
     height: 22px;
-}
-
-.nav-btn svg {
-    width: 22px;
-    height: 22px;
     flex-shrink: 0;
 }
 
@@ -1707,17 +1683,6 @@ body.reading-mode .reading-text {
 
 body.dark-mode .community-badge {
     box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95);
-}
-
-body.reading-scroll-compact .bottom-nav {
-    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
-    pointer-events: none;
-}
-
-body.reading-scroll-compact .home-reading-bar {
-    transform: translate(-50%, calc(100% + 18px));
-    opacity: 0;
-    pointer-events: none;
 }
 
 /* ========================================
@@ -1793,6 +1758,19 @@ body.reading-scroll-compact .home-reading-bar {
     .compact-header {
     min-height: 66px;
     padding: 10px 12px 6px;
+}
+
+body.reading-scroll-compact .app-header {
+    min-height: calc(46px + env(safe-area-inset-top));
+}
+
+body.reading-scroll-compact .compact-header {
+    min-height: 48px;
+    padding: 6px 12px 5px;
+}
+
+body.reading-scroll-compact .compact-header h1 {
+    font-size: 0.96rem;
 }
 
 .compact-header h1 {
@@ -2803,43 +2781,6 @@ body.dark-mode .skeleton-card {
     background-size: 200% 100%;
 }
 
-body.reading-scroll-compact .app-header {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
-}
-
-body.reading-scroll-compact .compact-header {
-    min-height: 52px;
-    padding: 8px 14px 7px;
-}
-
-body.reading-scroll-compact .compact-header h1 {
-    font-size: 1.02rem;
-    line-height: 1.05;
-}
-
-body.reading-scroll-compact .compact-header p {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    margin: 0;
-    font-size: 0;
-}
-
-body.reading-scroll-compact .header-settings-btn {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-50%) scale(0.92);
-}
-
-body.reading-scroll-compact .floating-controls {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-12px);
-}
-
 /* ========================================
    HEADER COMPACTO AL HACER SCROLL EN LECTURA
    ======================================== */
@@ -2848,15 +2789,18 @@ body.reading-scroll-compact .app-header {
     transform: none;
     pointer-events: auto;
     box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+    min-height: calc(50px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
 }
 
 body.reading-scroll-compact .compact-header {
     min-height: 50px;
-    padding: 7px 14px 6px;
+    padding: 6px 14px 5px;
 }
 
 body.reading-scroll-compact .app-header-main {
     gap: 0;
+    transform: translateY(-1px);
 }
 
 body.reading-scroll-compact .compact-header h1 {
@@ -2870,7 +2814,9 @@ body.reading-scroll-compact .compact-header p {
     opacity: 0;
     max-height: 0;
     overflow: hidden;
-    margin-top: 0;
+    margin: 0;
+    font-size: 0;
+    line-height: 0;
     transform: translateY(-4px);
     pointer-events: none;
 }
@@ -2885,6 +2831,18 @@ body.reading-scroll-compact .floating-controls {
     opacity: 0;
     pointer-events: none;
     transform: translateX(-12px);
+}
+
+body.reading-scroll-compact .bottom-nav {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.reading-scroll-compact .home-reading-bar {
+    transform: translate(-50%, calc(100% + 18px));
+    opacity: 0;
+    pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
