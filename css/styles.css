@@ -114,6 +114,7 @@ body {
     gap: 2px;
     min-width: 0;
     text-align: center;
+    transition: gap 0.22s ease;
 }
 
 .compact-header h1 {
@@ -124,6 +125,7 @@ body {
     letter-spacing: -0.02em;
     color: var(--primary);
     text-align: center;
+    transition: font-size 0.22s ease, line-height 0.22s ease, transform 0.22s ease;
 }
 
 .compact-header p {
@@ -135,6 +137,13 @@ body {
     color: var(--text-muted);
     opacity: 0.85;
     text-align: center;
+    max-height: 24px;
+    transition:
+        opacity 0.18s ease,
+        max-height 0.18s ease,
+        transform 0.18s ease,
+        margin 0.18s ease,
+        font-size 0.18s ease;
 }
 
 .header-settings-btn {
@@ -155,7 +164,11 @@ body {
     border-radius: 10px;
     cursor: pointer;
     padding: 0;
-    transition: background-color 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+    transition:
+        background-color 0.18s ease,
+        transform 0.22s ease,
+        opacity 0.18s ease,
+        color 0.18s ease;
 }
 
 .header-settings-btn.active {
@@ -2819,6 +2832,53 @@ body.reading-scroll-compact .header-settings-btn {
     opacity: 0;
     pointer-events: none;
     transform: translateY(-50%) scale(0.92);
+}
+
+body.reading-scroll-compact .floating-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-12px);
+}
+
+/* ========================================
+   HEADER COMPACTO AL HACER SCROLL EN LECTURA
+   ======================================== */
+body.reading-scroll-compact .app-header {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+}
+
+body.reading-scroll-compact .compact-header {
+    min-height: 50px;
+    padding: 7px 14px 6px;
+}
+
+body.reading-scroll-compact .app-header-main {
+    gap: 0;
+}
+
+body.reading-scroll-compact .compact-header h1 {
+    font-size: 1.02rem;
+    line-height: 1.02;
+    transform: scale(0.98);
+    transform-origin: center center;
+}
+
+body.reading-scroll-compact .compact-header p {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    margin-top: 0;
+    transform: translateY(-4px);
+    pointer-events: none;
+}
+
+body.reading-scroll-compact .header-settings-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.88);
 }
 
 body.reading-scroll-compact .floating-controls {
