@@ -464,7 +464,6 @@ body.dark-mode .reading-text *::-moz-selection {
 .btn-primary,
 .btn-secondary,
 .home-reading-bar-btn,
-.exit-reading-btn,
 .floating-btn,
 .floating-toggle-btn,
 .floating-streak {
@@ -1538,66 +1537,6 @@ input:checked + .slider:before {
 body.dark-mode .toast-message {
     background: rgba(255, 255, 255, 0.9);
     color: #1a1a2e;
-}
-
-/* ========================================
-   MODO LECTURA
-   ======================================== */
-body.reading-mode .main-action,
-body.reading-mode .action-group,
-body.reading-mode .floating-controls,
-body.reading-mode .home-reading-bar {
-    opacity: 0;
-    transform: translateY(10px);
-    pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-body.reading-mode .bottom-nav {
-    opacity: 0;
-    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
-    pointer-events: none;
-    transition: opacity 0.25s ease, transform 0.25s ease;
-}
-
-body.reading-mode .app-header {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-}
-
-body.reading-mode .reading-card {
-    background: transparent !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin-top: 20px;
-}
-
-body.reading-mode .reading-text {
-    font-size: calc(var(--reading-size) + 0.12rem);
-    line-height: 2.1;
-    letter-spacing: 0.3px;
-}
-
-.exit-reading-btn {
-    position: fixed;
-    bottom: 84px;
-    right: 16px;
-    z-index: 1000;
-    background: var(--accent);
-    color: white;
-    border: none;
-    border-radius: 999px;
-    padding: 10px 14px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.exit-reading-btn:hover {
-    transform: scale(1.05);
 }
 
 /* ========================================
