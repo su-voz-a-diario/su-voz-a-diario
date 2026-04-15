@@ -151,7 +151,6 @@ const App = {
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
-    readingMode: false,
     communityFormOpen: false,
     currentUser: null,
     communityUnreadCount: 0,
@@ -243,8 +242,6 @@ const App = {
 // Estado de render y controles
 renderScheduled: false,
 controlsCollapsed: false,
-lastReadingTap: 0,
-readingTapDelay: 400,
 selectionMenuVisible: false,
 selectionUpdateTimer: null,
 selectionHideTimer: null,
@@ -636,8 +633,6 @@ handleScrollChrome: function() {
 bindScrollChrome: function() {
     window.addEventListener('scroll', () => {
         if (!this.scrollCompactEnabled) return;
-        if (this.readingMode) return;
-
         if (this.scrollTicking) return;
 
         this.scrollTicking = true;
@@ -1596,12 +1591,6 @@ updateCommunityBadge: function() {
     this.showToast('Se abrió el PDF para descargar');
     },
     
-    resetReadingMode: function() {
-    this.readingMode = false;
-    this.lastReadingTap = 0;
-    document.body.classList.remove('reading-mode');
-    },
-
     escapeRegExp: function(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
@@ -2195,7 +2184,6 @@ removeSelectionMenu: function() {
     this.saveCommunityScrollPosition();
     }
     
-   this.resetReadingMode();
 this.removeSelectionMenu();
 this.isSelecting = false;
 
@@ -2500,10 +2488,6 @@ const introVideoHtml = showIntroVideo ? `
            <div class="action-group">
     <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">📤 Compartir lectura</button>
 </div>
-            
-            ${this.readingMode ? `
-                <button class="exit-reading-btn" data-action="exit-reading-mode">✕ Salir del modo lectura</button>
-            ` : ''}
             
             ${isHome ? `
     <div class="home-reading-bar">
@@ -3462,36 +3446,19 @@ if (this.$headerSettingsBtn) {
         
         // Eventos del contenido
        this.$content.addEventListener('click', async (e) => {
-            const readingEl = e.target.closest('.selection-surface');
-                if (readingEl) {
+       const readingEl = e.target.closest('.selection-surface');
+if (readingEl) {
     const selection = window.getSelection();
-if (selection && selection.toString().trim()) {
-    return;
+
+    if (selection && selection.toString().trim()) {
+        return;
+    }
+
+    if (this.selectionMenuVisible) {
+        return;
+    }
 }
-
-                if (this.selectionMenuVisible) {
-                return;
-                }
-
-                 const now = Date.now();
-                const shell = readingEl.closest('.reading-text-shell');
-                const date = shell ? shell.getAttribute('data-reading-date') : null;
-
-                if (now - this.lastReadingTap < this.readingTapDelay) {
-                this.readingMode = !this.readingMode;
-                document.body.classList.toggle('reading-mode', this.readingMode);
-                this.lastReadingTap = 0;
-
-                    if (date) {
-                        this.rerenderCurrentReadingView(date);
-                    }
-                } else {
-                    this.lastReadingTap = now;
-                }
-
-                return;
-            }
-
+           
   const openBibleBookBtn = e.target.closest('[data-action="open-bible-book"]');
 if (openBibleBookBtn) {
     const bookId = openBibleBookBtn.getAttribute('data-book-id');
@@ -3565,15 +3532,6 @@ if (openBibleChapterBtn) {
 
         return;
     }
-            
-            if (e.target.closest('[data-action="exit-reading-mode"]')) {
-                const readingShell = document.querySelector('.reading-text-shell');
-                const date = readingShell ? readingShell.getAttribute('data-reading-date') : null;
-                this.readingMode = false;
-                document.body.classList.remove('reading-mode');
-                if (date) this.rerenderCurrentReadingView(date);
-                return;
-            }
             
             // Marcar como leído
             const markBtn = e.target.closest('[data-action="mark-read"]');
