@@ -21,21 +21,6 @@
     --reading-size: 1.08rem;
 }
 
-/* Tema oscuro por sistema (se sobrescribe con clases) */
-@media (prefers-color-scheme: dark) {
-    :root {
-        --primary: #e5e7eb;
-        --primary-light: #cbd5e1;
-        --accent: #60a5fa;
-        --accent-hover: #3b82f6;
-        --bg-color: #05070b;
-        --surface-color: #0f1115;
-        --text-main: #f8fafc;
-        --text-muted: #9ca3af;
-        --border-color: #1f2937;
-    }
-}
-
 /* Clases para tema manual */
 body.dark-mode {
     --primary: #e5e7eb;
@@ -73,7 +58,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     line-height: 1.5;
-    padding-bottom: calc(var(--nav-height) + 58px);
+    padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 12px);
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -252,7 +237,7 @@ body.dark-mode .header-settings-btn:hover {
     -webkit-backdrop-filter: blur(6px);
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
     cursor: pointer;
-    transition: all 0.18s ease;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .floating-toggle-btn:active {
@@ -297,7 +282,7 @@ body.dark-mode .header-settings-btn:hover {
 }
 
 .floating-btn:hover {
-    transform: translateY(-1px);
+    transform: none;
 }
 
 .floating-btn:active {
@@ -355,7 +340,7 @@ body.dark-mode .header-settings-btn:hover {
 }
 
 .reading-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.1);
 }
 
@@ -413,27 +398,21 @@ body.dark-mode .header-settings-btn:hover {
 .reading-text::selection,
 .reading-text *::selection {
     background: rgba(59, 130, 246, 0.18);
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
 }
 
 .reading-text::-moz-selection,
 .reading-text *::-moz-selection {
     background: rgba(59, 130, 246, 0.18);
-    color: #0f172a !important;
 }
 
 body.dark-mode .reading-text::selection,
 body.dark-mode .reading-text *::selection {
     background: rgba(147, 197, 253, 0.18);
-    color: #f8fafc !important;
-    -webkit-text-fill-color: #f8fafc !important;
 }
 
 body.dark-mode .reading-text::-moz-selection,
 body.dark-mode .reading-text *::-moz-selection {
     background: rgba(147, 197, 253, 0.18);
-    color: #f8fafc !important;
 }
 
 .reading-text p,
@@ -648,7 +627,7 @@ body.dark-mode .badge-corona {
 .btn-primary:hover:not(:disabled),
 .btn-primary:active:not(:disabled) {
     background-color: var(--accent-hover);
-    transform: scale(0.98);
+    transform: none;
 }
 
 .btn-primary:disabled {
@@ -674,16 +653,16 @@ body.dark-mode .badge-corona {
     cursor: pointer;
     font-family: var(--font-ui);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: all 0.18s ease;
+    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
 }
 
 .btn-secondary:hover {
     background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05));
-    transform: translateY(-1px);
+    transform: none;
 }
 
 .btn-secondary:active {
-    transform: scale(0.98);
+    transform: none;
 }
 
 .btn-secondary.has-note {
@@ -790,13 +769,13 @@ body.dark-mode .badge-corona {
 }
 
 .bible-book-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
     border-color: rgba(49, 130, 206, 0.28);
 }
 
 .bible-book-card:active {
-    transform: scale(0.98);
+    transform: none;
 }
 
 .bible-book-name {
@@ -832,13 +811,13 @@ body.dark-mode .badge-corona {
 }
 
 .bible-chapter-btn:hover {
-    transform: translateY(-1px);
+    transform: none;
     border-color: rgba(49, 130, 206, 0.35);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
 }
 
 .bible-chapter-btn:active {
-    transform: scale(0.98);
+    transform: none;
 }
 
 .bible-reading-view h2 {
@@ -901,16 +880,16 @@ body.dark-mode .badge-corona {
     justify-content: space-between;
     cursor: pointer;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-    transition: all 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .calendar-day:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
 }
 
 .calendar-day:active {
-    transform: scale(0.98);
+    transform: none;
 }
 
 .calendar-day.today {
@@ -1036,7 +1015,7 @@ body.dark-mode .note-section {
 }
 
 .note-section.active {
-    transform: scale(1.03);
+    transform: none;
     border-color: rgba(99, 179, 237, 0.55);
     box-shadow: 0 14px 30px rgba(0, 0, 0, 0.16);
     opacity: 1;
@@ -1172,7 +1151,7 @@ body.dark-mode .note-privacy {
 }
 
 .community-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 10px 22px rgba(0,0,0,0.08);
 }
 
@@ -1344,7 +1323,7 @@ body.dark-mode .note-privacy {
 }
 
 .community-delete-main:active {
-    transform: scale(0.98);
+    transform: none;
 }
 
 body.dark-mode .community-delete-main {
@@ -1991,12 +1970,12 @@ body.dark-mode .about-feature {
 }
 
 .community-reaction-btn:hover {
-    transform: scale(1.06);
+    transform: none;
     opacity: 0.92;
 }
 
 .community-reaction-btn:active {
-    transform: scale(0.96);
+    transform: none;
 }
 
 .community-reaction-btn.is-active {
@@ -2319,7 +2298,6 @@ body.dark-mode .community-reply-form {
     border-left: none;
     background: rgba(15, 23, 42, 0.03);
     border-radius: 10px;
-    transform: scale(0.97);
 }
 
 body.dark-mode .community-reply-item {
@@ -2361,252 +2339,6 @@ body.dark-mode .community-reply-item {
     opacity: 0.7;
 }
 
-/* ========================================
-   MENÚ DE SELECCIÓN (HIGHLIGHTS) - VERSIÓN SOLO ICONOS
-   ======================================== */
-.selection-menu {
-    position: absolute;
-    z-index: 9999;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    padding: 0.42rem 0.5rem;
-    border-radius: 999px;
-    background: rgba(22, 28, 36, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-        0 10px 30px rgba(0, 0, 0, 0.24),
-        0 2px 10px rgba(0, 0, 0, 0.16);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    opacity: 0;
-    transform: translateY(6px) scale(0.96);
-    pointer-events: none;
-    transition:
-        opacity 0.18s ease,
-        transform 0.18s ease;
-}
-
-.selection-menu.visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-    pointer-events: auto;
-}
-
-.selection-menu-btn {
-    width: 2.35rem;
-    height: 2.35rem;
-    border: none;
-    border-radius: 999px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-    font-size: 1rem;
-    cursor: pointer;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
-    transition:
-        transform 0.15s ease,
-        background-color 0.15s ease,
-        box-shadow 0.15s ease,
-        opacity 0.15s ease;
-}
-
-.selection-menu-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
-}
-
-.selection-menu-btn[data-role="highlight-yellow"]:hover {
-    background: rgba(255, 214, 10, 0.18);
-}
-
-.selection-menu-btn[data-role="highlight-blue"]:hover {
-    background: rgba(59, 130, 246, 0.18);
-}
-
-body.light-mode .selection-menu-btn[data-role="highlight-yellow"]:hover {
-    background: rgba(250, 204, 21, 0.18);
-}
-
-body.light-mode .selection-menu-btn[data-role="highlight-blue"]:hover {
-    background: rgba(96, 165, 250, 0.18);
-}
-
-body.dark-mode .selection-menu-btn[data-role="highlight-yellow"]:hover {
-    background: rgba(255, 214, 10, 0.14);
-}
-
-body.dark-mode .selection-menu-btn[data-role="highlight-blue"]:hover {
-    background: rgba(59, 130, 246, 0.16);
-}
-
-.selection-menu-btn:active {
-    transform: scale(0.94);
-}
-
-.selection-menu-btn:focus-visible {
-    outline: 2px solid rgba(255, 255, 255, 0.35);
-    outline-offset: 2px;
-}
-
-/* ========================================
-   ESTADO ACTIVO DE COLORES
-======================================== */
-.selection-menu-btn.is-active {
-    background: rgba(255, 255, 255, 0.2);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
-}
-
-.selection-menu-btn[data-role="highlight-yellow"].is-active {
-    background: rgba(255, 214, 10, 0.22);
-    box-shadow:
-        inset 0 0 0 1px rgba(255, 214, 10, 0.35),
-        0 0 0 1px rgba(255, 214, 10, 0.08);
-}
-
-.selection-menu-btn[data-role="highlight-blue"].is-active {
-    background: rgba(59, 130, 246, 0.22);
-    box-shadow:
-        inset 0 0 0 1px rgba(96, 165, 250, 0.35),
-        0 0 0 1px rgba(96, 165, 250, 0.08);
-}
-
-/* ========================================
-   BOTÓN DE QUITAR RESALTADO
-======================================== */
-.selection-menu-btn-danger {
-    background: rgba(255, 255, 255, 0.06);
-    color: rgba(255, 255, 255, 0.92);
-    font-size: 0.96rem;
-    font-weight: 700;
-}
-
-.selection-menu-btn-danger:hover {
-    background: rgba(239, 68, 68, 0.18);
-}
-
-.selection-menu-btn-danger:active {
-    transform: scale(0.94);
-}
-
-/* ========================================
-   ESTADO CARGA / DESHABILITADO
-======================================== */
-.selection-menu-btn:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-    transform: none;
-}
-
-/* ========================================
-   FLECHA DEL MENÚ
-======================================== */
-.selection-menu-arrow {
-    position: absolute;
-    width: 0.72rem;
-    height: 0.72rem;
-    background: rgba(22, 28, 36, 0.96);
-    transform: rotate(45deg);
-    border-radius: 2px;
-    z-index: -1;
-}
-
-.selection-menu-arrow-top {
-    top: -0.28rem;
-    left: 50%;
-    margin-left: -0.36rem;
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.selection-menu-arrow-bottom {
-    bottom: -0.28rem;
-    left: 50%;
-    margin-left: -0.36rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-/* ========================================
-   AJUSTES PARA TEMA CLARO
-======================================== */
-body.light-mode .selection-menu {
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    box-shadow:
-        0 12px 30px rgba(15, 23, 42, 0.16),
-        0 2px 10px rgba(15, 23, 42, 0.08);
-}
-
-body.light-mode .selection-menu-btn {
-    background: rgba(15, 23, 42, 0.06);
-    color: #1e293b;
-}
-
-body.light-mode .selection-menu-btn:hover {
-    background: rgba(15, 23, 42, 0.1);
-}
-
-body.light-mode .selection-menu-btn.is-active {
-    background: rgba(15, 23, 42, 0.12);
-}
-
-body.light-mode .selection-menu-btn[data-role="highlight-yellow"].is-active {
-    background: rgba(250, 204, 21, 0.26);
-    box-shadow:
-        inset 0 0 0 1px rgba(202, 138, 4, 0.28),
-        0 0 0 1px rgba(202, 138, 4, 0.06);
-}
-
-body.light-mode .selection-menu-btn[data-role="highlight-blue"].is-active {
-    background: rgba(96, 165, 250, 0.24);
-    box-shadow:
-        inset 0 0 0 1px rgba(37, 99, 235, 0.24),
-        0 0 0 1px rgba(37, 99, 235, 0.05);
-}
-
-body.light-mode .selection-menu-btn-danger {
-    background: rgba(15, 23, 42, 0.05);
-    color: #334155;
-}
-
-body.light-mode .selection-menu-btn-danger:hover {
-    background: rgba(239, 68, 68, 0.14);
-    color: #b91c1c;
-}
-
-body.light-mode .selection-menu-arrow {
-    background: rgba(255, 255, 255, 0.96);
-}
-
-body.light-mode .selection-menu-arrow-top {
-    border-left: 1px solid rgba(15, 23, 42, 0.08);
-    border-top: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-body.light-mode .selection-menu-arrow-bottom {
-    border-right: 1px solid rgba(15, 23, 42, 0.08);
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
-}
-
-/* ========================================
-   MÓVIL
-======================================== */
-@media (max-width: 640px) {
-    .selection-menu {
-        gap: 0.38rem;
-        padding: 0.38rem 0.45rem;
-    }
-
-    .selection-menu-btn {
-        width: 2.2rem;
-        height: 2.2rem;
-        font-size: 0.96rem;
-    }
-}
-
 mark.user-highlight {
     padding: 0.08em 0.12em;
     border-radius: 0.3em;
@@ -2633,35 +2365,6 @@ body.dark-mode mark.user-highlight-yellow {
 body.dark-mode mark.user-highlight-blue {
     background: rgba(96, 165, 250, 0.16);
     box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.12);
-}
-
-@media (max-width: 480px) {
-    .selection-menu {
-        padding: 0.4rem 0.48rem;
-        gap: 0.34rem;
-    }
-
-    .selection-menu-btn {
-        width: 2.45rem;
-        height: 2.45rem;
-        font-size: 1rem;
-    }
-
-    .selection-menu-btn-danger {
-        font-size: 0.98rem;
-    }
-}
-
-@media (max-width: 380px) {
-    .selection-menu-btn {
-        width: 2.25rem;
-        height: 2.25rem;
-        font-size: 0.94rem;
-    }
-
-    .selection-menu-btn-danger {
-        font-size: 0.92rem;
-    }
 }
 
 /* ========================================
