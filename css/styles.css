@@ -1566,8 +1566,8 @@ body.reading-mode .reading-text {
     right: 0;
     height: calc(var(--nav-height) + env(safe-area-inset-bottom));
     background-color: var(--surface-color);
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
     z-index: 10;
@@ -1581,22 +1581,27 @@ body.reading-mode .reading-text {
     color: var(--text-muted);
     font-family: var(--font-ui);
     display: flex;
-    flex: 1 1 0;
-    min-width: 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: auto;
+    width: 100%;
+    min-width: 0;
     height: 100%;
     cursor: pointer;
     transition: color 0.2s;
-    padding: 0;
+    padding: 0 2px;
 }
 
 .nav-btn span {
-    font-size: 0.7rem;
+    display: block;
+    width: 100%;
+    font-size: 0.68rem;
     margin-top: 4px;
     font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .nav-btn.active {
@@ -1608,13 +1613,14 @@ body.reading-mode .reading-text {
     height: 22px;
 }
 
+.nav-btn svg {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+}
+
 .nav-btn-community {
     position: relative;
-    display: flex;
-    flex: 1 1 0;
-    min-width: 0;
-    flex-direction: column;
-    align-items: center;
 }
 
 .community-badge {
