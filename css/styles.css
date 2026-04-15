@@ -86,8 +86,13 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
-    z-index: 10;
-    transition: background-color 0.3s ease;
+    z-index: 1100;
+    transition:
+        background-color 0.22s ease,
+        transform 0.22s ease,
+        min-height 0.22s ease,
+        box-shadow 0.22s ease,
+        opacity 0.22s ease;
 }
 
 .compact-header {
@@ -186,6 +191,40 @@ body.dark-mode .header-settings-btn.active {
 
 body.dark-mode .header-settings-btn:hover {
     background: rgba(255, 255, 255, 0.08);
+}
+
+body.reading-scroll-compact .app-header {
+    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
+}
+
+body.reading-scroll-compact .compact-header {
+    min-height: 52px;
+    padding: 8px 14px 7px;
+}
+
+body.reading-scroll-compact .compact-header h1 {
+    font-size: 1.02rem;
+    line-height: 1.05;
+}
+
+body.reading-scroll-compact .compact-header p {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    margin: 0;
+    font-size: 0;
+}
+
+body.reading-scroll-compact .header-settings-btn {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.92);
+}
+
+body.reading-scroll-compact .floating-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-12px);
 }
 
 .floating-controls {
@@ -1572,7 +1611,10 @@ body.reading-mode .reading-text {
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
     z-index: 10;
     padding-bottom: env(safe-area-inset-bottom);
-    transition: background-color 0.3s ease;
+    transition:
+        background-color 0.3s ease,
+        transform 0.22s ease,
+        opacity 0.22s ease;
 }
 
 .nav-btn {
@@ -1641,6 +1683,17 @@ body.reading-mode .reading-text {
 
 body.dark-mode .community-badge {
     box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95);
+}
+
+body.reading-scroll-compact .bottom-nav {
+    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+    pointer-events: none;
+}
+
+body.reading-scroll-compact .home-reading-bar {
+    transform: translate(-50%, calc(100% + 18px));
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* ========================================
@@ -2082,7 +2135,7 @@ body.dark-mode .community-reaction-btn {
     position: fixed;
     left: 50%;
     bottom: calc(var(--nav-height) + 4px + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
+    transform: translate(-50%, 0);
     width: min(92vw, 420px);
     height: 44px;
     padding: 0 8px;
@@ -2099,6 +2152,7 @@ body.dark-mode .community-reaction-btn {
     -webkit-backdrop-filter: blur(14px);
 
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+    transition: transform 0.22s ease, opacity 0.22s ease;
 }
 
 .home-reading-bar-btn {
