@@ -242,13 +242,8 @@ const App = {
 // Estado de render y controles
 renderScheduled: false,
 controlsCollapsed: false,
-selectionMenuVisible: false,
 selectionUpdateTimer: null,
 selectionHideTimer: null,
-selectionViewportCleanup: null,
-selectionForceRetryTimer: null,
-selectionPositionRaf: null,
-selectionLastPlacement: null,
 isSelecting: false,
 pushListenersReady: false,
 themeListenerReady: false,
@@ -1632,57 +1627,6 @@ getSelectionContext: function() {
     };
 },
 
-getSelectionAnchorRect: function(range) {
-    if (!range) return null;
-
-    const rects = Array.from(range.getClientRects()).filter(rect => rect.width > 0 && rect.height > 0);
-
-    if (rects.length) {
-        return rects[rects.length - 1];
-    }
-
-    const fallback = range.getBoundingClientRect();
-    if (fallback) return fallback;
-
-    return null;
-},
-
-scheduleSelectionMenuUpdate: function(forceRetry = false) {
-    if (this.selectionUpdateTimer) {
-        clearTimeout(this.selectionUpdateTimer);
-        this.selectionUpdateTimer = null;
-    }
-
-    if (this.selectionForceRetryTimer) {
-        clearTimeout(this.selectionForceRetryTimer);
-        this.selectionForceRetryTimer = null;
-    }
-
-    const delay = isIOSDevice() ? 110 : isAndroidDevice() ? 150 : 30;
-
-    const runUpdate = (retry = 0) => {
-        const context = this.getSelectionContext();
-
-        if (context) {
-            this.ensureSelectionMenu(context);
-            return;
-        }
-
-        if (forceRetry && isAndroidDevice() && retry < 8) {
-            this.selectionForceRetryTimer = setTimeout(() => {
-                runUpdate(retry + 1);
-            }, 70);
-            return;
-        }
-
-        this.removeSelectionMenu();
-    };
-
-    this.selectionUpdateTimer = setTimeout(() => {
-        runUpdate(0);
-    }, delay);
-},
-
 restoreHighlightsInDOM: function(dateStr) {
     const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
     const container = shell ? shell.querySelector('.selection-surface') : null;
@@ -1786,7 +1730,7 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     this.saveHighlights(dateStr, highlights);
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
     window.getSelection()?.removeAllRanges();
-    this.removeSelectionMenu();
+    this.hideSelectionPanel();
     this.rerenderCurrentReadingView(dateStr);
 },
 
@@ -1836,56 +1780,46 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
     );
 
     window.getSelection()?.removeAllRanges();
-    this.removeSelectionMenu();
+    this.hideSelectionPanel();
     this.rerenderCurrentReadingView(dateStr);
 },
 
-// ========================================
-// SISTEMA DE SELECCIÓN PROFESIONAL
-// ========================================
-
-ensureSelectionMenu: function(context) {
-    let menu = document.getElementById('selection-menu');
+showSelectionPanel: function(context) {
+    let panel = document.getElementById('selection-panel');
 
     const highlightState = this.getSelectionHighlightState(context.text, context.dateStr);
 
-    if (!menu) {
-        menu = document.createElement('div');
-        menu.id = 'selection-menu';
-        menu.className = 'selection-menu';
-        menu.setAttribute('data-selection-active', 'true');
+    if (!panel) {
+        panel = document.createElement('div');
+        panel.id = 'selection-panel';
+        panel.className = 'selection-panel';
 
-        const yellowBtn = document.createElement('button');
-        yellowBtn.className = 'selection-menu-btn';
-        yellowBtn.type = 'button';
-        yellowBtn.innerHTML = '🟡';
-        yellowBtn.title = 'Resaltar en amarillo';
-        yellowBtn.setAttribute('data-role', 'highlight-yellow');
-        yellowBtn.addEventListener('click', (e) => {
+        panel.innerHTML = `
+            <div class="selection-panel-backdrop"></div>
+            <div class="selection-panel-sheet">
+                <button class="selection-panel-btn" type="button" data-role="highlight-yellow" title="Resaltar en amarillo">🟡</button>
+                <button class="selection-panel-btn" type="button" data-role="highlight-blue" title="Resaltar en azul">🔵</button>
+                <button class="selection-panel-btn" type="button" data-role="copy" title="Copiar">📋</button>
+                <button class="selection-panel-btn selection-panel-btn-danger" type="button" data-role="remove-highlight" title="Quitar resaltado">✕</button>
+                <button class="selection-panel-btn" type="button" data-role="close" title="Cerrar">↓</button>
+            </div>
+        `;
+
+        document.body.appendChild(panel);
+
+        panel.querySelector('[data-role="highlight-yellow"]').addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.saveSelectedHighlight(this.currentSelectedText, 'yellow', this.currentSelectionDate);
         });
 
-        const blueBtn = document.createElement('button');
-        blueBtn.className = 'selection-menu-btn';
-        blueBtn.type = 'button';
-        blueBtn.innerHTML = '🔵';
-        blueBtn.title = 'Resaltar en azul';
-        blueBtn.setAttribute('data-role', 'highlight-blue');
-        blueBtn.addEventListener('click', (e) => {
+        panel.querySelector('[data-role="highlight-blue"]').addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
             this.saveSelectedHighlight(this.currentSelectedText, 'blue', this.currentSelectionDate);
         });
 
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'selection-menu-btn';
-        copyBtn.type = 'button';
-        copyBtn.innerHTML = '📋';
-        copyBtn.title = 'Copiar texto';
-        copyBtn.setAttribute('data-role', 'copy');
-        copyBtn.addEventListener('click', async (e) => {
+        panel.querySelector('[data-role="copy"]').addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -1896,28 +1830,22 @@ ensureSelectionMenu: function(context) {
                 this.showToast('No se pudo copiar');
             }
 
+            this.hideSelectionPanel();
             window.getSelection()?.removeAllRanges();
-            this.removeSelectionMenu();
         });
 
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'selection-menu-btn selection-menu-btn-danger';
-        removeBtn.type = 'button';
-        removeBtn.innerHTML = '✕';
-        removeBtn.title = 'Quitar resaltado';
-        removeBtn.setAttribute('data-role', 'remove-highlight');
-        removeBtn.addEventListener('click', (e) => {
+        panel.querySelector('[data-role="remove-highlight"]').addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
             const state = this.getSelectionHighlightState(this.currentSelectedText, this.currentSelectionDate);
 
             if (!state.exists) {
-    this.showToast('No se encontró un resaltado guardado para esa selección');
-    window.getSelection()?.removeAllRanges();
-    this.removeSelectionMenu();
-    return;
-}
+                this.showToast('No se encontró un resaltado guardado para esa selección');
+                this.hideSelectionPanel();
+                window.getSelection()?.removeAllRanges();
+                return;
+            }
 
             if (state.colors.length === 1) {
                 this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate, state.colors[0]);
@@ -1927,38 +1855,29 @@ ensureSelectionMenu: function(context) {
             this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate);
         });
 
-        menu.appendChild(yellowBtn);
-        menu.appendChild(blueBtn);
-        menu.appendChild(copyBtn);
-        menu.appendChild(removeBtn);
-
-        document.body.appendChild(menu);
-
-        requestAnimationFrame(() => {
-            menu.classList.add('visible');
+        panel.querySelector('[data-role="close"]').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
         });
 
-        this.bindSelectionViewportTracking(menu);
+        panel.querySelector('.selection-panel-backdrop').addEventListener('click', () => {
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+        });
     }
 
     this.currentSelectionRange = context.range.cloneRange();
     this.currentSelectionDate = context.dateStr;
     this.currentSelectedText = context.text;
 
-    const yellowBtn = menu.querySelector('[data-role="highlight-yellow"]');
-    const blueBtn = menu.querySelector('[data-role="highlight-blue"]');
-    const removeBtn = menu.querySelector('[data-role="remove-highlight"]');
+    const yellowBtn = panel.querySelector('[data-role="highlight-yellow"]');
+    const blueBtn = panel.querySelector('[data-role="highlight-blue"]');
+    const removeBtn = panel.querySelector('[data-role="remove-highlight"]');
 
-    if (yellowBtn) {
-        yellowBtn.classList.toggle('is-active', highlightState.colors.includes('yellow'));
-    }
-
-    if (blueBtn) {
-        blueBtn.classList.toggle('is-active', highlightState.colors.includes('blue'));
-    }
-
-    if (removeBtn) {
-    removeBtn.style.display = 'inline-flex';
+    yellowBtn.classList.toggle('is-active', highlightState.colors.includes('yellow'));
+    blueBtn.classList.toggle('is-active', highlightState.colors.includes('blue'));
 
     if (highlightState.colors.length === 1) {
         const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
@@ -1966,153 +1885,16 @@ ensureSelectionMenu: function(context) {
     } else {
         removeBtn.title = 'Quitar resaltado';
     }
-}
 
-    this.positionSelectionMenu(menu, context.range);
-    this.selectionMenuVisible = true;
+    requestAnimationFrame(() => {
+        panel.classList.add('visible');
+    });
 },
 
-positionSelectionMenu: function(menu, range) {
-    const rect = this.getSelectionAnchorRect(range);
-    if (!rect) return;
-
-    const vv = window.visualViewport;
-    const viewportWidth = vv ? vv.width : window.innerWidth;
-    const viewportHeight = vv ? vv.height : window.innerHeight;
-    const viewportLeft = vv ? vv.offsetLeft + window.scrollX : window.scrollX;
-    const viewportTop = vv ? vv.offsetTop + window.scrollY : window.scrollY;
-
-    const menuRect = menu.getBoundingClientRect();
-    const safe = 12;
-    const gap = 10;
-
-    let left = rect.left + window.scrollX + (rect.width / 2) - (menuRect.width / 2);
-    left = Math.max(
-        viewportLeft + safe,
-        Math.min(left, viewportLeft + viewportWidth - menuRect.width - safe)
-    );
-
-    const selectionCenterY = rect.top + window.scrollY + (rect.height / 2);
-    const viewportCenterY = viewportTop + (viewportHeight / 2);
-
-    const preferAbove = selectionCenterY > viewportCenterY;
-
-    let top;
-    let arrowPosition;
-
-    if (preferAbove) {
-        top = rect.top + window.scrollY - menuRect.height - gap;
-        arrowPosition = 'bottom';
-
-        if (top < viewportTop + safe) {
-            top = rect.bottom + window.scrollY + gap;
-            arrowPosition = 'top';
-        }
-    } else {
-        top = rect.bottom + window.scrollY + gap;
-        arrowPosition = 'top';
-
-        if (top + menuRect.height > viewportTop + viewportHeight - safe) {
-            top = rect.top + window.scrollY - menuRect.height - gap;
-            arrowPosition = 'bottom';
-        }
-    }
-
-    top = Math.max(
-        viewportTop + safe,
-        Math.min(top, viewportTop + viewportHeight - menuRect.height - safe)
-    );
-
-    menu.style.left = `${left}px`;
-    menu.style.top = `${top}px`;
-
-    this.selectionLastPlacement = { left, top, arrowPosition };
-    this.updateMenuArrow(menu, arrowPosition);
-},
-
-bindSelectionViewportTracking: function(menu) {
-    if (this.selectionViewportCleanup) {
-        this.selectionViewportCleanup();
-        this.selectionViewportCleanup = null;
-    }
-
-    const schedulePositionUpdate = () => {
-        if (this.selectionPositionRaf) return;
-
-        this.selectionPositionRaf = requestAnimationFrame(() => {
-            this.selectionPositionRaf = null;
-
-            const context = this.getSelectionContext();
-            if (!context) {
-                this.removeSelectionMenu();
-                return;
-            }
-
-            this.currentSelectionRange = context.range.cloneRange();
-            this.currentSelectionDate = context.dateStr;
-            this.currentSelectedText = context.text;
-
-            this.positionSelectionMenu(menu, context.range);
-        });
-    };
-
-    const onPointerDownOutside = (e) => {
-        if (!menu.contains(e.target)) {
-            setTimeout(() => {
-                const context = this.getSelectionContext();
-                if (!context) {
-                    this.removeSelectionMenu();
-                }
-            }, 30);
-        }
-    };
-
-    window.addEventListener('scroll', schedulePositionUpdate, { passive: true });
-    window.addEventListener('resize', schedulePositionUpdate, { passive: true });
-
-    if (window.visualViewport) {
-        window.visualViewport.addEventListener('scroll', schedulePositionUpdate, { passive: true });
-        window.visualViewport.addEventListener('resize', schedulePositionUpdate, { passive: true });
-    }
-
-    document.addEventListener('pointerdown', onPointerDownOutside, true);
-
-    this.selectionViewportCleanup = () => {
-        window.removeEventListener('scroll', schedulePositionUpdate);
-        window.removeEventListener('resize', schedulePositionUpdate);
-
-        if (window.visualViewport) {
-            window.visualViewport.removeEventListener('scroll', schedulePositionUpdate);
-            window.visualViewport.removeEventListener('resize', schedulePositionUpdate);
-        }
-
-        document.removeEventListener('pointerdown', onPointerDownOutside, true);
-
-        if (this.selectionPositionRaf) {
-            cancelAnimationFrame(this.selectionPositionRaf);
-            this.selectionPositionRaf = null;
-        }
-    };
-},
-
-updateMenuArrow: function(menu, position) {
-    const existingArrow = menu.querySelector('.selection-menu-arrow');
-    if (existingArrow) existingArrow.remove();
-
-    const arrow = document.createElement('div');
-    arrow.className = `selection-menu-arrow selection-menu-arrow-${position}`;
-    menu.appendChild(arrow);
-},
-
-removeSelectionMenu: function() {
-    const menu = document.getElementById('selection-menu');
-    if (menu) {
-        menu.remove();
-    }
-
-    if (this.selectionViewportCleanup) {
-        this.selectionViewportCleanup();
-        this.selectionViewportCleanup = null;
+hideSelectionPanel: function() {
+    const panel = document.getElementById('selection-panel');
+    if (panel) {
+        panel.classList.remove('visible');
     }
 
     if (this.selectionUpdateTimer) {
@@ -2125,21 +1907,29 @@ removeSelectionMenu: function() {
         this.selectionHideTimer = null;
     }
 
-    if (this.selectionForceRetryTimer) {
-        clearTimeout(this.selectionForceRetryTimer);
-        this.selectionForceRetryTimer = null;
-    }
-
-    if (this.selectionPositionRaf) {
-        cancelAnimationFrame(this.selectionPositionRaf);
-        this.selectionPositionRaf = null;
-    }
-
-    this.selectionLastPlacement = null;
-    this.selectionMenuVisible = false;
     this.currentSelectionRange = null;
     this.currentSelectedText = null;
     this.currentSelectionDate = null;
+},
+
+scheduleSelectionPanelUpdate: function() {
+    if (this.selectionUpdateTimer) {
+        clearTimeout(this.selectionUpdateTimer);
+        this.selectionUpdateTimer = null;
+    }
+
+    const delay = isIOSDevice() ? 120 : isAndroidDevice() ? 160 : 50;
+
+    this.selectionUpdateTimer = setTimeout(() => {
+        const context = this.getSelectionContext();
+
+        if (!context) {
+            this.hideSelectionPanel();
+            return;
+        }
+
+        this.showSelectionPanel(context);
+    }, delay);
 },
     
     // ========================================
@@ -2184,7 +1974,7 @@ removeSelectionMenu: function() {
     this.saveCommunityScrollPosition();
     }
     
-this.removeSelectionMenu();
+this.hideSelectionPanel();
 this.isSelecting = false;
 
 if (this.currentView === 'calendar' && view !== 'calendar') {
@@ -3453,10 +3243,6 @@ if (readingEl) {
     if (selection && selection.toString().trim()) {
         return;
     }
-
-    if (this.selectionMenuVisible) {
-        return;
-    }
 }
            
   const openBibleBookBtn = e.target.closest('[data-action="open-bible-book"]');
@@ -4016,15 +3802,15 @@ document.addEventListener('selectionchange', () => {
 
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
         this.isSelecting = false;
-        this.removeSelectionMenu();
+        this.hideSelectionPanel();
         return;
     }
 
     if (!surface) {
-    this.isSelecting = false;
-    this.removeSelectionMenu();
-    return;
-}
+        this.isSelecting = false;
+        this.hideSelectionPanel();
+        return;
+    }
 
     const range = selection.getRangeAt(0);
     const commonAncestor = range.commonAncestorContainer;
@@ -4034,7 +3820,8 @@ document.addEventListener('selectionchange', () => {
 
     if (!ancestorElement || !surface.contains(ancestorElement)) {
         this.isSelecting = false;
-        this.removeSelectionMenu();
+        this.hideSelectionPanel();
+        return;
     }
 });
 
@@ -4044,7 +3831,7 @@ const finishSelection = () => {
 
         if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
             this.isSelecting = false;
-            this.removeSelectionMenu();
+            this.hideSelectionPanel();
             return;
         }
 
@@ -4057,13 +3844,13 @@ const finishSelection = () => {
 
         if (!surface || !ancestorElement || !surface.contains(ancestorElement)) {
             this.isSelecting = false;
-            this.removeSelectionMenu();
+            this.hideSelectionPanel();
             return;
         }
 
         this.isSelecting = false;
-        this.scheduleSelectionMenuUpdate(true);
-    }, isAndroidDevice() ? 120 : 60);
+        this.scheduleSelectionPanelUpdate();
+    }, isAndroidDevice() ? 140 : 90);
 };
 
 document.addEventListener('pointerup', finishSelection, true);
