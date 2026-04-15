@@ -159,7 +159,6 @@ const App = {
     openReplyPostId: null,
     replyDrafts: {},
     replyCharLimit: 300,
-    currentView: 'home',
     previousView: null,
     
     calendarInitialized: false,
@@ -256,6 +255,12 @@ selectionLastPlacement: null,
 isSelecting: false,
 pushListenersReady: false,
 themeListenerReady: false,
+lastScrollY: 0,
+scrollDirection: 'up',
+scrollTicking: false,
+scrollCompactEnabled: false,
+scrollCompactActive: false,
+scrollIdleTimer: null,
     
     // ========================================
     // INICIALIZACIÓN
@@ -277,11 +282,12 @@ themeListenerReady: false,
         this.currentVersion = savedVersion;
     }
        
-     this.initTheme();
-    this.initNotifications();
-    this.setupSWCommunication();
-    this.bindEvents();
-    this.bindFloatingToggle();
+    this.initTheme();
+this.initNotifications();
+this.setupSWCommunication();
+this.bindEvents();
+this.bindFloatingToggle();
+this.bindScrollChrome();
     await this.initAuth();
 await this.loadData();
 await this.refreshCommunityBadge();
@@ -567,6 +573,80 @@ toggleFloatingControls: function() {
     if (this.$floatingToggle) {
         this.$floatingToggle.textContent = this.controlsCollapsed ? '☰' : '◀';
     }
+},
+
+isReadingLikeView: function(view = this.currentView) {
+    return ['home', 'reading', 'bible-reading'].includes(view);
+},
+
+setScrollCompactState: function(isCompact) {
+    this.scrollCompactActive = !!isCompact;
+    document.body.classList.toggle('reading-scroll-compact', this.scrollCompactActive);
+},
+
+resetScrollChrome: function() {
+    this.lastScrollY = window.scrollY || window.pageYOffset || 0;
+    this.scrollDirection = 'up';
+    this.scrollTicking = false;
+    this.scrollCompactEnabled = this.isReadingLikeView();
+    this.setScrollCompactState(false);
+
+    if (this.scrollIdleTimer) {
+        clearTimeout(this.scrollIdleTimer);
+        this.scrollIdleTimer = null;
+    }
+},
+
+handleScrollChrome: function() {
+    if (!this.scrollCompactEnabled) {
+        this.setScrollCompactState(false);
+        return;
+    }
+
+    const currentY = window.scrollY || window.pageYOffset || 0;
+    const diff = currentY - this.lastScrollY;
+    const threshold = 10;
+    const compactStartOffset = 80;
+
+    if (Math.abs(diff) < threshold) {
+        return;
+    }
+
+    if (diff > 0 && currentY > compactStartOffset) {
+        this.scrollDirection = 'down';
+        this.setScrollCompactState(true);
+    } else if (diff < 0) {
+        this.scrollDirection = 'up';
+        this.setScrollCompactState(false);
+    }
+
+    this.lastScrollY = currentY;
+
+    if (this.scrollIdleTimer) {
+        clearTimeout(this.scrollIdleTimer);
+    }
+
+    this.scrollIdleTimer = setTimeout(() => {
+        if (this.scrollDirection === 'up') {
+            this.setScrollCompactState(false);
+        }
+    }, 120);
+},
+
+bindScrollChrome: function() {
+    window.addEventListener('scroll', () => {
+        if (!this.scrollCompactEnabled) return;
+        if (this.readingMode) return;
+
+        if (this.scrollTicking) return;
+
+        this.scrollTicking = true;
+
+        requestAnimationFrame(() => {
+            this.handleScrollChrome();
+            this.scrollTicking = false;
+        });
+    }, { passive: true });
 },
 
 bindFloatingToggle: function() {
@@ -2116,17 +2196,20 @@ removeSelectionMenu: function() {
     }
     
    this.resetReadingMode();
-    this.removeSelectionMenu();
-    this.isSelecting = false;
-    if (this.currentView === 'calendar' && view !== 'calendar') {
+this.removeSelectionMenu();
+this.isSelecting = false;
+
+if (this.currentView === 'calendar' && view !== 'calendar') {
     this.saveCalendarScroll();
-    }
-    if (view !== 'settings' && oldView !== 'settings') {
+}
+
+if (view !== 'settings' && oldView !== 'settings') {
     this.previousView = oldView;
 }
 
 this.currentView = view;
 this.updateNavUI();
+this.resetScrollChrome();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
         btn.classList.toggle(
@@ -2184,10 +2267,6 @@ updateNavUI: function() {
             }
         }
     });
-
-    if (this.$headerSettingsBtn) {
-        this.$headerSettingsBtn.classList.toggle('active', this.currentView === 'settings');
-    }
 },
     
     formatDateEs: function(dateStr) {
