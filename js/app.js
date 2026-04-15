@@ -3823,6 +3823,8 @@ document.addEventListener('selectionchange', () => {
         this.hideSelectionPanel();
         return;
     }
+
+    this.scheduleSelectionPanelUpdate();
 });
 
 const finishSelection = () => {
