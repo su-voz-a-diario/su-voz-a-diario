@@ -1759,7 +1759,6 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     this.hideSelectionPanel();
 window.getSelection()?.removeAllRanges();
 this.rerenderCurrentReadingView(dateStr, true);
-
 },
 
 getSelectionHighlightState: function(selectedText, dateStr) {
