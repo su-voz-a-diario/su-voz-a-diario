@@ -2401,7 +2401,7 @@ body.selection-panel-open {
     right: 0;
     bottom: 0;
 
-    height: 80%;
+    height: min(58vh, 460px);
     background: var(--surface-color);
 
     border-radius: 20px 20px 0 0;
