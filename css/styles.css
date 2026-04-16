@@ -1588,14 +1588,28 @@ body.dark-mode .toast-message {
 
 .community-badge {
     position: absolute;
-    top: 4px;
-    right: 18px;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    background: #e53935;
-    box-shadow: 0 0 0 1.5px rgba(255,255,255,0.9);
-    z-index: 5;
+    top: 2px;
+    right: 10px;
+
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+
+    border-radius: 999px;
+
+    background: rgba(229, 57, 53, 0.9);
+    color: #fff;
+
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 18px;
+    text-align: center;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
 }
 
 .community-badge[hidden] {
@@ -1603,7 +1617,8 @@ body.dark-mode .toast-message {
 }
 
 body.dark-mode .community-badge {
-    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.95);
+    background: rgba(239, 68, 68, 0.95);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
 
 /* ========================================
