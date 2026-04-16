@@ -1756,15 +1756,9 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     }
 
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
-    this.rerenderCurrentReadingView(dateStr);
-
-    setTimeout(() => {
-        const context = this.getSelectionContext();
-        if (context) {
-            this.showSelectionPanel(context);
-        }
-    }, 60);
-},
+    this.hideSelectionPanel();
+window.getSelection()?.removeAllRanges();
+this.rerenderCurrentReadingView(dateStr, true);
 
 getSelectionHighlightState: function(selectedText, dateStr) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
@@ -1784,6 +1778,7 @@ const matching = highlights.filter(item =>
 
 removeSelectedHighlight: function(selectedText, dateStr, color = null) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
+    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
 
     if (!cleanText || cleanText.length < 3) {
         this.showToast('Selecciona un texto válido');
@@ -1792,8 +1787,11 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
 
     const highlights = this.getHighlights(dateStr);
     const filtered = highlights.filter(item => {
-        if (item.text !== cleanText) return true;
+        const sameText = normalize(item.text) === normalize(cleanText);
+
+        if (!sameText) return true;
         if (color && item.color !== color) return true;
+
         return false;
     });
 
@@ -1823,17 +1821,9 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
             : 'Resaltado eliminado'
     );
 
-    this.rerenderCurrentReadingView(dateStr);
-
-    setTimeout(() => {
-        const context = this.getSelectionContext();
-        if (context) {
-            this.showSelectionPanel(context);
-        } else {
-            this.hideSelectionPanel();
-            window.getSelection()?.removeAllRanges();
-        }
-    }, 60);
+    this.hideSelectionPanel();
+    window.getSelection()?.removeAllRanges();
+    this.rerenderCurrentReadingView(dateStr, true);
 },
 
 showSelectionPanel: function(context) {
@@ -2267,11 +2257,13 @@ restoreCalendarPosition: function() {
         this.renderViewContent(reading, false);
     },
 
-rerenderCurrentReadingView: async function(dateStr = null) {
+rerenderCurrentReadingView: async function(dateStr = null, force = false) {
     const panelOpen = this.$selectionPanel?.classList.contains('visible');
-    if (panelOpen) return;
+
+    if (!force && panelOpen) return;
+
     const selection = window.getSelection();
-    if (this.isSelecting && selection && !selection.isCollapsed) return;
+    if (!force && this.isSelecting && selection && !selection.isCollapsed) return;
 
     if (this.currentView === 'home') {
         this.renderHome();
