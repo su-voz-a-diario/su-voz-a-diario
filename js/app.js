@@ -1799,15 +1799,34 @@ showSelectionPanel: function(context) {
         panel.className = 'selection-panel';
 
         panel.innerHTML = `
-            <div class="selection-panel-backdrop"></div>
-            <div class="selection-panel-sheet">
-                <button class="selection-panel-btn" type="button" data-role="highlight-yellow" title="Resaltar en amarillo">🟡</button>
-                <button class="selection-panel-btn" type="button" data-role="highlight-blue" title="Resaltar en azul">🔵</button>
-                <button class="selection-panel-btn" type="button" data-role="copy" title="Copiar">📋</button>
-                <button class="selection-panel-btn selection-panel-btn-danger" type="button" data-role="remove-highlight" title="Quitar resaltado">✕</button>
-                <button class="selection-panel-btn" type="button" data-role="close" title="Cerrar">↓</button>
+    <div class="selection-panel-backdrop"></div>
+
+    <div class="selection-sheet-full">
+
+        <!-- HEADER -->
+        <div class="selection-sheet-header">
+            <div class="selection-actions-left">
+                <button class="color-btn yellow" data-role="highlight-yellow"></button>
+                <button class="color-btn blue" data-role="highlight-blue"></button>
+                <button class="action-btn" data-role="copy">Copiar</button>
+                <button class="action-btn danger" data-role="remove-highlight">Quitar</button>
             </div>
-        `;
+
+            <button class="close-btn" data-role="close">✕</button>
+        </div>
+
+        <!-- TEXTO SELECCIONADO -->
+        <div class="selection-preview">
+            ${this.escapeHtml(context.text)}
+        </div>
+
+        <!-- ZONA INFERIOR -->
+        <div class="selection-bottom">
+            <textarea placeholder="Agregar nota..."></textarea>
+        </div>
+
+    </div>
+`;
 
         document.body.appendChild(panel);
 
