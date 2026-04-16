@@ -1588,28 +1588,32 @@ body.dark-mode .toast-message {
 
 .community-badge {
     position: absolute;
-    top: 2px;
-    right: 10px;
+    top: 4px;
+    right: 8px;
+    z-index: 2;
 
-    min-width: 18px;
-    height: 18px;
+    min-width: 20px;
+    height: 20px;
     padding: 0 6px;
 
-    border-radius: 999px;
-
-    background: rgba(229, 57, 53, 0.9);
-    color: #fff;
-
-    font-size: 0.65rem;
-    font-weight: 700;
-    line-height: 18px;
-    text-align: center;
-
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
 
-    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    border-radius: 999px;
+    background: rgba(229, 57, 53, 0.92);
+    color: #ffffff;
+
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0;
+
+    white-space: nowrap;
+    text-align: center;
+
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
 }
 
 .community-badge[hidden] {
@@ -1617,8 +1621,10 @@ body.dark-mode .toast-message {
 }
 
 body.dark-mode .community-badge {
-    background: rgba(239, 68, 68, 0.95);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    background: rgba(248, 113, 113, 0.92);
+    color: #ffffff;
+    border-color: rgba(15, 17, 21, 0.82);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.34);
 }
 
 /* ========================================
@@ -1988,7 +1994,7 @@ body.dark-mode .about-feature {
 }
 
 .community-reaction-btn:hover {
-    transform: scale(1.06);
+    transform: none;
     opacity: 0.92;
 }
 
@@ -2372,7 +2378,7 @@ body.dark-mode .community-reply-item {
     pointer-events: auto;
 }
 
-body.selection-open {
+body.selection-panel-open {
     overflow: hidden;
 }
 
