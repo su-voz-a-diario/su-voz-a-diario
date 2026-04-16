@@ -148,7 +148,34 @@
             <span>Estadísticas</span>
         </button>
     </nav>
-    
+
+<div class="selection-panel" id="selectionPanel">
+  <div class="selection-panel-backdrop"></div>
+
+  <div class="selection-sheet-full">
+
+    <div class="selection-sheet-header">
+      <div class="selection-actions-left">
+        <button class="color-btn yellow" data-color="yellow"></button>
+        <button class="color-btn blue" data-color="blue"></button>
+
+        <button class="action-btn" id="copyBtn">Copiar</button>
+        <button class="action-btn danger" id="clearBtn">Quitar</button>
+      </div>
+
+      <button class="close-btn" id="closePanel">✕</button>
+    </div>
+
+    <div class="selection-preview" id="selectionPreview"></div>
+
+    <div class="selection-bottom">
+      <textarea id="selectionNote" placeholder="Escribe una nota..."></textarea>
+      <button class="btn-primary" id="saveNoteBtn">Guardar nota</button>
+    </div>
+
+  </div>
+</div>
+   
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script type="module">
