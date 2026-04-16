@@ -1624,6 +1624,7 @@ getSelectionContext: function() {
     if (!text || text.length < 3) return null;
 
     const range = selection.getRangeAt(0);
+    if (!document.body.contains(range.startContainer)) return null;
     const startSurface = this.getSelectionSurfaceFromNode(range.startContainer);
     const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
 
@@ -1658,6 +1659,7 @@ restoreHighlightsInDOM: function(dateStr) {
 },
 
 highlightTextInElement: function(container, text, color = 'yellow') {
+    if (container.querySelector('mark.user-highlight')) return;
     if (!text || !text.trim()) return;
 
     const searchText = text.trim().toLowerCase();
@@ -1768,7 +1770,11 @@ getSelectionHighlightState: function(selectedText, dateStr) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
     const highlights = this.getHighlights(dateStr);
 
-    const matching = highlights.filter(item => item.text === cleanText);
+    const normalize = str => str.replace(/\s+/g, ' ').trim().toLowerCase();
+
+const matching = highlights.filter(item =>
+    normalize(item.text) === normalize(cleanText)
+);
 
     return {
         exists: matching.length > 0,
@@ -2262,6 +2268,8 @@ restoreCalendarPosition: function() {
     },
 
 rerenderCurrentReadingView: async function(dateStr = null) {
+    const panelOpen = this.$selectionPanel?.classList.contains('visible');
+    if (panelOpen) return;
     const selection = window.getSelection();
     if (this.isSelecting && selection && !selection.isCollapsed) return;
 
@@ -3956,7 +3964,7 @@ document.addEventListener('selectionchange', () => {
 });
 
 const finishSelection = () => {
-    const delay = isAndroidDevice() ? 180 : isIOSDevice() ? 90 : 60;
+    const delay = isAndroidDevice() ? 250 : isIOSDevice() ? 90 : 60;
 
     setTimeout(() => {
         this.isSelecting = false;
