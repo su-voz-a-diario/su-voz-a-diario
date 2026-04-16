@@ -243,11 +243,13 @@ const App = {
 renderScheduled: false,
 controlsCollapsed: false,
 selectionUpdateTimer: null,
+selectionHideTimer: null,
 isSelecting: false,
 activeSelectionSurface: null,
 currentSelectionRange: null,
 currentSelectedText: null,
 currentSelectionDate: null,
+currentSelectionColorDraft: null,
 pushListenersReady: false,
 themeListenerReady: false,
 lastScrollY: 0,
@@ -264,6 +266,7 @@ scrollIdleTimer: null,
     console.log('[App] Inicializando...');
     
     this.cacheDOM();
+    this.bindSelectionPanelEvents();
     this.showAprilMessageIfNeeded();
     this.loadSettings();
     this.loadStreak();
@@ -315,6 +318,16 @@ cacheDOM: function() {
     this.$streakCount = document.getElementById('streak-count');
     this.$floatingControls = document.getElementById('floating-controls');
     this.$floatingToggle = document.getElementById('floating-toggle');
+
+    this.$selectionPanel = document.getElementById('selectionPanel');
+    this.$selectionBackdrop = this.$selectionPanel?.querySelector('.selection-panel-backdrop') || null;
+    this.$selectionPreview = document.getElementById('selectionPreview');
+    this.$selectionNote = document.getElementById('selectionNote');
+    this.$selectionCopyBtn = document.getElementById('copyBtn');
+    this.$selectionClearBtn = document.getElementById('clearBtn');
+    this.$selectionCloseBtn = document.getElementById('closePanel');
+    this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
+    this.$selectionColorButtons = Array.from(document.querySelectorAll('.color-btn'));
 },
 
     showAprilMessageIfNeeded: function() {
@@ -1730,12 +1743,25 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     }
 
     highlights.push({ text: cleanText, color });
-
     this.saveHighlights(dateStr, highlights);
+
+    this.currentSelectionColorDraft = color;
+
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            btn.classList.toggle('is-active', btn.getAttribute('data-color') === color);
+        });
+    }
+
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
-    window.getSelection()?.removeAllRanges();
-    this.hideSelectionPanel();
     this.rerenderCurrentReadingView(dateStr);
+
+    setTimeout(() => {
+        const context = this.getSelectionContext();
+        if (context) {
+            this.showSelectionPanel(context);
+        }
+    }, 60);
 },
 
 getSelectionHighlightState: function(selectedText, dateStr) {
@@ -1777,72 +1803,150 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
         this.saveHighlights(dateStr, filtered);
     }
 
+    this.currentSelectionColorDraft = null;
+
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            btn.classList.remove('is-active');
+        });
+    }
+
     this.showToast(
         color
             ? `Resaltado ${color === 'yellow' ? 'amarillo' : 'azul'} eliminado`
             : 'Resaltado eliminado'
     );
 
-    window.getSelection()?.removeAllRanges();
-    this.hideSelectionPanel();
     this.rerenderCurrentReadingView(dateStr);
+
+    setTimeout(() => {
+        const context = this.getSelectionContext();
+        if (context) {
+            this.showSelectionPanel(context);
+        } else {
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+        }
+    }, 60);
 },
 
 showSelectionPanel: function(context) {
-    let panel = document.getElementById('selection-panel');
+    const panel = this.$selectionPanel;
+    if (!panel) return;
 
     const highlightState = this.getSelectionHighlightState(context.text, context.dateStr);
 
-    if (!panel) {
-        panel = document.createElement('div');
-        panel.id = 'selection-panel';
-        panel.className = 'selection-panel';
+    this.currentSelectionRange = context.range.cloneRange();
+    this.currentSelectionDate = context.dateStr;
+    this.currentSelectedText = context.text;
+    this.activeSelectionSurface = context.surface;
 
-        panel.innerHTML = `
-    <div class="selection-panel-backdrop"></div>
+    if (this.$selectionPreview) {
+        this.$selectionPreview.textContent = context.text;
+    }
 
-    <div class="selection-sheet-full">
+    if (this.$selectionNote) {
+        this.$selectionNote.value = '';
+    }
 
-        <!-- HEADER -->
-        <div class="selection-sheet-header">
-            <div class="selection-actions-left">
-                <button class="color-btn yellow" data-role="highlight-yellow"></button>
-                <button class="color-btn blue" data-role="highlight-blue"></button>
-                <button class="action-btn" data-role="copy">Copiar</button>
-                <button class="action-btn danger" data-role="remove-highlight">Quitar</button>
-            </div>
+    this.currentSelectionColorDraft = highlightState.colors[0] || null;
 
-            <button class="close-btn" data-role="close">✕</button>
-        </div>
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            const color = btn.getAttribute('data-color');
+            btn.classList.toggle('is-active', highlightState.colors.includes(color));
+        });
+    }
 
-        <!-- TEXTO SELECCIONADO -->
-        <div class="selection-preview">
-            ${this.escapeHtml(context.text)}
-        </div>
+    if (this.$selectionClearBtn) {
+        if (highlightState.colors.length === 1) {
+            const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
+            this.$selectionClearBtn.title = `Quitar resaltado ${colorName}`;
+        } else {
+            this.$selectionClearBtn.title = 'Quitar resaltado';
+        }
+    }
 
-        <!-- ZONA INFERIOR -->
-        <div class="selection-bottom">
-            <textarea placeholder="Agregar nota..."></textarea>
-        </div>
+requestAnimationFrame(() => {
+    panel.classList.add('visible');
+    document.body.classList.add('selection-panel-open');
+    this.handleSelectionPanelLayout();
+});
+},
 
-    </div>
-`;
+hideSelectionPanel: function(clearStoredSelection = true) {
+    if (this.$selectionPanel) {
+        this.$selectionPanel.classList.remove('visible');
+    }
 
-        document.body.appendChild(panel);
+    document.body.classList.remove('selection-panel-open');
 
-        panel.querySelector('[data-role="highlight-yellow"]').addEventListener('click', (e) => {
+    if (this.selectionUpdateTimer) {
+        clearTimeout(this.selectionUpdateTimer);
+        this.selectionUpdateTimer = null;
+    }
+
+    if (this.selectionHideTimer) {
+        clearTimeout(this.selectionHideTimer);
+        this.selectionHideTimer = null;
+    }
+
+    if (clearStoredSelection) {
+        this.currentSelectionRange = null;
+        this.currentSelectedText = null;
+        this.currentSelectionDate = null;
+        this.activeSelectionSurface = null;
+        this.currentSelectionColorDraft = null;
+    }
+},
+
+saveSelectionNoteFromPanel: function() {
+    const dateStr = this.currentSelectionDate;
+    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+    const noteText = (this.$selectionNote?.value || '').trim();
+
+    if (!dateStr || !selectedText) {
+        this.showToast('No hay selección activa');
+        return;
+    }
+
+    if (!noteText) {
+        this.showToast('Escribe una nota');
+        return;
+    }
+
+    const note = this.getNote(dateStr);
+    const entry = `• "${selectedText}"\n${noteText}\n\n`;
+    note.aprendizaje = `${note.aprendizaje || ''}${entry}`.trim();
+
+    this.saveNote(dateStr, note);
+    this.showToast('Nota guardada');
+    this.hideSelectionPanel();
+    window.getSelection()?.removeAllRanges();
+    this.rerenderCurrentReadingView(dateStr);
+},
+
+bindSelectionPanelEvents: function() {
+    if (this._selectionPanelEventsBound) return;
+
+    if (this.$selectionBackdrop) {
+        this.$selectionBackdrop.addEventListener('click', () => {
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+        });
+    }
+
+    if (this.$selectionCloseBtn) {
+        this.$selectionCloseBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.saveSelectedHighlight(this.currentSelectedText, 'yellow', this.currentSelectionDate);
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
         });
+    }
 
-        panel.querySelector('[data-role="highlight-blue"]').addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.saveSelectedHighlight(this.currentSelectedText, 'blue', this.currentSelectionDate);
-        });
-
-        panel.querySelector('[data-role="copy"]').addEventListener('click', async (e) => {
+    if (this.$selectionCopyBtn) {
+        this.$selectionCopyBtn.addEventListener('click', async (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -1856,8 +1960,10 @@ showSelectionPanel: function(context) {
             this.hideSelectionPanel();
             window.getSelection()?.removeAllRanges();
         });
+    }
 
-        panel.querySelector('[data-role="remove-highlight"]').addEventListener('click', (e) => {
+    if (this.$selectionClearBtn) {
+        this.$selectionClearBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -1877,60 +1983,50 @@ showSelectionPanel: function(context) {
 
             this.removeSelectedHighlight(this.currentSelectedText, this.currentSelectionDate);
         });
+    }
 
-        panel.querySelector('[data-role="close"]').addEventListener('click', (e) => {
+    if (this.$selectionSaveNoteBtn) {
+        this.$selectionSaveNoteBtn.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.hideSelectionPanel();
-            window.getSelection()?.removeAllRanges();
-        });
-
-        panel.querySelector('.selection-panel-backdrop').addEventListener('click', () => {
-            this.hideSelectionPanel();
-            window.getSelection()?.removeAllRanges();
+            this.saveSelectionNoteFromPanel();
         });
     }
 
-    this.currentSelectionRange = context.range.cloneRange();
-    this.currentSelectionDate = context.dateStr;
-    this.currentSelectedText = context.text;
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
 
-    const yellowBtn = panel.querySelector('[data-role="highlight-yellow"]');
-    const blueBtn = panel.querySelector('[data-role="highlight-blue"]');
-    const removeBtn = panel.querySelector('[data-role="remove-highlight"]');
+                const color = btn.getAttribute('data-color');
+                if (!color) return;
 
-    yellowBtn.classList.toggle('is-active', highlightState.colors.includes('yellow'));
-    blueBtn.classList.toggle('is-active', highlightState.colors.includes('blue'));
-
-    if (highlightState.colors.length === 1) {
-        const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
-        removeBtn.title = `Quitar resaltado ${colorName}`;
-    } else {
-        removeBtn.title = 'Quitar resaltado';
+                this.saveSelectedHighlight(this.currentSelectedText, color, this.currentSelectionDate);
+            });
+        });
     }
 
-    requestAnimationFrame(() => {
-        panel.classList.add('visible');
-    });
+    this._selectionPanelEventsBound = true;
 },
 
-hideSelectionPanel: function(clearStoredSelection = true) {
-    const panel = document.getElementById('selection-panel');
-    if (panel) {
-        panel.classList.remove('visible');
-    }
+handleSelectionPanelLayout: function() {
+    const panel = this.$selectionPanel;
+    if (!panel) return;
 
-    if (this.selectionUpdateTimer) {
-        clearTimeout(this.selectionUpdateTimer);
-        this.selectionUpdateTimer = null;
-    }
+    const preview = this.$selectionPreview;
+    const selection = window.getSelection();
 
-    if (clearStoredSelection) {
-        this.currentSelectionRange = null;
-        this.currentSelectedText = null;
-        this.currentSelectionDate = null;
-        this.activeSelectionSurface = null;
-    }
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+    if (!preview) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    if (!rect || (!rect.width && !rect.height)) return;
+
+    const previewBottom = Math.max(72, rect.top - 12);
+    preview.style.top = `${previewBottom}px`;
 },
     
 scheduleSelectionPanelUpdate: function(force = false) {
@@ -3860,7 +3956,7 @@ document.addEventListener('selectionchange', () => {
 });
 
 const finishSelection = () => {
-    const delay = isAndroidDevice() ? 180 : isIOSDevice() ? 90 : 50;
+    const delay = isAndroidDevice() ? 180 : isIOSDevice() ? 90 : 60;
 
     setTimeout(() => {
         this.isSelecting = false;
@@ -3883,6 +3979,19 @@ const finishSelection = () => {
 
 document.addEventListener('pointerup', finishSelection, true);
 document.addEventListener('pointercancel', finishSelection, true);
+document.addEventListener('mouseup', finishSelection, true);
+
+window.addEventListener('resize', () => {
+    if (this.$selectionPanel?.classList.contains('visible')) {
+        this.handleSelectionPanelLayout();
+    }
+}, { passive: true });
+
+window.addEventListener('scroll', () => {
+    if (this.$selectionPanel?.classList.contains('visible')) {
+        this.handleSelectionPanelLayout();
+    }
+}, { passive: true });
 },
     
     initTheme: function() {
