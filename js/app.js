@@ -243,8 +243,11 @@ const App = {
 renderScheduled: false,
 controlsCollapsed: false,
 selectionUpdateTimer: null,
-selectionHideTimer: null,
 isSelecting: false,
+activeSelectionSurface: null,
+currentSelectionRange: null,
+currentSelectedText: null,
+currentSelectionDate: null,
 pushListenersReady: false,
 themeListenerReady: false,
 lastScrollY: 0,
@@ -1586,36 +1589,37 @@ updateCommunityBadge: function() {
     this.showToast('Se abrió el PDF para descargar');
     },
     
-    escapeRegExp: function(string) {
+escapeRegExp: function(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     },
 
-    getSelectionSurface: function() {
-    return document.querySelector('.selection-surface');
+getSelectionSurfaceFromNode: function(node) {
+    if (!node) return null;
+
+    const element = node.nodeType === Node.ELEMENT_NODE
+        ? node
+        : node.parentElement;
+
+    return element ? element.closest('.selection-surface') : null;
 },
 
 getSelectionContext: function() {
     const selection = window.getSelection();
-    const surface = this.getSelectionSurface();
-
-    if (!selection || !surface || selection.rangeCount === 0) return null;
-    if (selection.isCollapsed) return null;
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
 
     const text = selection.toString().replace(/\s+/g, ' ').trim();
     if (!text || text.length < 3) return null;
 
     const range = selection.getRangeAt(0);
-    const commonAncestor = range.commonAncestorContainer;
+    const startSurface = this.getSelectionSurfaceFromNode(range.startContainer);
+    const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
 
-    const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
-        ? commonAncestor
-        : commonAncestor.parentElement;
+    if (!startSurface || !endSurface || startSurface !== endSurface) {
+        return null;
+    }
 
-    if (!ancestorElement || !surface.contains(ancestorElement)) return null;
-
-    const shell = ancestorElement.closest('.reading-text-shell');
+    const shell = startSurface.closest('.reading-text-shell');
     const dateStr = shell?.getAttribute('data-reading-date');
-
     if (!dateStr) return null;
 
     return {
@@ -1623,7 +1627,7 @@ getSelectionContext: function() {
         range: range.cloneRange(),
         text,
         dateStr,
-        surface
+        surface: startSurface
     };
 },
 
@@ -1891,7 +1895,7 @@ showSelectionPanel: function(context) {
     });
 },
 
-hideSelectionPanel: function() {
+hideSelectionPanel: function(clearStoredSelection = true) {
     const panel = document.getElementById('selection-panel');
     if (panel) {
         panel.classList.remove('visible');
@@ -1902,33 +1906,40 @@ hideSelectionPanel: function() {
         this.selectionUpdateTimer = null;
     }
 
-    if (this.selectionHideTimer) {
-        clearTimeout(this.selectionHideTimer);
-        this.selectionHideTimer = null;
+    if (clearStoredSelection) {
+        this.currentSelectionRange = null;
+        this.currentSelectedText = null;
+        this.currentSelectionDate = null;
+        this.activeSelectionSurface = null;
     }
-
-    this.currentSelectionRange = null;
-    this.currentSelectedText = null;
-    this.currentSelectionDate = null;
 },
-
-scheduleSelectionPanelUpdate: function() {
+    
+scheduleSelectionPanelUpdate: function(force = false) {
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
         this.selectionUpdateTimer = null;
     }
 
-    const delay = isIOSDevice() ? 120 : isAndroidDevice() ? 160 : 50;
+    const delay = force ? 0 : (isAndroidDevice() ? 220 : isIOSDevice() ? 120 : 60);
 
     this.selectionUpdateTimer = setTimeout(() => {
         const context = this.getSelectionContext();
 
         if (!context) {
-            this.hideSelectionPanel();
+            if (!this.isSelecting) {
+                this.hideSelectionPanel();
+            }
             return;
         }
 
-        this.showSelectionPanel(context);
+        this.currentSelectionRange = context.range.cloneRange();
+        this.currentSelectedText = context.text;
+        this.currentSelectionDate = context.dateStr;
+        this.activeSelectionSurface = context.surface;
+
+        if (!this.isSelecting) {
+            this.showSelectionPanel(context);
+        }
     }, delay);
 },
     
@@ -3784,80 +3795,75 @@ this.$content.addEventListener('focusin', (e) => {
     }
 });
 
-document.addEventListener('touchstart', (e) => {
-    if (e.target.closest('.selection-surface')) {
-        this.isSelecting = true;
-    }
-}, true);
-
 document.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('.selection-surface')) {
-        this.isSelecting = true;
+    const surface = e.target.closest('.selection-surface');
+
+    if (!surface) {
+        this.isSelecting = false;
+        return;
+    }
+
+    this.isSelecting = true;
+    this.activeSelectionSurface = surface;
+
+    if (this.selectionUpdateTimer) {
+        clearTimeout(this.selectionUpdateTimer);
+        this.selectionUpdateTimer = null;
     }
 }, true);
 
 document.addEventListener('selectionchange', () => {
     const selection = window.getSelection();
-    const surface = this.getSelectionSurface();
 
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        this.isSelecting = false;
-        this.hideSelectionPanel();
-        return;
-    }
-
-    if (!surface) {
-        this.isSelecting = false;
-        this.hideSelectionPanel();
+        if (!this.isSelecting) {
+            this.hideSelectionPanel();
+        }
         return;
     }
 
     const range = selection.getRangeAt(0);
-    const commonAncestor = range.commonAncestorContainer;
-    const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
-        ? commonAncestor
-        : commonAncestor.parentElement;
+    const startSurface = this.getSelectionSurfaceFromNode(range.startContainer);
+    const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
 
-    if (!ancestorElement || !surface.contains(ancestorElement)) {
-        this.isSelecting = false;
-        this.hideSelectionPanel();
+    if (!startSurface || !endSurface || startSurface !== endSurface) {
+        if (!this.isSelecting) {
+            this.hideSelectionPanel();
+        }
         return;
     }
 
-    this.scheduleSelectionPanelUpdate();
+    this.activeSelectionSurface = startSurface;
+
+    if (!this.isSelecting) {
+        this.scheduleSelectionPanelUpdate();
+    }
 });
 
 const finishSelection = () => {
+    const delay = isAndroidDevice() ? 180 : isIOSDevice() ? 90 : 50;
+
     setTimeout(() => {
-        const selection = window.getSelection();
-
-        if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-            this.isSelecting = false;
-            this.hideSelectionPanel();
-            return;
-        }
-
-        const surface = this.getSelectionSurface();
-        const range = selection.getRangeAt(0);
-        const commonAncestor = range.commonAncestorContainer;
-        const ancestorElement = commonAncestor.nodeType === Node.ELEMENT_NODE
-            ? commonAncestor
-            : commonAncestor.parentElement;
-
-        if (!surface || !ancestorElement || !surface.contains(ancestorElement)) {
-            this.isSelecting = false;
-            this.hideSelectionPanel();
-            return;
-        }
-
         this.isSelecting = false;
-        this.scheduleSelectionPanelUpdate();
-    }, isAndroidDevice() ? 140 : 90);
+
+        const context = this.getSelectionContext();
+
+        if (!context) {
+            this.hideSelectionPanel();
+            return;
+        }
+
+        this.currentSelectionRange = context.range.cloneRange();
+        this.currentSelectedText = context.text;
+        this.currentSelectionDate = context.dateStr;
+        this.activeSelectionSurface = context.surface;
+
+        this.showSelectionPanel(context);
+    }, delay);
 };
 
 document.addEventListener('pointerup', finishSelection, true);
-document.addEventListener('touchend', finishSelection, true);
-document.addEventListener('mouseup', finishSelection, true);
+document.addEventListener('pointercancel', finishSelection, true);
 },
     
     initTheme: function() {
