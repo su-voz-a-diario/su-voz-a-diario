@@ -1760,6 +1760,8 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 window.getSelection()?.removeAllRanges();
 this.rerenderCurrentReadingView(dateStr, true);
 
+},
+
 getSelectionHighlightState: function(selectedText, dateStr) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
     const highlights = this.getHighlights(dateStr);
