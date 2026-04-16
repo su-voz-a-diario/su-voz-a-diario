@@ -1659,7 +1659,6 @@ restoreHighlightsInDOM: function(dateStr) {
 },
 
 highlightTextInElement: function(container, text, color = 'yellow') {
-    if (container.querySelector('mark.user-highlight')) return;
     if (!text || !text.trim()) return;
 
     const searchText = text.trim().toLowerCase();
@@ -2041,7 +2040,7 @@ scheduleSelectionPanelUpdate: function(force = false) {
         this.selectionUpdateTimer = null;
     }
 
-    const delay = force ? 0 : (isAndroidDevice() ? 220 : isIOSDevice() ? 120 : 60);
+    const delay = isAndroidDevice() ? 250 : isIOSDevice() ? 90 : 60;
 
     this.selectionUpdateTimer = setTimeout(() => {
         const context = this.getSelectionContext();
