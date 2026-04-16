@@ -51,6 +51,9 @@ body.light-mode {
     margin: 0;
     padding: 0;
     -webkit-tap-highlight-color: transparent;
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 body {
@@ -381,7 +384,7 @@ body.dark-mode .header-settings-btn:hover {
 .reading-text {
     font-family: var(--font-reading);
     font-size: var(--reading-size);
-    line-height: 1.9;
+    line-height: 1.75;
     color: var(--text-main);
     text-align: justify;
     letter-spacing: 0.2px;
@@ -1787,9 +1790,9 @@ body.dark-mode .floating-streak {
 
 body.light-mode .floating-toggle-btn,
 body.light-mode .floating-btn {
-    background: rgba(255, 255, 255, 0.88);
-    color: #1a202c;
-    border: 1px solid rgba(226, 232, 240, 0.95);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
+    border: 1px solid rgba(203, 213, 225, 0.9);
 }
 
 /* ========================================
@@ -1970,7 +1973,7 @@ body.dark-mode .about-feature {
 }
 
 .community-reaction-btn:hover {
-    transform: none;
+    transform: scale(1.06);
     opacity: 0.92;
 }
 
@@ -2354,6 +2357,10 @@ body.dark-mode .community-reply-item {
     pointer-events: auto;
 }
 
+body.selection-open {
+    overflow: hidden;
+}
+
 .selection-panel-backdrop {
     position: absolute;
     inset: 0;
@@ -2468,13 +2475,13 @@ mark.user-highlight {
 }
 
 mark.user-highlight-yellow {
-    background: rgba(250, 204, 21, 0.18);
-    box-shadow: inset 0 -1px 0 rgba(202, 138, 4, 0.14);
+    background: rgba(250, 204, 21, 0.22);
+    box-shadow: 0 0 0 1px rgba(202, 138, 4, 0.18);
 }
 
 mark.user-highlight-blue {
-    background: rgba(96, 165, 250, 0.18);
-    box-shadow: inset 0 -1px 0 rgba(37, 99, 235, 0.14);
+    background: rgba(96, 165, 250, 0.22);
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
 }
 
 body.dark-mode mark.user-highlight-yellow {
