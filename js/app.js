@@ -1387,9 +1387,10 @@ updateCommunityBadge: function() {
 
     if (this.communityUnreadCount > 0) {
         this.$communityBadge.hidden = false;
-        this.$communityBadge.textContent = ''; // sin número
+        this.$communityBadge.textContent = this.communityUnreadCount > 9 ? '9+' : String(this.communityUnreadCount);
     } else {
         this.$communityBadge.hidden = true;
+        this.$communityBadge.textContent = '0';
     }
 },
     
