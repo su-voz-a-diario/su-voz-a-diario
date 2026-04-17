@@ -321,7 +321,6 @@ cacheDOM: function() {
 
     this.$selectionPanel = document.getElementById('selectionPanel');
     this.$selectionBackdrop = this.$selectionPanel?.querySelector('.selection-panel-backdrop') || null;
-    this.$selectionPreview = document.getElementById('selectionPreview');
     this.$selectionNote = document.getElementById('selectionNote');
     this.$selectionCopyBtn = document.getElementById('copyBtn');
     this.$selectionClearBtn = document.getElementById('clearBtn');
@@ -1838,10 +1837,6 @@ showSelectionPanel: function(context) {
     this.currentSelectedText = context.text;
     this.activeSelectionSurface = context.surface;
 
-    if (this.$selectionPreview) {
-        this.$selectionPreview.textContent = context.text;
-    }
-
     if (this.$selectionNote) {
         this.$selectionNote.value = '';
     }
@@ -1863,6 +1858,20 @@ showSelectionPanel: function(context) {
             this.$selectionClearBtn.title = 'Quitar resaltado';
         }
     }
+
+const selection = window.getSelection();
+if (selection && selection.rangeCount > 0) {
+    const rect = selection.getRangeAt(0).getBoundingClientRect();
+    const safeBottom = window.innerHeight - 280;
+
+    if (rect.bottom > safeBottom) {
+        const neededOffset = rect.bottom - safeBottom + 16;
+        window.scrollBy({
+            top: neededOffset,
+            behavior: 'smooth'
+        });
+    }
+}
 
 requestAnimationFrame(() => {
     panel.classList.add('visible');
