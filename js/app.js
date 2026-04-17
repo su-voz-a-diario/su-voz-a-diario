@@ -43,15 +43,25 @@ async function apiBibleFetch(path) {
         }
     });
 
-    const data = await response.json();
+    let data = null;
+
+    try {
+        data = await response.json();
+    } catch (error) {
+        data = null;
+    }
 
     if (!response.ok) {
         console.error('API.Bible error:', data);
         throw new Error(data?.message || 'Error al consultar API.Bible');
     }
 
+    if (!data) {
+        throw new Error('Respuesta inválida de API.Bible');
+    }
+
     return data;
-} 
+}
 
 async function getBibleChapter(bookId, chapterNumber) {
     const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
@@ -75,7 +85,6 @@ const App = {
     // ========================================
     data: [],
     currentView: 'home',
-    today: new Date(),
     currentVersion: 'rvr60',
     bibleBooks: [
     { id: 'gen', name: 'Génesis', chapters: 50 },
@@ -326,6 +335,7 @@ cacheDOM: function() {
     this.$selectionClearBtn = document.getElementById('clearBtn');
     this.$selectionCloseBtn = document.getElementById('closePanel');
     this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
+    this.$selectionNoteBtn = document.getElementById('noteBtn');
     this.$selectionColorButtons = Array.from(document.querySelectorAll('.color-btn'));
 },
 
@@ -709,23 +719,29 @@ checkReminderOnOpen: function() {
         
         // Notas totales
         let totalNotes = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('su-voz-note-')) {
-                const note = this.storage.get(key, null);
-                if (
-                note &&
-                (
-                    note.dios?.trim() ||
-                    note.aprendizaje?.trim() ||
-                    note.respuesta?.trim() ||
-                    note.oracion?.trim()
-                )
-            ) {
-                  totalNotes++;
-            }
-            }
+for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+
+    if (key && key.startsWith('su-voz-note-')) {
+        const note = this.storage.get(key, null);
+        if (
+            note &&
+            (
+                note.dios?.trim() ||
+                note.aprendizaje?.trim() ||
+                note.respuesta?.trim() ||
+                note.oracion?.trim()
+            )
+        ) {
+            totalNotes++;
         }
+    }
+
+    if (key && key.startsWith('su-voz-selection-notes-')) {
+    const date = key.replace('su-voz-selection-notes-', '');
+    const selectionNotes = this.getSelectionNotes(date);
+    totalNotes += selectionNotes.length;
+}
         
         // Resaltados totales
         let totalHighlights = 0;
@@ -787,6 +803,67 @@ checkReminderOnOpen: function() {
     getHighlightsKey: function(dateStr) {
         return `su-voz-highlights-${dateStr}`;
     },
+
+    getSelectionNotesKey: function(dateStr) {
+    return `su-voz-selection-notes-${dateStr}`;
+},
+
+getSelectionNotes: function(dateStr) {
+    const saved = this.storage.get(this.getSelectionNotesKey(dateStr), []);
+    if (!Array.isArray(saved)) return [];
+
+    return saved
+        .map(item => ({
+            text: (item?.text || '').replace(/\s+/g, ' ').trim(),
+            note: (item?.note || '').trim()
+        }))
+        .filter(item => item.text.length >= 3 && item.note.length > 0);
+},
+
+getSelectionNoteByText: function(dateStr, selectedText) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    return this.getSelectionNotes(dateStr).find(item => item.text.toLowerCase() === cleanText) || null;
+},
+
+saveSelectionNoteEntry: function(dateStr, selectedText, noteText) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
+    const cleanNote = (noteText || '').trim();
+
+    if (!cleanText || cleanText.length < 3 || !cleanNote) return false;
+
+    const notes = this.getSelectionNotes(dateStr);
+    const normalizedText = cleanText.toLowerCase();
+
+    const existingIndex = notes.findIndex(item => item.text.toLowerCase() === normalizedText);
+
+    if (existingIndex >= 0) {
+        notes[existingIndex].note = cleanNote;
+    } else {
+        notes.push({
+            text: cleanText,
+            note: cleanNote
+        });
+    }
+
+    this.storage.set(this.getSelectionNotesKey(dateStr), notes);
+    return true;
+},
+
+deleteSelectionNoteEntry: function(dateStr, selectedText) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const notes = this.getSelectionNotes(dateStr);
+    const filtered = notes.filter(item => item.text.toLowerCase() !== cleanText);
+
+    if (filtered.length === notes.length) return false;
+
+    if (filtered.length === 0) {
+        this.storage.remove(this.getSelectionNotesKey(dateStr));
+    } else {
+        this.storage.set(this.getSelectionNotesKey(dateStr), filtered);
+    }
+
+    return true;
+},
 
     getNoteKey: function(dateStr) {
     return `su-voz-note-${dateStr}`;
@@ -1601,10 +1678,6 @@ updateCommunityBadge: function() {
     doc.save(`reflexion-${dateStr}.pdf`);
     this.showToast('Se abrió el PDF para descargar');
     },
-    
-escapeRegExp: function(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    },
 
 getSelectionSurfaceFromNode: function(node) {
     if (!node) return null;
@@ -1656,6 +1729,88 @@ restoreHighlightsInDOM: function(dateStr) {
     highlights.forEach(item => {
         this.highlightTextInElement(container, item.text, item.color);
     });
+},
+
+restoreSelectionNotesInDOM: function(dateStr) {
+    const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
+    const container = shell ? shell.querySelector('.selection-surface') : null;
+    if (!container) return;
+
+    const selectionNotes = this.getSelectionNotes(dateStr);
+    if (!selectionNotes.length) return;
+
+    selectionNotes.forEach(item => {
+        this.addSelectionNoteMarkerInElement(container, item.text, item.note);
+    });
+},
+
+addSelectionNoteMarkerInElement: function(container, text, note = '') {
+    if (!text || !text.trim()) return;
+
+    const searchText = text.trim().toLowerCase();
+
+    const walker = document.createTreeWalker(
+        container,
+        NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(node) {
+                if (!node.nodeValue || !node.nodeValue.trim()) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                if (node.parentNode && node.parentNode.closest('.selection-note-anchor')) {
+                    return NodeFilter.FILTER_REJECT;
+                }
+
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        }
+    );
+
+    const matches = [];
+    let node;
+
+    while ((node = walker.nextNode())) {
+        const original = node.nodeValue;
+        const lower = original.toLowerCase();
+        let startIndex = 0;
+        let index;
+
+        while ((index = lower.indexOf(searchText, startIndex)) !== -1) {
+            matches.push({
+                node,
+                index,
+                length: searchText.length
+            });
+            startIndex = index + searchText.length;
+        }
+    }
+
+    for (let i = matches.length - 1; i >= 0; i--) {
+        const { node, index, length } = matches[i];
+
+        if (!node.parentNode) continue;
+
+        const original = node.nodeValue;
+        const before = original.slice(0, index);
+        const match = original.slice(index, index + length);
+        const after = original.slice(index + length);
+
+        const fragment = document.createDocumentFragment();
+
+        if (before) fragment.appendChild(document.createTextNode(before));
+
+        const anchor = document.createElement('span');
+        anchor.className = 'selection-note-anchor';
+        anchor.textContent = match;
+        anchor.setAttribute('data-selection-note', 'true');
+        anchor.setAttribute('title', note ? `Nota: ${note}` : 'Este texto tiene una nota guardada');
+        fragment.appendChild(anchor);
+
+        if (after) fragment.appendChild(document.createTextNode(after));
+
+        node.parentNode.replaceChild(fragment, node);
+    }
 },
 
 highlightTextInElement: function(container, text, color = 'yellow') {
@@ -1732,10 +1887,11 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     }
 
     const cleanText = selectedText.replace(/\s+/g, ' ').trim();
+    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const highlights = this.getHighlights(dateStr);
 
     const existsSameColor = highlights.some(item =>
-        item.text === cleanText && item.color === color
+        normalize(item.text) === normalize(cleanText) && item.color === color
     );
 
     if (existsSameColor) {
@@ -1756,8 +1912,8 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
     this.hideSelectionPanel();
-window.getSelection()?.removeAllRanges();
-this.rerenderCurrentReadingView(dateStr, true);
+    window.getSelection()?.removeAllRanges();
+    this.rerenderCurrentReadingView(dateStr, true);
 },
 
 getSelectionHighlightState: function(selectedText, dateStr) {
@@ -1837,9 +1993,11 @@ showSelectionPanel: function(context) {
     this.currentSelectedText = context.text;
     this.activeSelectionSurface = context.surface;
 
-    if (this.$selectionNote) {
-        this.$selectionNote.value = '';
-    }
+    const existingSelectionNote = this.getSelectionNoteByText(context.dateStr, context.text);
+
+if (this.$selectionNote) {
+    this.$selectionNote.value = existingSelectionNote?.note || '';
+}
 
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
 
@@ -1862,7 +2020,12 @@ showSelectionPanel: function(context) {
 const selection = window.getSelection();
 if (selection && selection.rangeCount > 0) {
     const rect = selection.getRangeAt(0).getBoundingClientRect();
-    const safeBottom = window.innerHeight - 280;
+    const panelHeight = this.$selectionPanel?.offsetHeight || 220;
+    const viewportHeight = window.visualViewport
+        ? window.visualViewport.height
+        : window.innerHeight;
+
+    const safeBottom = viewportHeight - panelHeight - 24;
 
     if (rect.bottom > safeBottom) {
         const neededOffset = rect.bottom - safeBottom + 16;
@@ -1876,13 +2039,13 @@ if (selection && selection.rangeCount > 0) {
 requestAnimationFrame(() => {
     panel.classList.add('visible');
     document.body.classList.add('selection-panel-open');
-    this.handleSelectionPanelLayout();
 });
 },
-
+    
 hideSelectionPanel: function(clearStoredSelection = true) {
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
+        this.$selectionPanel.classList.remove('note-mode');
     }
 
     document.body.classList.remove('selection-panel-open');
@@ -1917,19 +2080,32 @@ saveSelectionNoteFromPanel: function() {
     }
 
     if (!noteText) {
-        this.showToast('Escribe una nota');
+        const deleted = this.deleteSelectionNoteEntry(dateStr, selectedText);
+
+        if (deleted) {
+            this.showToast('Nota eliminada');
+        } else {
+            this.showToast('Escribe una nota');
+            return;
+        }
+
+        this.hideSelectionPanel();
+        window.getSelection()?.removeAllRanges();
+        this.rerenderCurrentReadingView(dateStr, true);
         return;
     }
 
-    const note = this.getNote(dateStr);
-    const entry = `• "${selectedText}"\n${noteText}\n\n`;
-    note.aprendizaje = `${note.aprendizaje || ''}${entry}`.trim();
+    const saved = this.saveSelectionNoteEntry(dateStr, selectedText, noteText);
 
-    this.saveNote(dateStr, note);
+    if (!saved) {
+        this.showToast('No se pudo guardar la nota');
+        return;
+    }
+
     this.showToast('Nota guardada');
     this.hideSelectionPanel();
     window.getSelection()?.removeAllRanges();
-    this.rerenderCurrentReadingView(dateStr);
+    this.rerenderCurrentReadingView(dateStr, true);
 },
 
 bindSelectionPanelEvents: function() {
@@ -1968,6 +2144,19 @@ bindSelectionPanelEvents: function() {
         });
     }
 
+    if (this.$selectionNoteBtn) {
+    this.$selectionNoteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.expandSelectionPanelForNote(true);
+
+        setTimeout(() => {
+            this.$selectionNote?.focus();
+        }, 100);
+    });
+}
+
     if (this.$selectionClearBtn) {
         this.$selectionClearBtn.addEventListener('click', (e) => {
             e.preventDefault();
@@ -1992,12 +2181,32 @@ bindSelectionPanelEvents: function() {
     }
 
     if (this.$selectionSaveNoteBtn) {
-        this.$selectionSaveNoteBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.saveSelectionNoteFromPanel();
-        });
-    }
+    this.$selectionSaveNoteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.saveSelectionNoteFromPanel();
+    });
+}
+
+    if (this.$selectionNote) {
+    this.$selectionNote.addEventListener('focus', () => {
+        this.expandSelectionPanelForNote(true);
+
+        setTimeout(() => {
+            this.$selectionNote?.scrollIntoView({
+                block: 'center',
+                behavior: 'smooth'
+            });
+        }, 180);
+    });
+
+    this.$selectionNote.addEventListener('blur', () => {
+        setTimeout(() => {
+            this.expandSelectionPanelForNote(false);
+        }, 150);
+    });
+}
 
     if (this.$selectionColorButtons.length) {
         this.$selectionColorButtons.forEach(btn => {
@@ -2016,23 +2225,35 @@ bindSelectionPanelEvents: function() {
     this._selectionPanelEventsBound = true;
 },
 
-handleSelectionPanelLayout: function() {
-    const panel = this.$selectionPanel;
-    if (!panel) return;
+expandSelectionPanelForNote: function(expand = true) {
+    if (!this.$selectionPanel) return;
 
-    const preview = this.$selectionPreview;
-    const selection = window.getSelection();
+    if (expand) {
+        this.$selectionPanel.classList.add('note-mode');
 
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
-    if (!preview) return;
+        setTimeout(() => {
+            const viewportHeight = window.visualViewport
+                ? window.visualViewport.height
+                : window.innerHeight;
 
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+            const rect = this.$selectionPanel.getBoundingClientRect();
+            const overflow = rect.bottom - viewportHeight;
 
-    if (!rect || (!rect.width && !rect.height)) return;
+            if (overflow > 0) {
+                window.scrollBy({
+                    top: overflow + 24,
+                    behavior: 'smooth'
+                });
+            }
 
-    const previewBottom = Math.max(72, rect.top - 12);
-    preview.style.top = `${previewBottom}px`;
+            this.$selectionNote?.scrollIntoView({
+                block: 'center',
+                behavior: 'smooth'
+            });
+        }, 220);
+    } else {
+        this.$selectionPanel.classList.remove('note-mode');
+    }
 },
     
 scheduleSelectionPanelUpdate: function(force = false) {
@@ -2444,6 +2665,7 @@ const introVideoHtml = showIntroVideo ? `
 ` : ''}
         `;
             this.restoreHighlightsInDOM(reading.date);
+            this.restoreSelectionNotesInDOM(reading.date);
     },
     
     escapeHtml: function(text) {
@@ -2596,6 +2818,7 @@ renderBibleReading: async function() {
         `;
 
         this.restoreHighlightsInDOM(`bible-${requestedBookId}-${requestedChapter}`);
+        this.restoreSelectionNotesInDOM(`bible-${requestedBookId}-${requestedChapter}`);
     } catch (error) {
         console.error('Error cargando capítulo bíblico:', error);
 
@@ -3025,33 +3248,39 @@ if (notificationsToggle) {
     
    exportAllData: function() {
     const allData = {
-        version: '2.1',
-        exportDate: new Date().toISOString(),
-        readDates: this.getReadDates(),
-        streak: this.streak,
-        settings: this.settings,
-        notes: {},
-        highlights: {}
-    };
+    version: '2.1',
+    exportDate: new Date().toISOString(),
+    readDates: this.getReadDates(),
+    streak: this.streak,
+    settings: this.settings,
+    notes: {},
+    highlights: {},
+    selectionNotes: {}
+};
     
     for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
+    const key = localStorage.key(i);
 
-        if (key && key.startsWith('su-voz-note-')) {
-            const date = key.replace('su-voz-note-', '');
-            allData.notes[date] = this.storage.get(key, {
-                dios: '',
-                aprendizaje: '',
-                respuesta: '',
-                oracion: ''
-            });
-        }
-
-        if (key && key.startsWith('su-voz-highlights-')) {
-            const date = key.replace('su-voz-highlights-', '');
-            allData.highlights[date] = this.getHighlights(date);
-        }
+    if (key && key.startsWith('su-voz-note-')) {
+        const date = key.replace('su-voz-note-', '');
+        allData.notes[date] = this.storage.get(key, {
+            dios: '',
+            aprendizaje: '',
+            respuesta: '',
+            oracion: ''
+        });
     }
+
+    if (key && key.startsWith('su-voz-highlights-')) {
+        const date = key.replace('su-voz-highlights-', '');
+        allData.highlights[date] = this.getHighlights(date);
+    }
+
+    if (key && key.startsWith('su-voz-selection-notes-')) {
+        const date = key.replace('su-voz-selection-notes-', '');
+        allData.selectionNotes[date] = this.getSelectionNotes(date);
+    }
+}
 
     const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -3096,6 +3325,25 @@ if (notificationsToggle) {
                         this.storage.set(this.getHighlightsKey(date), highlights);
                     });
                 }
+
+                if (data.selectionNotes) {
+    Object.entries(data.selectionNotes).forEach(([date, selectionNotes]) => {
+        const normalized = Array.isArray(selectionNotes)
+            ? selectionNotes
+                .map(item => ({
+                    text: (item?.text || '').replace(/\s+/g, ' ').trim(),
+                    note: (item?.note || '').trim()
+                }))
+                .filter(item => item.text.length >= 3 && item.note.length > 0)
+            : [];
+
+        if (normalized.length > 0) {
+            this.storage.set(this.getSelectionNotesKey(date), normalized);
+        } else {
+            this.storage.remove(this.getSelectionNotesKey(date));
+        }
+    });
+}
                 
                 this.showToast('✅ Datos importados correctamente');
                 setTimeout(() => location.reload(), 1500);
@@ -3990,18 +4238,6 @@ const finishSelection = () => {
 document.addEventListener('pointerup', finishSelection, true);
 document.addEventListener('pointercancel', finishSelection, true);
 document.addEventListener('mouseup', finishSelection, true);
-
-window.addEventListener('resize', () => {
-    if (this.$selectionPanel?.classList.contains('visible')) {
-        this.handleSelectionPanelLayout();
-    }
-}, { passive: true });
-
-window.addEventListener('scroll', () => {
-    if (this.$selectionPanel?.classList.contains('visible')) {
-        this.handleSelectionPanelLayout();
-    }
-}, { passive: true });
 },
     
     initTheme: function() {
