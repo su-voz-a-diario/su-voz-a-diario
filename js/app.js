@@ -254,6 +254,8 @@ controlsCollapsed: false,
 selectionUpdateTimer: null,
 selectionHideTimer: null,
 isSelecting: false,
+selectionPanelLocked: false,
+activeSelectionSurface: null,
 activeSelectionSurface: null,
 currentSelectionRange: null,
 currentSelectedText: null,
@@ -276,6 +278,7 @@ scrollIdleTimer: null,
     
     this.cacheDOM();
     this.bindSelectionPanelEvents();
+    this.bindSelectionViewportEvents();
     this.showAprilMessageIfNeeded();
     this.loadSettings();
     this.loadStreak();
@@ -330,6 +333,7 @@ cacheDOM: function() {
 
     this.$selectionPanel = document.getElementById('selectionPanel');
     this.$selectionBackdrop = this.$selectionPanel?.querySelector('.selection-panel-backdrop') || null;
+    this.$selectionSheet = this.$selectionPanel?.querySelector('.selection-sheet-full') || null;
     this.$selectionNote = document.getElementById('selectionNote');
     this.$selectionCopyBtn = document.getElementById('copyBtn');
     this.$selectionClearBtn = document.getElementById('clearBtn');
@@ -2040,6 +2044,7 @@ if (selection && selection.rangeCount > 0) {
 requestAnimationFrame(() => {
     panel.classList.add('visible');
     document.body.classList.add('selection-panel-open');
+    this.updateSelectionSheetPosition();
 });
 },
     
@@ -2047,6 +2052,10 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
         this.$selectionPanel.classList.remove('note-mode');
+    }
+
+    if (this.$selectionSheet) {
+        this.$selectionSheet.style.bottom = '0px';
     }
 
     document.body.classList.remove('selection-panel-open');
@@ -2061,13 +2070,15 @@ hideSelectionPanel: function(clearStoredSelection = true) {
         this.selectionHideTimer = null;
     }
 
-    if (clearStoredSelection) {
-        this.currentSelectionRange = null;
-        this.currentSelectedText = null;
-        this.currentSelectionDate = null;
-        this.activeSelectionSurface = null;
-        this.currentSelectionColorDraft = null;
-    }
+    this.selectionPanelLocked = false;
+
+if (clearStoredSelection) {
+    this.currentSelectionRange = null;
+    this.currentSelectedText = null;
+    this.currentSelectionDate = null;
+    this.activeSelectionSurface = null;
+    this.currentSelectionColorDraft = null;
+}
 },
 
 saveSelectionNoteFromPanel: function() {
@@ -2150,11 +2161,12 @@ bindSelectionPanelEvents: function() {
         e.preventDefault();
         e.stopPropagation();
 
+        this.selectionPanelLocked = true;
         this.expandSelectionPanelForNote(true);
 
         setTimeout(() => {
             this.$selectionNote?.focus();
-        }, 100);
+        }, 120);
     });
 }
 
@@ -2192,6 +2204,7 @@ bindSelectionPanelEvents: function() {
 
     if (this.$selectionNote) {
     this.$selectionNote.addEventListener('focus', () => {
+        this.selectionPanelLocked = true;
         this.expandSelectionPanelForNote(true);
 
         setTimeout(() => {
@@ -2204,8 +2217,16 @@ bindSelectionPanelEvents: function() {
 
     this.$selectionNote.addEventListener('blur', () => {
         setTimeout(() => {
-            this.expandSelectionPanelForNote(false);
-        }, 150);
+            const stillInsidePanel =
+                this.$selectionPanel &&
+                document.activeElement &&
+                this.$selectionPanel.contains(document.activeElement);
+
+            if (!stillInsidePanel) {
+                this.selectionPanelLocked = false;
+                this.expandSelectionPanelForNote(false);
+            }
+        }, 180);
     });
 }
 
@@ -2223,6 +2244,12 @@ bindSelectionPanelEvents: function() {
         });
     }
 
+if (this.$selectionPanel) {
+    this.$selectionPanel.addEventListener('pointerdown', () => {
+        this.selectionPanelLocked = true;
+    });
+}
+    
     this._selectionPanelEventsBound = true;
 },
 
@@ -2232,29 +2259,65 @@ expandSelectionPanelForNote: function(expand = true) {
     if (expand) {
         this.$selectionPanel.classList.add('note-mode');
 
+        requestAnimationFrame(() => {
+            this.updateSelectionSheetPosition();
+        });
+
         setTimeout(() => {
-            const viewportHeight = window.visualViewport
-                ? window.visualViewport.height
-                : window.innerHeight;
-
-            const rect = this.$selectionPanel.getBoundingClientRect();
-            const overflow = rect.bottom - viewportHeight;
-
-            if (overflow > 0) {
-                window.scrollBy({
-                    top: overflow + 24,
-                    behavior: 'smooth'
-                });
-            }
+            this.updateSelectionSheetPosition();
 
             this.$selectionNote?.scrollIntoView({
                 block: 'center',
                 behavior: 'smooth'
             });
-        }, 220);
+
+            setTimeout(() => {
+                this.updateSelectionSheetPosition();
+            }, 120);
+        }, 180);
     } else {
         this.$selectionPanel.classList.remove('note-mode');
+
+        if (this.$selectionSheet) {
+            this.$selectionSheet.style.bottom = '0px';
+        }
     }
+},
+
+updateSelectionSheetPosition: function() {
+    if (!this.$selectionPanel || !this.$selectionSheet) return;
+    if (!this.$selectionPanel.classList.contains('visible')) return;
+
+    const vv = window.visualViewport;
+
+    if (!vv) {
+        this.$selectionSheet.style.bottom = '0px';
+        return;
+    }
+
+    const keyboardHeight = Math.max(
+        0,
+        window.innerHeight - vv.height - vv.offsetTop
+    );
+
+    this.$selectionSheet.style.bottom = keyboardHeight > 0
+        ? `${keyboardHeight}px`
+        : '0px';
+},
+
+bindSelectionViewportEvents: function() {
+    if (this._selectionViewportEventsBound) return;
+
+    if (window.visualViewport) {
+        const update = () => {
+            this.updateSelectionSheetPosition();
+        };
+
+        window.visualViewport.addEventListener('resize', update);
+        window.visualViewport.addEventListener('scroll', update);
+    }
+
+    this._selectionViewportEventsBound = true;
 },
     
 scheduleSelectionPanelUpdate: function(force = false) {
@@ -4197,7 +4260,7 @@ document.addEventListener('selectionchange', () => {
     const selection = window.getSelection();
 
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        if (!this.isSelecting) {
+        if (!this.isSelecting && !this.selectionPanelLocked) {
             this.hideSelectionPanel();
         }
         return;
@@ -4208,7 +4271,7 @@ document.addEventListener('selectionchange', () => {
     const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
 
     if (!startSurface || !endSurface || startSurface !== endSurface) {
-        if (!this.isSelecting) {
+        if (!this.isSelecting && !this.selectionPanelLocked) {
             this.hideSelectionPanel();
         }
         return;
@@ -4216,7 +4279,7 @@ document.addEventListener('selectionchange', () => {
 
     this.activeSelectionSurface = startSurface;
 
-    if (!this.isSelecting) {
+    if (!this.isSelecting && !this.selectionPanelLocked) {
         this.scheduleSelectionPanelUpdate();
     }
 });
@@ -4226,6 +4289,10 @@ const finishSelection = () => {
 
     setTimeout(() => {
         this.isSelecting = false;
+
+        if (this.selectionPanelLocked) {
+            return;
+        }
 
         const context = this.getSelectionContext();
 
