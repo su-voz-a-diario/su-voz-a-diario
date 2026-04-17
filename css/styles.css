@@ -2425,6 +2425,28 @@ body.selection-panel-open {
     overflow: hidden;
 }
 
+.selection-panel.note-mode .selection-sheet-full {
+    max-height: min(70vh, 560px);
+}
+
+.selection-panel.note-mode .selection-sheet-full {
+    display: flex;
+    flex-direction: column;
+}
+
+.selection-panel.note-mode .selection-bottom {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.selection-panel.note-mode .selection-bottom textarea {
+    flex: 1;
+    min-height: 140px;
+    max-height: none;
+}
+
 .selection-panel.visible .selection-sheet-full {
     transform: translateY(0);
 }
