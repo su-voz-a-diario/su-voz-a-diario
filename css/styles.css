@@ -2401,7 +2401,8 @@ body.selection-panel-open {
     right: 0;
     bottom: 0;
 
-    height: min(58vh, 460px);
+    height: auto;
+    max-height: min(34vh, 260px);
     background: var(--surface-color);
 
     border-radius: 20px 20px 0 0;
@@ -2462,29 +2463,28 @@ body.selection-panel-open {
     color: var(--text-main);
 }
 
-/* TEXTO */
-.selection-preview {
-    padding: 16px;
-    font-size: 16px;
-    line-height: 1.6;
-    overflow-y: auto;
-    color: var(--text-main);
-}
-
 /* PARTE INFERIOR */
 .selection-bottom {
     padding: 12px;
     border-top: 1px solid var(--border-color);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .selection-bottom textarea {
     width: 100%;
-    min-height: 80px;
+    min-height: 68px;
+    max-height: 90px;
     border-radius: 10px;
     padding: 10px;
     border: 1px solid var(--border-color);
     background: var(--bg-color);
     color: var(--text-main);
+    resize: none;
+    font-family: var(--font-ui);
+    font-size: 0.92rem;
+    line-height: 1.45;
 }
 
 mark.user-highlight {
