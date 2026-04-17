@@ -717,8 +717,8 @@ checkReminderOnOpen: function() {
         // Calcular porcentaje
         const percentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
         
-        // Notas totales
-        let totalNotes = 0;
+    // Notas totales
+let totalNotes = 0;
 for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
 
@@ -738,21 +738,22 @@ for (let i = 0; i < localStorage.length; i++) {
     }
 
     if (key && key.startsWith('su-voz-selection-notes-')) {
-    const date = key.replace('su-voz-selection-notes-', '');
-    const selectionNotes = this.getSelectionNotes(date);
-    totalNotes += selectionNotes.length;
+        const date = key.replace('su-voz-selection-notes-', '');
+        const selectionNotes = this.getSelectionNotes(date);
+        totalNotes += selectionNotes.length;
+    }
 }
-        
-        // Resaltados totales
-        let totalHighlights = 0;
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-           if (key && key.startsWith('su-voz-highlights-')) {
-                const date = key.replace('su-voz-highlights-', '');
-                const highlights = this.getHighlights(date);
-                totalHighlights += highlights.length;
-            }
-        }
+
+// Resaltados totales
+let totalHighlights = 0;
+for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && key.startsWith('su-voz-highlights-')) {
+        const date = key.replace('su-voz-highlights-', '');
+        const highlights = this.getHighlights(date);
+        totalHighlights += highlights.length;
+    }
+}
         
         return {
             totalRead,
@@ -1804,7 +1805,7 @@ addSelectionNoteMarkerInElement: function(container, text, note = '') {
         anchor.className = 'selection-note-anchor';
         anchor.textContent = match;
         anchor.setAttribute('data-selection-note', 'true');
-        anchor.setAttribute('title', note ? `Nota: ${note}` : 'Este texto tiene una nota guardada');
+        anchor.setAttribute('title', note || 'Este texto tiene una nota guardada');
         fragment.appendChild(anchor);
 
         if (after) fragment.appendChild(document.createTextNode(after));
@@ -3627,6 +3628,13 @@ if (readingEl) {
     if (selection && selection.toString().trim()) {
         return;
     }
+}
+
+const selectionNoteAnchor = e.target.closest('.selection-note-anchor');
+if (selectionNoteAnchor) {
+    const noteText = selectionNoteAnchor.getAttribute('title') || 'Este texto tiene una nota guardada';
+    this.showToast(noteText, 4000);
+    return;
 }
            
   const openBibleBookBtn = e.target.closest('[data-action="open-bible-book"]');
