@@ -2515,6 +2515,24 @@ body.dark-mode mark.user-highlight-blue {
     box-shadow: inset 0 -1px 0 rgba(96, 165, 250, 0.12);
 }
 
+.selection-note-anchor {
+    position: relative;
+    border-bottom: 2px dotted rgba(49, 130, 206, 0.95);
+    cursor: pointer;
+}
+
+.selection-note-anchor::after {
+    content: '📝';
+    font-size: 0.72em;
+    margin-left: 4px;
+    vertical-align: super;
+    line-height: 1;
+}
+
+body.dark-mode .selection-note-anchor {
+    border-bottom: 2px dotted rgba(96, 165, 250, 0.95);
+}
+
 /* ========================================
    SKELETON LOADING PARA COMUNIDAD
    ======================================== */
