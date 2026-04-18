@@ -2442,7 +2442,6 @@ showSelectionPanelForVerse: function() {
     
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
     
-    // Actualizar estado visual de los botones
     if (this.$selectionColorButtons.length) {
         this.$selectionColorButtons.forEach(btn => {
             const color = btn.getAttribute('data-color');
@@ -2450,7 +2449,7 @@ showSelectionPanelForVerse: function() {
         });
     }
     
-    // ✅ AGREGAR ESTAS DOS LÍNEAS
+    // ✅ ESTAS DOS LÍNEAS SON CRÍTICAS
     panel.classList.add('visible');
     document.body.classList.add('selection-panel-open');
     
