@@ -2099,18 +2099,18 @@ bindSelectionPanelEvents: function() {
 }
 
     if (this.$selectionColorButtons.length) {
-        this.$selectionColorButtons.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+    this.$selectionColorButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-                const color = btn.getAttribute('data-color');
-                if (!color) return;
+            const color = btn.getAttribute('data-color');
+            if (!color) return;
 
-                this.saveSelectedHighlight(this.currentSelectedText, color, this.currentSelectionDate);
-            });
+            this.saveSelectedHighlight(this.currentSelectedText, color, this.currentSelectionDate);
         });
-    }
+    });
+}
 
 if (this.$selectionPanel) {
     this.$selectionPanel.addEventListener('pointerdown', () => {
@@ -2442,6 +2442,7 @@ showSelectionPanelForVerse: function() {
     
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
     
+    // ✅ IMPORTANTE: Actualizar estado visual de los botones
     if (this.$selectionColorButtons.length) {
         this.$selectionColorButtons.forEach(btn => {
             const color = btn.getAttribute('data-color');
@@ -2449,10 +2450,9 @@ showSelectionPanelForVerse: function() {
         });
     }
     
-    // Mostrar panel SIN manipular scroll del body
+    // ✅ IMPORTANTE: Mostrar panel
     panel.classList.add('visible');
     
-    // Ajustar posición del sheet basado en el versículo seleccionado
     this.positionSelectionSheet();
 },
 
@@ -2494,6 +2494,7 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const cleanLower = normalize(cleanText);
     
+    // Verificar si ya existe este resaltado con el mismo color
     const existingIndex = highlights.findIndex(item => 
         normalize(item.text) === cleanLower && item.color === color
     );
@@ -2503,28 +2504,42 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
         return;
     }
     
-    highlights.push({ text: cleanText, color });
-    this.saveHighlights(dateStr, highlights);
+    // Eliminar resaltados previos de otros colores para el mismo texto
+    const filteredHighlights = highlights.filter(item => 
+        normalize(item.text) !== cleanLower
+    );
+    
+    // Agregar el nuevo resaltado
+    filteredHighlights.push({ text: cleanText, color });
+    
+    // Guardar en localStorage
+    this.saveHighlights(dateStr, filteredHighlights);
     
     this.currentSelectionColorDraft = color;
     
+    // Actualizar botones de color en el panel
     if (this.$selectionColorButtons.length) {
         this.$selectionColorButtons.forEach(btn => {
             const btnColor = btn.getAttribute('data-color');
-            btn.classList.toggle('is-active', 
-                highlights.some(h => normalize(h.text) === cleanLower && h.color === btnColor)
-            );
+            btn.classList.toggle('is-active', btnColor === color);
         });
     }
     
     this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
     
-    // Aplicar resaltado visual inmediatamente
+    // ✅ CORREGIDO: Aplicar clase CSS inmediatamente al versículo seleccionado
     if (this.currentSelectedVerse) {
+        // Remover clases de resaltado anteriores
+        this.currentSelectedVerse.classList.remove('highlight-yellow', 'highlight-blue');
+        // Agregar la nueva clase
         this.currentSelectedVerse.classList.add(`highlight-${color}`);
     }
     
-    this.rerenderCurrentReadingView(dateStr, true);
+    // Cerrar el panel
+    this.hideSelectionPanel();
+    
+    // No es necesario re-renderizar todo, solo guardamos el estado
+    // this.rerenderCurrentReadingView(dateStr, true);
 },
     
    getTodayDateStr: function() {
