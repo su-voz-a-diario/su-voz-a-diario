@@ -2446,11 +2446,19 @@ body.dark-mode .community-reply-item {
    PANEL DE SELECCIÓN (MEJORADO - ANDROID + iOS)
    ======================================== */
 
+/* ========================================
+   PANEL DE SELECCIÓN (MEJORADO - ANDROID + iOS)
+   ======================================== */
+
 .selection-panel {
     position: fixed;
     inset: 0;
     z-index: 25000;
     pointer-events: none;
+    /* ✅ NUEVO: Prevenir parpadeo en Android */
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+    will-change: transform;
 }
 
 .selection-panel.visible {
@@ -2492,7 +2500,8 @@ body.selection-panel-open {
     background: var(--surface-color);
     border-radius: 20px 20px 0 0;
     transform: translateY(100%);
-    transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1), bottom 0.25s ease, max-height 0.25s ease;
+    /* ✅ NUEVO: Transición más suave */
+    transition: transform 0.2s ease-out, bottom 0.2s ease, max-height 0.2s ease;
     display: flex;
     flex-direction: column;
     overflow: hidden;
