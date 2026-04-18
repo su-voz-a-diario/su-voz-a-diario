@@ -2852,11 +2852,11 @@ const introVideoHtml = showIntroVideo ? `
 renderBible: function() {
     if (!this.selectedBibleBook) {
         this.$content.innerHTML = `
-            <div class="bible-view">
-                <div class="bible-header-card">
-                    <div class="bible-title">📖 Biblia</div>
-                    <div class="bible-subtitle">Selecciona un libro para explorar sus capítulos</div>
-                </div>
+    <div class="bible-view">
+        <div class="bible-header-card">
+            <div class="bible-title">📖 Biblia</div>
+            <div class="bible-subtitle">La Nueva Biblia de las Américas (NBLA)</div>
+        </div>
 
                 <div class="bible-books-grid">
                     ${this.bibleBooks.map(book => `
@@ -2957,39 +2957,41 @@ renderBibleReading: async function() {
 
         this.currentBibleChapterData = chapterData;
 
-        this.$content.innerHTML = `
-            <div class="bible-reading-view">
-                <button class="btn-secondary" data-action="back-to-bible-books">
-                    ← Volver
-                </button>
+this.$content.innerHTML = `
+    <div class="bible-reading-view">
+        <button class="btn-secondary" data-action="back-to-bible-books">
+            ← Volver
+        </button>
 
-                <h2>${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}</h2>
+        <h2>${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}</h2>
+        
+        <div class="bible-reading-version">La Nueva Biblia de las Américas (NBLA)</div>
 
-                <div class="bible-nav-bar">
-                    <button
-                        class="btn-secondary"
-                        data-action="bible-prev-chapter"
-                        ${requestedChapter > 1 ? '' : 'disabled'}
-                    >
-                        ← Anterior
-                    </button>
+        <div class="bible-nav-bar">
+            <button
+                class="btn-secondary"
+                data-action="bible-prev-chapter"
+                ${requestedChapter > 1 ? '' : 'disabled'}
+            >
+                ← Anterior
+            </button>
 
-                    <button
-                        class="btn-secondary"
-                        data-action="bible-next-chapter"
-                        ${requestedChapter < requestedBook.chapters ? '' : 'disabled'}
-                    >
-                        Siguiente →
-                    </button>
-                </div>
+            <button
+                class="btn-secondary"
+                data-action="bible-next-chapter"
+                ${requestedChapter < requestedBook.chapters ? '' : 'disabled'}
+            >
+                Siguiente →
+            </button>
+        </div>
 
-                <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
-    <div class="reading-text selection-surface verse-container" data-selection-surface="true">
-        ${this.renderVerseText(chapterData.content || '<p>No se pudo cargar el contenido.</p>', `bible-${requestedBookId}-${requestedChapter}`)}
-    </div>
-</div>
+        <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
+            <div class="reading-text selection-surface verse-container" data-selection-surface="true">
+                ${this.renderVerseText(chapterData.content || '<p>No se pudo cargar el contenido.</p>', `bible-${requestedBookId}-${requestedChapter}`)}
             </div>
-        `;
+        </div>
+    </div>
+`;
 
         this.restoreHighlightsInDOMForVerses(`bible-${requestedBookId}-${requestedChapter}`);
         this.restoreSelectionNotesInDOM(`bible-${requestedBookId}-${requestedChapter}`);
