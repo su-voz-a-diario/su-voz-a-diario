@@ -715,37 +715,93 @@ body.dark-mode .badge-corona {
     gap: 16px;
 }
 
+/* ========================================
+   SECCIÓN BIBLIA - HEADER MEJORADO
+   ======================================== */
+
+/* Contenedor principal del header en la vista de Biblia */
 .bible-header-card {
-    background: var(--surface-color);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 18px 16px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 1.5rem 1rem 1.5rem 1rem;
+    background: var(--card-bg, #ffffff);
+    border-radius: 16px;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-color, #eaeaea);
+    min-height: 120px;
 }
 
-.bible-title {
-    font-size: 1.35rem;
-    font-weight: 800;
-    color: var(--primary);
-    line-height: 1.2;
-}
-
-.bible-subtitle {
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    line-height: 1.5;
-}
-
+/* Botón de "Volver a libros" - Posicionado absolutamente a la izquierda */
 .bible-back-btn {
-    display: inline-flex;
-    width: fit-content;
-    min-height: 44px;
-    padding: 10px 14px;
-    justify-content: flex-start;
-    align-self: flex-start;
+    position: absolute;
+    left: 0.75rem;
+    top: 0.75rem;
+    z-index: 10;
+    background: transparent;
+    box-shadow: none;
+    padding: 0.5rem 0.75rem;
+    color: var(--accent-primary, #4a90e2);
+    font-size: 0.9rem;
+    border: none;
+}
+
+.bible-back-btn:hover {
+    background: var(--hover-bg, #f5f5f5);
+    border-radius: 8px;
+}
+
+/* Título principal "Biblia" o nombre del libro */
+.bible-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--text-primary, #1a1a1a);
+    line-height: 1.2;
+    width: 100%;
+    padding: 0 1rem;
+    word-break: break-word;
+}
+
+/* Subtítulo con la versión de la Biblia */
+.bible-subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary, #666666);
+    font-weight: 400;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    background: var(--tag-bg, #f0f0f0);
+    padding: 0.25rem 1rem;
+    border-radius: 20px;
+    display: inline-block;
+    margin-top: 0.25rem;
+}
+
+/* Modo oscuro - ajustes automáticos */
+.dark-mode .bible-header-card {
+    background: var(--card-bg-dark, #1e1e1e);
+    border-color: var(--border-color-dark, #333333);
+}
+
+.dark-mode .bible-title {
+    color: var(--text-primary-dark, #ffffff);
+}
+
+.dark-mode .bible-subtitle {
+    color: var(--text-secondary-dark, #aaaaaa);
+    background: var(--tag-bg-dark, #2a2a2a);
+}
+
+.dark-mode .bible-back-btn {
+    color: var(--accent-primary-dark, #6eb5ff);
+}
+
+.dark-mode .bible-back-btn:hover {
+    background: var(--hover-bg-dark, #2a2a2a);
 }
 
 .bible-books-grid {
