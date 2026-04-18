@@ -264,7 +264,6 @@ pushListenersReady: false,
 themeListenerReady: false,
 lastScrollY: 0,
 scrollDirection: 'up',
-scrollTicking: false,
 scrollCompactEnabled: false,
 scrollCompactActive: false,
 scrollIdleTimer: null,
@@ -605,17 +604,27 @@ isReadingLikeView: function(view = this.currentView) {
 },
 
 setScrollCompactState: function(isCompact) {
-    this.scrollCompactActive = !!isCompact;
-    document.body.classList.toggle('reading-scroll-compact', this.scrollCompactActive);
+    if (this.scrollCompactActive === isCompact) return;
+    
+    this.scrollCompactActive = isCompact;
+    
+    // ✅ CORREGIDO: Usar classList en lugar de toggle con fuerza
+    if (isCompact) {
+        document.body.classList.add('reading-scroll-compact');
+    } else {
+        document.body.classList.remove('reading-scroll-compact');
+    }
 },
 
 resetScrollChrome: function() {
     this.lastScrollY = window.scrollY || window.pageYOffset || 0;
-    this.scrollDirection = 'up';
-    this.scrollTicking = false;
     this.scrollCompactEnabled = this.isReadingLikeView();
-    this.setScrollCompactState(false);
-
+    
+    // ✅ CORREGIDO: Resetear estado correctamente
+    if (this.scrollCompactActive) {
+        this.setScrollCompactState(false);
+    }
+    
     if (this.scrollIdleTimer) {
         clearTimeout(this.scrollIdleTimer);
         this.scrollIdleTimer = null;
@@ -623,52 +632,50 @@ resetScrollChrome: function() {
 },
 
 handleScrollChrome: function() {
+    // ✅ CORREGIDO: Versión simplificada que no interfiere con el scroll normal
     if (!this.scrollCompactEnabled) {
-        this.setScrollCompactState(false);
         return;
     }
 
     const currentY = window.scrollY || window.pageYOffset || 0;
-    const diff = currentY - this.lastScrollY;
-    const threshold = 10;
-    const compactStartOffset = 80;
+    const threshold = 15;
+    const compactStartOffset = 100;
 
-    if (Math.abs(diff) < threshold) {
+    // Solo activar/desactivar cuando hay un cambio significativo
+    if (Math.abs(currentY - this.lastScrollY) < threshold) {
         return;
     }
 
-    if (diff > 0 && currentY > compactStartOffset) {
-        this.scrollDirection = 'down';
-        this.setScrollCompactState(true);
-    } else if (diff < 0) {
-        this.scrollDirection = 'up';
-        this.setScrollCompactState(false);
+    if (currentY > compactStartOffset) {
+        if (!this.scrollCompactActive) {
+            this.setScrollCompactState(true);
+        }
+    } else {
+        if (this.scrollCompactActive) {
+            this.setScrollCompactState(false);
+        }
     }
 
     this.lastScrollY = currentY;
-
-    if (this.scrollIdleTimer) {
-        clearTimeout(this.scrollIdleTimer);
-    }
-
-    this.scrollIdleTimer = setTimeout(() => {
-        if (this.scrollDirection === 'up') {
-            this.setScrollCompactState(false);
-        }
-    }, 120);
 },
 
 bindScrollChrome: function() {
+    // ✅ CORREGIDO: Usar debounce para evitar múltiples llamadas
+    let scrollTimeout = null;
+    
     window.addEventListener('scroll', () => {
         if (!this.scrollCompactEnabled) return;
-        if (this.scrollTicking) return;
-
-        this.scrollTicking = true;
-
-        requestAnimationFrame(() => {
+        
+        // Cancelar timeout anterior
+        if (scrollTimeout) {
+            clearTimeout(scrollTimeout);
+        }
+        
+        // Ejecutar después de que termine el scroll
+        scrollTimeout = setTimeout(() => {
             this.handleScrollChrome();
-            this.scrollTicking = false;
-        });
+            scrollTimeout = null;
+        }, 50);
     }, { passive: true });
 },
 
@@ -2022,24 +2029,70 @@ showSelectionPanel: function(context) {
         }
     }
 
-    // ✅ CORREGIDO: Solo guardar scroll, NO bloquear body inmediatamente
+    // ✅ GUARDAR posición actual
     this.selectionScrollY = window.scrollY;
     
-    // Mostrar panel primero
+    // ✅ OBTENER posición exacta de la selección
+    const selection = window.getSelection();
+    let selectionRect = null;
+    
+    if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        selectionRect = {
+            top: rect.top + window.scrollY,
+            bottom: rect.bottom + window.scrollY,
+            left: rect.left,
+            right: rect.right,
+            height: rect.height
+        };
+        
+        this.lastSelectionRect = selectionRect;
+    }
+
+    // ✅ MOSTRAR panel primero (sin bloquear body aún)
     panel.classList.add('visible');
     document.body.classList.add('selection-panel-open');
     
-    // ✅ CORREGIDO: Bloquear scroll DESPUÉS de mostrar el panel
+    // ✅ CALCULAR ajuste de scroll para que la selección quede visible SOBRE el panel
+    if (selectionRect) {
+        const panelHeight = this.$selectionSheet ? this.$selectionSheet.offsetHeight : 220;
+        const viewportHeight = window.innerHeight;
+        
+        // Altura deseada para la selección (justo encima del panel)
+        const targetPosition = viewportHeight - panelHeight - 20;
+        
+        // Posición actual de la selección en la pantalla
+        const selectionScreenY = selectionRect.top - window.scrollY;
+        
+        // Si la selección está debajo del panel o muy cerca del borde
+        if (selectionScreenY > targetPosition - 30 || selectionScreenY < 50) {
+            // Calcular cuánto scroll necesitamos para posicionar la selección correctamente
+            const scrollTarget = selectionRect.top - targetPosition;
+            
+            // Aplicar scroll suave para posicionar la selección
+            setTimeout(() => {
+                window.scrollTo({
+                    top: Math.max(0, scrollTarget),
+                    behavior: 'smooth'
+                });
+            }, 50);
+        }
+    }
+    
+    // ✅ BLOQUEAR body DESPUÉS del scroll
     setTimeout(() => {
+        const currentScroll = window.scrollY;
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
-        document.body.style.top = `-${this.selectionScrollY}px`;
-    }, 10);
+        document.body.style.top = `-${currentScroll}px`;
+        this.selectionScrollY = currentScroll;
+    }, 150);
     
     this.updateSelectionSheetPosition();
     
-    // ✅ CORREGIDO: Llamar a preventAndroidAutoScroll si es Android
     if (isAndroidDevice()) {
         this.preventAndroidAutoScroll();
     }
@@ -2054,17 +2107,13 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     
     const scrollY = this.selectionScrollY || 0;
     
-    // ✅ CORREGIDO: Restaurar scroll del body PRIMERO
+    // ✅ RESTAURAR scroll del body PRIMERO
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
     document.body.style.top = '';
     
-    // Restaurar posición de scroll
-    if (scrollY > 0) {
-        window.scrollTo(0, scrollY);
-    }
-    
+    // Ocultar panel
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
         this.$selectionPanel.classList.remove('note-mode');
@@ -2076,6 +2125,11 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     }
 
     document.body.classList.remove('selection-panel-open');
+
+    // ✅ RESTAURAR posición de scroll exacta
+    if (scrollY > 0) {
+        window.scrollTo(0, scrollY);
+    }
 
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
@@ -2333,42 +2387,56 @@ updateSelectionSheetPosition: function() {
 
     const vv = window.visualViewport;
     const isAndroid = isAndroidDevice();
+    const panel = this.$selectionPanel;
+    const sheet = this.$selectionSheet;
 
     if (!vv) {
-        this.$selectionSheet.style.bottom = '0px';
+        sheet.style.bottom = '0px';
         return;
     }
 
-    // ✅ MEJORADO: Cálculo específico para Android
     let bottomOffset = 0;
     
     if (isAndroid) {
-        // En Android, el viewport se comporta diferente con el teclado
         const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
         bottomOffset = keyboardHeight;
         
-        // ✅ NUEVO: Ajustar altura máxima para Android
-        const maxSheetHeight = vv.height * 0.7; // Máximo 70% del viewport
-        this.$selectionSheet.style.maxHeight = `${maxSheetHeight}px`;
+        const maxSheetHeight = vv.height * 0.65;
+        sheet.style.maxHeight = `${maxSheetHeight}px`;
     } else {
         const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
         bottomOffset = keyboardHeight;
-        this.$selectionSheet.style.maxHeight = '';
+        sheet.style.maxHeight = '';
     }
 
-    this.$selectionSheet.style.bottom = `${bottomOffset}px`;
+    sheet.style.bottom = `${bottomOffset}px`;
     
-    // ✅ NUEVO: Asegurar que la selección siga visible
-    if (isAndroid && this.lastSelectionRect) {
-        const currentScrollY = window.scrollY;
-        const selectionTop = this.lastSelectionRect.top;
+    // ✅ NUEVO: Asegurar que la selección esté visible SOBRE el panel
+    if (this.lastSelectionRect) {
+        const panelHeight = sheet.offsetHeight;
+        const viewportHeight = vv.height;
+        const currentScroll = window.scrollY;
+        const selectionScreenTop = this.lastSelectionRect.top - currentScroll;
         
-        // Si la selección está muy arriba, ajustar scroll
-        if (selectionTop < currentScrollY + 50) {
+        // Si la selección está cubierta por el panel
+        if (selectionScreenTop + this.lastSelectionRect.height > viewportHeight - panelHeight) {
+            const neededScroll = this.lastSelectionRect.top - (viewportHeight - panelHeight - 20);
+            
             requestAnimationFrame(() => {
                 window.scrollTo({
-                    top: Math.max(0, selectionTop - 100),
-                    behavior: 'instant'
+                    top: Math.max(0, neededScroll),
+                    behavior: 'smooth'
+                });
+            });
+        }
+        // Si la selección está muy arriba (fuera de vista)
+        else if (selectionScreenTop < 10) {
+            const neededScroll = this.lastSelectionRect.top - 60;
+            
+            requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: Math.max(0, neededScroll),
+                    behavior: 'smooth'
                 });
             });
         }
