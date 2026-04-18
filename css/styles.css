@@ -2933,3 +2933,89 @@ body.selection-panel-open {
         scroll-behavior: auto !important;
     }
 }
+
+/* ======================================== */
+/* VERSÍCULOS SELECCIONABLES POR CLIC       */
+/* ======================================== */
+
+.verse-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.verse-item {
+    padding: 10px 14px;
+    border-radius: 10px;
+    transition: all 0.15s ease;
+    cursor: pointer;
+    line-height: 1.65;
+    border-left: 3px solid transparent;
+}
+
+.verse-item:active {
+    background-color: rgba(0, 0, 0, 0.04);
+}
+
+.dark-mode .verse-item:active {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.verse-number {
+    font-weight: 600;
+    font-size: 0.8em;
+    margin-right: 8px;
+    color: var(--text-muted);
+    vertical-align: super;
+}
+
+.verse-text-content {
+    font-weight: normal;
+}
+
+/* Versículo seleccionado */
+.verse-selected {
+    background-color: rgba(66, 133, 244, 0.1);
+    border-left: 3px solid #4285f4;
+}
+
+.dark-mode .verse-selected {
+    background-color: rgba(66, 133, 244, 0.18);
+    border-left-color: #5a9cff;
+}
+
+/* Resaltados en versículos */
+.verse-item.highlight-yellow {
+    background-color: #fff3a3 !important;
+    border-left-color: #f5c542;
+}
+
+.verse-item.highlight-blue {
+    background-color: #a3d4ff !important;
+    border-left-color: #4285f4;
+}
+
+.dark-mode .verse-item.highlight-yellow {
+    background-color: rgba(255, 235, 59, 0.25) !important;
+}
+
+.dark-mode .verse-item.highlight-blue {
+    background-color: rgba(33, 150, 243, 0.25) !important;
+}
+
+/* Cuando un versículo tiene resaltado Y está seleccionado */
+.verse-selected.highlight-yellow {
+    background-color: #ffe566 !important;
+}
+
+.verse-selected.highlight-blue {
+    background-color: #7cb9ff !important;
+}
+
+.dark-mode .verse-selected.highlight-yellow {
+    background-color: rgba(255, 235, 59, 0.35) !important;
+}
+
+.dark-mode .verse-selected.highlight-blue {
+    background-color: rgba(33, 150, 243, 0.35) !important;
+}
