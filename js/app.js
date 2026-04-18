@@ -2442,7 +2442,7 @@ showSelectionPanelForVerse: function() {
     
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
     
-    // ✅ IMPORTANTE: Actualizar estado visual de los botones
+    // Actualizar estado visual de los botones
     if (this.$selectionColorButtons.length) {
         this.$selectionColorButtons.forEach(btn => {
             const color = btn.getAttribute('data-color');
@@ -2450,8 +2450,9 @@ showSelectionPanelForVerse: function() {
         });
     }
     
-    // ✅ IMPORTANTE: Mostrar panel
+    // ✅ AGREGAR ESTAS DOS LÍNEAS
     panel.classList.add('visible');
+    document.body.classList.add('selection-panel-open');
     
     this.positionSelectionSheet();
 },
