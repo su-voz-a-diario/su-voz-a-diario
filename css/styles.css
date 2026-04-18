@@ -1586,55 +1586,124 @@ body.dark-mode .toast-message {
     position: relative;
 }
 
+/* ========================================
+   BADGE DE COMUNIDAD (NOTIFICACIONES)
+   ======================================== */
+
+.nav-btn-community {
+    position: relative;
+}
+
 .community-badge {
     position: absolute;
-    top: 6px;
-    right: 8px;
-    z-index: 2;
+    top: 2px;
+    right: 2px;
+    z-index: 5;
 
-    min-width: 18px;
-    height: 18px;
-    padding: 0 4px;
+    /* Tamaño fijo para que sea un círculo perfecto */
+    min-width: 20px;
+    width: auto;
+    height: 20px;
+    padding: 0 5px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
+    /* Círculo perfecto */
     border-radius: 999px;
-    background: rgba(49, 130, 206, 0.16);
-    color: #ffffff;
 
-    font-size: 0.62rem;
+    /* Fondo glass */
+    background: rgba(239, 68, 68, 0.95);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    /* Texto */
+    color: #ffffff;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
-    letter-spacing: 0;
-
+    letter-spacing: -0.01em;
     text-align: center;
     white-space: nowrap;
 
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    /* Borde sutil */
+    border: 1.5px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05);
 
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+    /* Animación suave */
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    transform: scale(1);
 }
 
-body.dark-mode .community-badge {
-    background: rgba(96, 165, 250, 0.16);
-    color: #f8fafc;
-    border-color: rgba(148, 163, 184, 0.18);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+/* Efecto de pulso cuando hay notificaciones nuevas */
+.community-badge:not([hidden]) {
+    animation: badge-pulse 0.3s ease-out;
 }
 
+@keyframes badge-pulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* Badge oculto */
 .community-badge[hidden] {
     display: none !important;
 }
 
+/* Modo oscuro */
 body.dark-mode .community-badge {
-    background: rgba(96, 165, 250, 0.16);
-    color: #f8fafc;
-    border-color: rgba(148, 163, 184, 0.18);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+    background: rgba(239, 68, 68, 0.95);
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+/* Modo claro */
+body.light-mode .community-badge {
+    background: rgba(239, 68, 68, 0.95);
+    border-color: rgba(255, 255, 255, 0.5);
+    box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+/* Ajuste para números de 2 dígitos */
+.community-badge[data-count="10"],
+.community-badge[data-count="11"],
+.community-badge[data-count="12"],
+.community-badge[data-count="13"],
+.community-badge[data-count="14"],
+.community-badge[data-count="15"],
+.community-badge[data-count="16"],
+.community-badge[data-count="17"],
+.community-badge[data-count="18"],
+.community-badge[data-count="19"],
+.community-badge[data-count="20"] {
+    padding: 0 4px;
+}
+
+/* Ajuste para pantallas pequeñas */
+@media (max-width: 480px) {
+    .community-badge {
+        top: 0px;
+        right: 0px;
+        min-width: 18px;
+        height: 18px;
+        font-size: 10px;
+        padding: 0 4px;
+    }
+}
+
+.community-badge[hidden] {
+    display: none !important;
 }
 
 /* ========================================
