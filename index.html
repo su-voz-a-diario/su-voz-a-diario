@@ -156,20 +156,15 @@
 
   <div class="selection-sheet-header">
     <div class="selection-actions-left">
-      <button class="color-btn yellow" data-color="yellow" aria-label="Resaltar en amarillo"></button>
-      <button class="color-btn blue" data-color="blue" aria-label="Resaltar en azul"></button>
+        <button class="color-btn yellow" data-color="yellow" aria-label="Resaltar en amarillo"></button>
+        <button class="color-btn blue" data-color="blue" aria-label="Resaltar en azul"></button>
 
-      <button class="action-btn" id="copyBtn">Copiar</button>
-      <button class="action-btn danger" id="clearBtn">Quitar</button>
+        <button class="action-btn" id="copyBtn" aria-label="Copiar texto">📋 Copiar</button>
+        <button class="action-btn" id="noteBtn" aria-label="Agregar nota">📝 Nota</button>
+        <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">🗑️ Quitar</button>
     </div>
 
     <button class="close-btn" id="closePanel" aria-label="Cerrar panel">✕</button>
-  </div>
-
-  <div class="selection-bottom">
-    <textarea id="selectionNote" placeholder="Escribe una nota..."></textarea>
-    <button class="btn-primary" id="saveNoteBtn">Guardar nota</button>
-  </div>
 </div>
    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
