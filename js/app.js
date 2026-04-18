@@ -251,12 +251,9 @@ const App = {
 // Estado de render y controles
 renderScheduled: false,
 controlsCollapsed: false,
-selectionUpdateTimer: null,
-selectionHideTimer: null,
-isSelecting: false,
 selectionPanelLocked: false,
 activeSelectionSurface: null,
-currentSelectionRange: null,
+currentSelectedVerse: null,        // NUEVO: elemento del versículo seleccionado
 currentSelectedText: null,
 currentSelectionDate: null,
 currentSelectionColorDraft: null,
@@ -267,11 +264,7 @@ scrollDirection: 'up',
 scrollCompactEnabled: false,
 scrollCompactActive: false,
 scrollIdleTimer: null,
-selectionScrollY: 0,
-lastSelectionRect: null,
-_androidScrollCleanup: null,
 _selectionPanelEventsBound: false,
-_selectionViewportEventsBound: false,
     
     // ========================================
     // INICIALIZACIÓN
@@ -281,7 +274,6 @@ _selectionViewportEventsBound: false,
     
     this.cacheDOM();
     this.bindSelectionPanelEvents();
-    this.bindSelectionViewportEvents();
     this.showAprilMessageIfNeeded();
     this.loadSettings();
     this.loadStreak();
@@ -1705,35 +1697,6 @@ getSelectionSurfaceFromNode: function(node) {
     return element ? element.closest('.selection-surface') : null;
 },
 
-getSelectionContext: function() {
-    const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
-
-    const text = selection.toString().replace(/\s+/g, ' ').trim();
-    if (!text || text.length < 3) return null;
-
-    const range = selection.getRangeAt(0);
-    if (!document.body.contains(range.startContainer)) return null;
-    const startSurface = this.getSelectionSurfaceFromNode(range.startContainer);
-    const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
-
-    if (!startSurface || !endSurface || startSurface !== endSurface) {
-        return null;
-    }
-
-    const shell = startSurface.closest('.reading-text-shell');
-    const dateStr = shell?.getAttribute('data-reading-date');
-    if (!dateStr) return null;
-
-    return {
-        selection,
-        range: range.cloneRange(),
-        text,
-        dateStr,
-        surface: startSurface
-    };
-},
-
 restoreHighlightsInDOM: function(dateStr) {
     const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
     const container = shell ? shell.querySelector('.selection-surface') : null;
@@ -1896,38 +1859,6 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     }
 },
 
-preventAndroidAutoScroll: function() {
-    if (!isAndroidDevice()) return;
-    
-    // ✅ CORREGIDO: Versión más simple que no interfiere con la selección
-    let touchStartY = 0;
-    
-    const handleTouchStart = (e) => {
-        if (!this.$selectionPanel?.classList.contains('visible')) return;
-        touchStartY = e.touches[0].clientY;
-    };
-    
-    const handleTouchMove = (e) => {
-        if (!this.$selectionPanel?.classList.contains('visible')) return;
-        
-        const touchY = e.touches[0].clientY;
-        const diff = touchStartY - touchY;
-        
-        // Solo prevenir scroll hacia arriba que podría ocultar la selección
-        if (Math.abs(diff) > 10) {
-            e.preventDefault();
-        }
-    };
-    
-    document.addEventListener('touchstart', handleTouchStart, { passive: false });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    
-    this._androidScrollCleanup = () => {
-        document.removeEventListener('touchstart', handleTouchStart);
-        document.removeEventListener('touchmove', handleTouchMove);
-    };
-},
-
 getSelectionHighlightState: function(selectedText, dateStr) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
     const highlights = this.getHighlights(dateStr);
@@ -1993,159 +1924,24 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
     window.getSelection()?.removeAllRanges();
     this.rerenderCurrentReadingView(dateStr, true);
 },
-
-showSelectionPanel: function(context) {
-    const panel = this.$selectionPanel;
-    if (!panel) return;
-
-    const highlightState = this.getSelectionHighlightState(context.text, context.dateStr);
-
-    this.currentSelectionRange = context.range.cloneRange();
-    this.currentSelectionDate = context.dateStr;
-    this.currentSelectedText = context.text;
-    this.activeSelectionSurface = context.surface;
-
-    const existingSelectionNote = this.getSelectionNoteByText(context.dateStr, context.text);
-
-    if (this.$selectionNote) {
-        this.$selectionNote.value = existingSelectionNote?.note || '';
-    }
-
-    this.currentSelectionColorDraft = highlightState.colors[0] || null;
-
-    if (this.$selectionColorButtons.length) {
-        this.$selectionColorButtons.forEach(btn => {
-            const color = btn.getAttribute('data-color');
-            btn.classList.toggle('is-active', highlightState.colors.includes(color));
-        });
-    }
-
-    if (this.$selectionClearBtn) {
-        if (highlightState.colors.length === 1) {
-            const colorName = highlightState.colors[0] === 'yellow' ? 'amarillo' : 'azul';
-            this.$selectionClearBtn.title = `Quitar resaltado ${colorName}`;
-        } else {
-            this.$selectionClearBtn.title = 'Quitar resaltado';
-        }
-    }
-
-    // ✅ GUARDAR posición actual
-    this.selectionScrollY = window.scrollY;
-    
-    // ✅ OBTENER posición exacta de la selección
-    const selection = window.getSelection();
-    let selectionRect = null;
-    
-    if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        
-        selectionRect = {
-            top: rect.top + window.scrollY,
-            bottom: rect.bottom + window.scrollY,
-            left: rect.left,
-            right: rect.right,
-            height: rect.height
-        };
-        
-        this.lastSelectionRect = selectionRect;
-    }
-
-    // ✅ MOSTRAR panel primero (sin bloquear body aún)
-    panel.classList.add('visible');
-    document.body.classList.add('selection-panel-open');
-    
-    // ✅ CALCULAR ajuste de scroll para que la selección quede visible SOBRE el panel
-    if (selectionRect) {
-        const panelHeight = this.$selectionSheet ? this.$selectionSheet.offsetHeight : 220;
-        const viewportHeight = window.innerHeight;
-        
-        // Altura deseada para la selección (justo encima del panel)
-        const targetPosition = viewportHeight - panelHeight - 20;
-        
-        // Posición actual de la selección en la pantalla
-        const selectionScreenY = selectionRect.top - window.scrollY;
-        
-        // Si la selección está debajo del panel o muy cerca del borde
-        if (selectionScreenY > targetPosition - 30 || selectionScreenY < 50) {
-            // Calcular cuánto scroll necesitamos para posicionar la selección correctamente
-            const scrollTarget = selectionRect.top - targetPosition;
-            
-            // Aplicar scroll suave para posicionar la selección
-            setTimeout(() => {
-                window.scrollTo({
-                    top: Math.max(0, scrollTarget),
-                    behavior: 'smooth'
-                });
-            }, 50);
-        }
-    }
-    
-    // ✅ BLOQUEAR body DESPUÉS del scroll
-    setTimeout(() => {
-        const currentScroll = window.scrollY;
-        document.body.style.overflow = 'hidden';
-        document.body.style.position = 'fixed';
-        document.body.style.width = '100%';
-        document.body.style.top = `-${currentScroll}px`;
-        this.selectionScrollY = currentScroll;
-    }, 150);
-    
-    this.updateSelectionSheetPosition();
-    
-    if (isAndroidDevice()) {
-        this.preventAndroidAutoScroll();
-    }
-},
     
 hideSelectionPanel: function(clearStoredSelection = true) {
-    // Limpiar listeners de Android
-    if (this._androidScrollCleanup) {
-        this._androidScrollCleanup();
-        this._androidScrollCleanup = null;
-    }
-    
-    const scrollY = this.selectionScrollY || 0;
-    
-    // ✅ RESTAURAR scroll del body PRIMERO
-    document.body.style.overflow = '';
-    document.body.style.position = '';
-    document.body.style.width = '';
-    document.body.style.top = '';
-    
-    // Ocultar panel
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
         this.$selectionPanel.classList.remove('note-mode');
     }
-
+    
     if (this.$selectionSheet) {
         this.$selectionSheet.style.bottom = '0px';
         this.$selectionSheet.style.maxHeight = '';
     }
-
+    
     document.body.classList.remove('selection-panel-open');
-
-    // ✅ RESTAURAR posición de scroll exacta
-    if (scrollY > 0) {
-        window.scrollTo(0, scrollY);
-    }
-
-    if (this.selectionUpdateTimer) {
-        clearTimeout(this.selectionUpdateTimer);
-        this.selectionUpdateTimer = null;
-    }
-
-    if (this.selectionHideTimer) {
-        clearTimeout(this.selectionHideTimer);
-        this.selectionHideTimer = null;
-    }
-
+    
+    this.clearVerseSelection();
     this.selectionPanelLocked = false;
-    this.lastSelectionRect = null;
-
+    
     if (clearStoredSelection) {
-        this.currentSelectionRange = null;
         this.currentSelectedText = null;
         this.currentSelectionDate = null;
         this.activeSelectionSurface = null;
@@ -2327,165 +2123,15 @@ if (this.$selectionPanel) {
 
 expandSelectionPanelForNote: function(expand = true) {
     if (!this.$selectionPanel) return;
-
+    
     if (expand) {
         this.$selectionPanel.classList.add('note-mode');
-        
-        // ✅ NUEVO: Guardar scroll antes de expandir
-        const currentScroll = window.scrollY;
-
-        requestAnimationFrame(() => {
-            this.updateSelectionSheetPosition();
-            
-            // ✅ NUEVO: En Android, ajustar para que el textarea sea visible
-            if (isAndroidDevice()) {
-                setTimeout(() => {
-                    const textarea = this.$selectionNote;
-                    if (textarea) {
-                        const rect = textarea.getBoundingClientRect();
-                        const viewportHeight = window.visualViewport?.height || window.innerHeight;
-                        
-                        if (rect.bottom > viewportHeight - 50) {
-                            const scrollNeeded = rect.bottom - viewportHeight + 100;
-                            window.scrollBy({
-                                top: scrollNeeded,
-                                behavior: 'smooth'
-                            });
-                        }
-                    }
-                }, 300);
-            }
-            
-            setTimeout(() => {
-                this.updateSelectionSheetPosition();
-                this.$selectionNote?.focus();
-            }, 120);
-        });
+        setTimeout(() => {
+            this.$selectionNote?.focus();
+        }, 120);
     } else {
         this.$selectionPanel.classList.remove('note-mode');
-
-        if (this.$selectionSheet) {
-            this.$selectionSheet.style.bottom = '0px';
-            this.$selectionSheet.style.maxHeight = '';
-        }
-        
-        // ✅ NUEVO: Restaurar scroll en Android
-        if (isAndroidDevice() && this.selectionScrollY) {
-            setTimeout(() => {
-                window.scrollTo({
-                    top: this.selectionScrollY,
-                    behavior: 'smooth'
-                });
-            }, 100);
-        }
     }
-},
-
-updateSelectionSheetPosition: function() {
-    if (!this.$selectionPanel || !this.$selectionSheet) return;
-    if (!this.$selectionPanel.classList.contains('visible')) return;
-
-    const vv = window.visualViewport;
-    const isAndroid = isAndroidDevice();
-    const panel = this.$selectionPanel;
-    const sheet = this.$selectionSheet;
-
-    if (!vv) {
-        sheet.style.bottom = '0px';
-        return;
-    }
-
-    let bottomOffset = 0;
-    
-    if (isAndroid) {
-        const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        bottomOffset = keyboardHeight;
-        
-        const maxSheetHeight = vv.height * 0.65;
-        sheet.style.maxHeight = `${maxSheetHeight}px`;
-    } else {
-        const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-        bottomOffset = keyboardHeight;
-        sheet.style.maxHeight = '';
-    }
-
-    sheet.style.bottom = `${bottomOffset}px`;
-    
-    // ✅ NUEVO: Asegurar que la selección esté visible SOBRE el panel
-    if (this.lastSelectionRect) {
-        const panelHeight = sheet.offsetHeight;
-        const viewportHeight = vv.height;
-        const currentScroll = window.scrollY;
-        const selectionScreenTop = this.lastSelectionRect.top - currentScroll;
-        
-        // Si la selección está cubierta por el panel
-        if (selectionScreenTop + this.lastSelectionRect.height > viewportHeight - panelHeight) {
-            const neededScroll = this.lastSelectionRect.top - (viewportHeight - panelHeight - 20);
-            
-            requestAnimationFrame(() => {
-                window.scrollTo({
-                    top: Math.max(0, neededScroll),
-                    behavior: 'smooth'
-                });
-            });
-        }
-        // Si la selección está muy arriba (fuera de vista)
-        else if (selectionScreenTop < 10) {
-            const neededScroll = this.lastSelectionRect.top - 60;
-            
-            requestAnimationFrame(() => {
-                window.scrollTo({
-                    top: Math.max(0, neededScroll),
-                    behavior: 'smooth'
-                });
-            });
-        }
-    }
-},
-
-bindSelectionViewportEvents: function() {
-    if (this._selectionViewportEventsBound) return;
-
-    if (window.visualViewport) {
-        const update = () => {
-            this.updateSelectionSheetPosition();
-        };
-
-        window.visualViewport.addEventListener('resize', update);
-        window.visualViewport.addEventListener('scroll', update);
-    }
-
-    this._selectionViewportEventsBound = true;
-},
-    
-scheduleSelectionPanelUpdate: function(force = false) {
-    if (this.selectionUpdateTimer) {
-        clearTimeout(this.selectionUpdateTimer);
-        this.selectionUpdateTimer = null;
-    }
-
-    // ✅ CORREGIDO: Mayor delay para Android
-    const delay = isAndroidDevice() ? 300 : isIOSDevice() ? 90 : 60;
-
-    this.selectionUpdateTimer = setTimeout(() => {
-        const context = this.getSelectionContext();
-
-        if (!context) {
-            if (!this.isSelecting) {
-                this.hideSelectionPanel();
-            }
-            return;
-        }
-
-        this.currentSelectionRange = context.range.cloneRange();
-        this.currentSelectedText = context.text;
-        this.currentSelectionDate = context.dateStr;
-        this.activeSelectionSurface = context.surface;
-
-        if (!this.isSelecting) {
-            this.showSelectionPanel(context);
-        }
-    }, delay);
 },
     
     // ========================================
@@ -2531,7 +2177,6 @@ scheduleSelectionPanelUpdate: function(force = false) {
     }
     
 this.hideSelectionPanel();
-this.isSelecting = false;
 
 if (this.currentView === 'calendar' && view !== 'calendar') {
     this.saveCalendarScroll();
@@ -2651,6 +2296,236 @@ changeHomeDay: function(direction) {
         month: 'short'
     });
 },
+
+
+// ========================================
+// NUEVO SISTEMA DE VERSÍCULOS SELECCIONABLES
+// ========================================
+
+renderVerseText: function(htmlContent, dateStr) {
+    // Crear un contenedor temporal para parsear el HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    
+    // Extraer versículos del formato API.Bible
+    const verses = [];
+    const verseSpans = tempDiv.querySelectorAll('.v, [data-verse]');
+    
+    if (verseSpans.length > 0) {
+        // Si hay marcadores de versículo, separar por ellos
+        let currentVerse = '';
+        let currentVerseNum = '';
+        
+        const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+            null
+        );
+        
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === Node.ELEMENT_NODE && 
+                (node.classList?.contains('v') || node.hasAttribute('data-verse'))) {
+                if (currentVerse) {
+                    verses.push({
+                        number: currentVerseNum,
+                        text: currentVerse.trim()
+                    });
+                }
+                currentVerseNum = node.textContent.trim();
+                currentVerse = '';
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                currentVerse += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                currentVerse += node.textContent || '';
+            }
+        }
+        
+        if (currentVerse) {
+            verses.push({
+                number: currentVerseNum,
+                text: currentVerse.trim()
+            });
+        }
+    } else {
+        // Si no hay marcadores, intentar separar por números de versículo en el texto
+        const plainText = tempDiv.textContent;
+        const versePattern = /(\d+)\s+([^\d]+?)(?=\s*\d+\s+|$)/g;
+        let match;
+        
+        while ((match = versePattern.exec(plainText)) !== null) {
+            verses.push({
+                number: match[1],
+                text: match[2].trim()
+            });
+        }
+    }
+    
+    // Si no se pudieron extraer versículos, mostrar el texto completo
+    if (verses.length === 0) {
+        const plainText = htmlContent.replace(/<[^>]+>/g, '').trim();
+        return `<div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">${htmlContent}</div>`;
+    }
+    
+    // Renderizar cada versículo como un elemento seleccionable
+    return verses.map(verse => `
+        <div class="verse-item verse-selectable" 
+             data-verse-number="${verse.number}"
+             data-verse-text="${this.escapeHtml(verse.text)}"
+             data-verse-full="${this.escapeHtml(verse.number + ' ' + verse.text)}">
+            <span class="verse-number">${verse.number}</span>
+            <span class="verse-text-content">${verse.text}</span>
+        </div>
+    `).join('');
+},
+
+handleVerseClick: function(e) {
+    const verseItem = e.target.closest('.verse-selectable');
+    if (!verseItem) return;
+    
+    const surface = verseItem.closest('.selection-surface');
+    if (!surface) return;
+    
+    const shell = surface.closest('.reading-text-shell');
+    const dateStr = shell?.getAttribute('data-reading-date');
+    if (!dateStr) return;
+    
+    const verseText = verseItem.getAttribute('data-verse-full') || 
+                      verseItem.getAttribute('data-verse-text') || 
+                      verseItem.textContent.trim();
+    
+    // Limpiar selección anterior
+    this.clearVerseSelection();
+    
+    // Marcar como seleccionado
+    verseItem.classList.add('verse-selected');
+    
+    // Guardar estado
+    this.currentSelectedVerse = verseItem;
+    this.currentSelectedText = verseText;
+    this.currentSelectionDate = dateStr;
+    this.activeSelectionSurface = surface;
+    
+    // Mostrar panel
+    this.showSelectionPanelForVerse();
+    
+    // Vibración sutil en móviles
+    if ('vibrate' in navigator) {
+        navigator.vibrate(10);
+    }
+},
+
+clearVerseSelection: function() {
+    document.querySelectorAll('.verse-selected').forEach(el => {
+        el.classList.remove('verse-selected');
+    });
+    this.currentSelectedVerse = null;
+},
+
+showSelectionPanelForVerse: function() {
+    const panel = this.$selectionPanel;
+    if (!panel) return;
+    
+    const highlightState = this.getSelectionHighlightState(
+        this.currentSelectedText, 
+        this.currentSelectionDate
+    );
+    
+    const existingSelectionNote = this.getSelectionNoteByText(
+        this.currentSelectionDate, 
+        this.currentSelectedText
+    );
+    
+    if (this.$selectionNote) {
+        this.$selectionNote.value = existingSelectionNote?.note || '';
+    }
+    
+    this.currentSelectionColorDraft = highlightState.colors[0] || null;
+    
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            const color = btn.getAttribute('data-color');
+            btn.classList.toggle('is-active', highlightState.colors.includes(color));
+        });
+    }
+    
+    // Mostrar panel SIN manipular scroll del body
+    panel.classList.add('visible');
+    
+    // Ajustar posición del sheet basado en el versículo seleccionado
+    this.positionSelectionSheet();
+},
+
+positionSelectionSheet: function() {
+    if (!this.$selectionSheet || !this.currentSelectedVerse) return;
+    
+    const verseRect = this.currentSelectedVerse.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const sheetHeight = this.$selectionSheet.offsetHeight || 220;
+    
+    // Calcular si el versículo está demasiado cerca del borde inferior
+    const verseBottom = verseRect.bottom;
+    const spaceBelow = viewportHeight - verseBottom;
+    
+    if (spaceBelow < sheetHeight + 20) {
+        // Si no hay espacio suficiente abajo, hacer scroll para mostrar el versículo
+        const scrollNeeded = verseRect.top - (viewportHeight - sheetHeight - 60);
+        if (scrollNeeded > 0) {
+            window.scrollBy({
+                top: scrollNeeded,
+                behavior: 'smooth'
+            });
+        }
+    }
+    
+    // El sheet se queda en la posición fija (bottom: 0)
+    this.$selectionSheet.style.bottom = '0px';
+},
+
+saveSelectedHighlight: function(selectedText, color, dateStr) {
+    const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
+    
+    if (!cleanText || cleanText.length < 3) {
+        this.showToast('Selecciona un texto válido');
+        return;
+    }
+    
+    const highlights = this.getHighlights(dateStr);
+    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const cleanLower = normalize(cleanText);
+    
+    const existingIndex = highlights.findIndex(item => 
+        normalize(item.text) === cleanLower && item.color === color
+    );
+    
+    if (existingIndex >= 0) {
+        this.showToast(`Este texto ya está resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+        return;
+    }
+    
+    highlights.push({ text: cleanText, color });
+    this.saveHighlights(dateStr, highlights);
+    
+    this.currentSelectionColorDraft = color;
+    
+    if (this.$selectionColorButtons.length) {
+        this.$selectionColorButtons.forEach(btn => {
+            const btnColor = btn.getAttribute('data-color');
+            btn.classList.toggle('is-active', 
+                highlights.some(h => normalize(h.text) === cleanLower && h.color === btnColor)
+            );
+        });
+    }
+    
+    this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+    
+    // Aplicar resaltado visual inmediatamente
+    if (this.currentSelectedVerse) {
+        this.currentSelectedVerse.classList.add(`highlight-${color}`);
+    }
+    
+    this.rerenderCurrentReadingView(dateStr, true);
+},
     
    getTodayDateStr: function() {
     const now = new Date();
@@ -2695,9 +2570,6 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
     const panelOpen = this.$selectionPanel?.classList.contains('visible');
 
     if (!force && panelOpen) return;
-
-    const selection = window.getSelection();
-    if (!force && this.isSelecting && selection && !selection.isCollapsed) return;
 
     if (this.currentView === 'home') {
         this.renderHome();
@@ -2782,10 +2654,10 @@ const introVideoHtml = showIntroVideo ? `
                     <div class="section-title">${readingLabel}</div>
                     <h2 class="reading-reference">${reading.reference}</h2>
                     <div class="reading-text-shell" data-reading-date="${reading.date}">
-                        <div class="reading-text selection-surface" data-selection-surface="true">
-                            ${readingText}
-                        </div>
-                    </div>
+    <div class="reading-text selection-surface verse-container" data-selection-surface="true">
+        ${this.renderVerseText(readingText, reading.date)}
+    </div>
+</div>
                </div>
             
             <div class="main-action">
@@ -3013,10 +2885,10 @@ renderBibleReading: async function() {
                 </div>
 
                 <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
-                    <div class="reading-text selection-surface" data-selection-surface="true">
-                        ${chapterData.content || '<p>No se pudo cargar el contenido.</p>'}
-                    </div>
-                </div>
+    <div class="reading-text selection-surface verse-container" data-selection-surface="true">
+        ${this.renderVerseText(chapterData.content || '<p>No se pudo cargar el contenido.</p>', `bible-${requestedBookId}-${requestedChapter}`)}
+    </div>
+</div>
             </div>
         `;
 
@@ -3822,15 +3694,13 @@ if (this.$headerSettingsBtn) {
         });
         
         // Eventos del contenido
-       this.$content.addEventListener('click', async (e) => {
-       const readingEl = e.target.closest('.selection-surface');
-if (readingEl) {
-    const selection = window.getSelection();
-
-    if (selection && selection.toString().trim()) {
+     this.$content.addEventListener('click', async (e) => {
+    const verseItem = e.target.closest('.verse-selectable');
+    if (verseItem) {
+        e.stopPropagation();
+        this.handleVerseClick(e);
         return;
     }
-}
 
 const selectionNoteAnchor = e.target.closest('.selection-note-anchor');
 if (selectionNoteAnchor) {
@@ -4377,81 +4247,6 @@ this.$content.addEventListener('focusin', (e) => {
         navigator.vibrate(20);
     }
 });
-
-document.addEventListener('pointerdown', (e) => {
-    const surface = e.target.closest('.selection-surface');
-
-    if (!surface) {
-        this.isSelecting = false;
-        return;
-    }
-
-    this.isSelecting = true;
-    this.activeSelectionSurface = surface;
-
-    if (this.selectionUpdateTimer) {
-        clearTimeout(this.selectionUpdateTimer);
-        this.selectionUpdateTimer = null;
-    }
-}, true);
-
-document.addEventListener('selectionchange', () => {
-    const selection = window.getSelection();
-
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        if (!this.isSelecting && !this.selectionPanelLocked) {
-            this.hideSelectionPanel();
-        }
-        return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const startSurface = this.getSelectionSurfaceFromNode(range.startContainer);
-    const endSurface = this.getSelectionSurfaceFromNode(range.endContainer);
-
-    if (!startSurface || !endSurface || startSurface !== endSurface) {
-        if (!this.isSelecting && !this.selectionPanelLocked) {
-            this.hideSelectionPanel();
-        }
-        return;
-    }
-
-    this.activeSelectionSurface = startSurface;
-
-    if (!this.isSelecting && !this.selectionPanelLocked) {
-        this.scheduleSelectionPanelUpdate();
-    }
-});
-
-const finishSelection = () => {
-    const delay = isAndroidDevice() ? 250 : isIOSDevice() ? 90 : 60;
-
-    setTimeout(() => {
-        this.isSelecting = false;
-
-        if (this.selectionPanelLocked) {
-            return;
-        }
-
-        const context = this.getSelectionContext();
-
-        if (!context) {
-            this.hideSelectionPanel();
-            return;
-        }
-
-        this.currentSelectionRange = context.range.cloneRange();
-        this.currentSelectedText = context.text;
-        this.currentSelectionDate = context.dateStr;
-        this.activeSelectionSurface = context.surface;
-
-        this.showSelectionPanel(context);
-    }, delay);
-};
-
-document.addEventListener('pointerup', finishSelection, true);
-document.addEventListener('pointercancel', finishSelection, true);
-document.addEventListener('mouseup', finishSelection, true);
 },
     
     initTheme: function() {
