@@ -253,10 +253,11 @@ renderScheduled: false,
 controlsCollapsed: false,
 selectionPanelLocked: false,
 activeSelectionSurface: null,
-currentSelectedVerse: null,        // NUEVO: elemento del versículo seleccionado
+currentSelectedVerse: null,       
 currentSelectedText: null,
 currentSelectionDate: null,
 currentSelectionColorDraft: null,
+_savedScrollY: null, 
 pushListenersReady: false,
 themeListenerReady: false,
 lastScrollY: 0,
@@ -1710,6 +1711,33 @@ restoreHighlightsInDOM: function(dateStr) {
     });
 },
 
+restoreHighlightsInDOMForVerses: function(dateStr) {
+    const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
+    const container = shell ? shell.querySelector('.verse-container') : null;
+    if (!container) return;
+    
+    const highlights = this.getHighlights(dateStr);
+    if (!highlights.length) return;
+    
+    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const verseItems = container.querySelectorAll('.verse-item');
+    
+    highlights.forEach(highlight => {
+        const highlightText = normalize(highlight.text);
+        
+        for (const verseItem of verseItems) {
+            const verseText = normalize(verseItem.getAttribute('data-verse-full') || 
+                                         verseItem.getAttribute('data-verse-text') || 
+                                         verseItem.textContent || '');
+            
+            if (verseText === highlightText || verseText.includes(highlightText)) {
+                verseItem.classList.add(`highlight-${highlight.color}`);
+                break;
+            }
+        }
+    });
+},
+
 restoreSelectionNotesInDOM: function(dateStr) {
     const shell = document.querySelector(`.reading-text-shell[data-reading-date="${dateStr}"]`);
     const container = shell ? shell.querySelector('.selection-surface') : null;
@@ -1936,7 +1964,14 @@ hideSelectionPanel: function(clearStoredSelection = true) {
         this.$selectionSheet.style.maxHeight = '';
     }
     
+    // ✅ QUITAR la clase que bloquea el scroll
     document.body.classList.remove('selection-panel-open');
+    
+    // ✅ RESTAURAR la posición del scroll guardada
+    if (this._savedScrollY !== undefined && this._savedScrollY !== null) {
+        window.scrollTo(0, this._savedScrollY);
+        this._savedScrollY = null;
+    }
     
     this.clearVerseSelection();
     this.selectionPanelLocked = false;
@@ -2426,6 +2461,9 @@ showSelectionPanelForVerse: function() {
     const panel = this.$selectionPanel;
     if (!panel) return;
     
+    // ✅ GUARDAR la posición actual del scroll
+    this._savedScrollY = window.scrollY;
+    
     const highlightState = this.getSelectionHighlightState(
         this.currentSelectedText, 
         this.currentSelectionDate
@@ -2449,7 +2487,7 @@ showSelectionPanelForVerse: function() {
         });
     }
     
-    // ✅ ESTAS DOS LÍNEAS SON CRÍTICAS
+    // Mostrar panel
     panel.classList.add('visible');
     document.body.classList.add('selection-panel-open');
     
@@ -2754,7 +2792,7 @@ const introVideoHtml = showIntroVideo ? `
     </div>
 ` : ''}
         `;
-            this.restoreHighlightsInDOM(reading.date);
+            this.restoreHighlightsInDOMForVerses(reading.date);
             this.restoreSelectionNotesInDOM(reading.date);
     },
     
@@ -2907,7 +2945,7 @@ renderBibleReading: async function() {
             </div>
         `;
 
-        this.restoreHighlightsInDOM(`bible-${requestedBookId}-${requestedChapter}`);
+        this.restoreHighlightsInDOMForVerses(`bible-${requestedBookId}-${requestedChapter}`);
         this.restoreSelectionNotesInDOM(`bible-${requestedBookId}-${requestedChapter}`);
     } catch (error) {
         console.error('Error cargando capítulo bíblico:', error);
