@@ -256,7 +256,6 @@ selectionHideTimer: null,
 isSelecting: false,
 selectionPanelLocked: false,
 activeSelectionSurface: null,
-activeSelectionSurface: null,
 currentSelectionRange: null,
 currentSelectedText: null,
 currentSelectionDate: null,
@@ -269,6 +268,11 @@ scrollTicking: false,
 scrollCompactEnabled: false,
 scrollCompactActive: false,
 scrollIdleTimer: null,
+selectionScrollY: 0,
+lastSelectionRect: null,
+_androidScrollCleanup: null,
+_selectionPanelEventsBound: false,
+_selectionViewportEventsBound: false,
     
     // ========================================
     // INICIALIZACIÓN
@@ -1885,6 +1889,35 @@ highlightTextInElement: function(container, text, color = 'yellow') {
     }
 },
 
+preventAndroidAutoScroll: function() {
+        if (!isAndroidDevice()) return;
+        
+        let lastScrollY = window.scrollY;
+        let scrollBlocked = false;
+        
+        const blockScroll = () => {
+            if (!this.$selectionPanel?.classList.contains('visible')) return;
+            if (scrollBlocked) return;
+            
+            scrollBlocked = true;
+            window.scrollTo(0, lastScrollY);
+            
+            requestAnimationFrame(() => {
+                scrollBlocked = false;
+            });
+        };
+        
+        window.addEventListener('scroll', blockScroll, { passive: false });
+        window.addEventListener('touchmove', blockScroll, { passive: false });
+        
+        const cleanup = () => {
+            window.removeEventListener('scroll', blockScroll);
+            window.removeEventListener('touchmove', blockScroll);
+        };
+        
+        this._androidScrollCleanup = cleanup;
+    },
+
 saveSelectedHighlight: function(selectedText, color, dateStr) {
     if (!selectedText || selectedText.trim().length < 3) {
         this.showToast('Selecciona un texto un poco más largo');
@@ -2000,9 +2033,9 @@ showSelectionPanel: function(context) {
 
     const existingSelectionNote = this.getSelectionNoteByText(context.dateStr, context.text);
 
-if (this.$selectionNote) {
-    this.$selectionNote.value = existingSelectionNote?.note || '';
-}
+    if (this.$selectionNote) {
+        this.$selectionNote.value = existingSelectionNote?.note || '';
+    }
 
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
 
@@ -2022,33 +2055,85 @@ if (this.$selectionNote) {
         }
     }
 
-const selection = window.getSelection();
-if (selection && selection.rangeCount > 0) {
-    const rect = selection.getRangeAt(0).getBoundingClientRect();
-    const panelHeight = this.$selectionPanel?.offsetHeight || 220;
-    const viewportHeight = window.visualViewport
-        ? window.visualViewport.height
-        : window.innerHeight;
-
-    const safeBottom = viewportHeight - panelHeight - 24;
-
-    if (rect.bottom > safeBottom) {
-        const neededOffset = rect.bottom - safeBottom + 16;
-        window.scrollBy({
-            top: neededOffset,
-            behavior: 'smooth'
-        });
+    // ✅ NUEVO: Guardar posición actual del scroll antes de mostrar el panel
+    this.selectionScrollY = window.scrollY;
+    
+    // ✅ NUEVO: Obtener la posición exacta de la selección
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        
+        // Guardar referencia a la posición de la selección
+        this.lastSelectionRect = {
+            top: rect.top + window.scrollY,
+            bottom: rect.bottom + window.scrollY,
+            left: rect.left,
+            right: rect.right,
+            height: rect.height
+        };
+        
+        // ✅ CRÍTICO PARA ANDROID: Ajustar el scroll para que la selección quede visible
+        // sin que el panel la tape completamente
+        const viewportHeight = window.visualViewport 
+            ? window.visualViewport.height 
+            : window.innerHeight;
+        
+        const panelHeight = 180; // Altura base del panel sin expandir
+        const selectionBottom = rect.bottom;
+        const safeZone = viewportHeight - panelHeight - 40; // 40px de margen
+        
+        if (selectionBottom > safeZone) {
+            // Solo ajustar si la selección está demasiado abajo
+            const scrollAdjustment = selectionBottom - safeZone;
+            
+            // ✅ USAR requestAnimationFrame para suavizar el ajuste
+            requestAnimationFrame(() => {
+                window.scrollBy({
+                    top: scrollAdjustment,
+                    behavior: 'instant' // 'instant' es mejor que 'smooth' en Android para selección
+                });
+            });
+        }
     }
-}
 
-requestAnimationFrame(() => {
-    panel.classList.add('visible');
-    document.body.classList.add('selection-panel-open');
-    this.updateSelectionSheetPosition();
-});
+    // ✅ MEJORADO: Mostrar panel con un pequeño retraso para permitir ajustes de scroll
+    requestAnimationFrame(() => {
+        // Prevenir scroll del body mientras el panel está abierto
+        document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.style.top = `-${this.selectionScrollY}px`;
+        
+        panel.classList.add('visible');
+        document.body.classList.add('selection-panel-open');
+        
+        // ✅ NUEVO: Ajustar posición del sheet para Android
+        this.updateSelectionSheetPosition();
+        
+        // ✅ NUEVO: Prevenir que Android haga scroll automático
+        if (isAndroidDevice()) {
+    this.preventAndroidAutoScroll(); 
+    setTimeout(() => {
+        window.scrollTo(0, this.selectionScrollY);
+    }, 50);
+}
+    });
 },
     
 hideSelectionPanel: function(clearStoredSelection = true) {
+    if (this._androidScrollCleanup) {
+        this._androidScrollCleanup();
+        this._androidScrollCleanup = null;
+    }
+    
+    // ✅ NUEVO: Restaurar scroll del body
+    const scrollY = this.selectionScrollY || 0;
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.width = '';
+    document.body.style.top = '';
+    
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
         this.$selectionPanel.classList.remove('note-mode');
@@ -2056,9 +2141,17 @@ hideSelectionPanel: function(clearStoredSelection = true) {
 
     if (this.$selectionSheet) {
         this.$selectionSheet.style.bottom = '0px';
+        this.$selectionSheet.style.maxHeight = '';
     }
 
     document.body.classList.remove('selection-panel-open');
+
+    // ✅ NUEVO: Restaurar posición de scroll
+    if (scrollY > 0) {
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+        });
+    }
 
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
@@ -2071,14 +2164,15 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     }
 
     this.selectionPanelLocked = false;
+    this.lastSelectionRect = null;
 
-if (clearStoredSelection) {
-    this.currentSelectionRange = null;
-    this.currentSelectedText = null;
-    this.currentSelectionDate = null;
-    this.activeSelectionSurface = null;
-    this.currentSelectionColorDraft = null;
-}
+    if (clearStoredSelection) {
+        this.currentSelectionRange = null;
+        this.currentSelectedText = null;
+        this.currentSelectionDate = null;
+        this.activeSelectionSurface = null;
+        this.currentSelectionColorDraft = null;
+    }
 },
 
 saveSelectionNoteFromPanel: function() {
@@ -2258,28 +2352,53 @@ expandSelectionPanelForNote: function(expand = true) {
 
     if (expand) {
         this.$selectionPanel.classList.add('note-mode');
+        
+        // ✅ NUEVO: Guardar scroll antes de expandir
+        const currentScroll = window.scrollY;
 
         requestAnimationFrame(() => {
             this.updateSelectionSheetPosition();
-        });
-
-        setTimeout(() => {
-            this.updateSelectionSheetPosition();
-
-            this.$selectionNote?.scrollIntoView({
-                block: 'center',
-                behavior: 'smooth'
-            });
-
+            
+            // ✅ NUEVO: En Android, ajustar para que el textarea sea visible
+            if (isAndroidDevice()) {
+                setTimeout(() => {
+                    const textarea = this.$selectionNote;
+                    if (textarea) {
+                        const rect = textarea.getBoundingClientRect();
+                        const viewportHeight = window.visualViewport?.height || window.innerHeight;
+                        
+                        if (rect.bottom > viewportHeight - 50) {
+                            const scrollNeeded = rect.bottom - viewportHeight + 100;
+                            window.scrollBy({
+                                top: scrollNeeded,
+                                behavior: 'smooth'
+                            });
+                        }
+                    }
+                }, 300);
+            }
+            
             setTimeout(() => {
                 this.updateSelectionSheetPosition();
+                this.$selectionNote?.focus();
             }, 120);
-        }, 180);
+        });
     } else {
         this.$selectionPanel.classList.remove('note-mode');
 
         if (this.$selectionSheet) {
             this.$selectionSheet.style.bottom = '0px';
+            this.$selectionSheet.style.maxHeight = '';
+        }
+        
+        // ✅ NUEVO: Restaurar scroll en Android
+        if (isAndroidDevice() && this.selectionScrollY) {
+            setTimeout(() => {
+                window.scrollTo({
+                    top: this.selectionScrollY,
+                    behavior: 'smooth'
+                });
+            }, 100);
         }
     }
 },
@@ -2289,20 +2408,47 @@ updateSelectionSheetPosition: function() {
     if (!this.$selectionPanel.classList.contains('visible')) return;
 
     const vv = window.visualViewport;
+    const isAndroid = isAndroidDevice();
 
     if (!vv) {
         this.$selectionSheet.style.bottom = '0px';
         return;
     }
 
-    const keyboardHeight = Math.max(
-        0,
-        window.innerHeight - vv.height - vv.offsetTop
-    );
+    // ✅ MEJORADO: Cálculo específico para Android
+    let bottomOffset = 0;
+    
+    if (isAndroid) {
+        // En Android, el viewport se comporta diferente con el teclado
+        const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        bottomOffset = keyboardHeight;
+        
+        // ✅ NUEVO: Ajustar altura máxima para Android
+        const maxSheetHeight = vv.height * 0.7; // Máximo 70% del viewport
+        this.$selectionSheet.style.maxHeight = `${maxSheetHeight}px`;
+    } else {
+        const keyboardHeight = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        bottomOffset = keyboardHeight;
+        this.$selectionSheet.style.maxHeight = '';
+    }
 
-    this.$selectionSheet.style.bottom = keyboardHeight > 0
-        ? `${keyboardHeight}px`
-        : '0px';
+    this.$selectionSheet.style.bottom = `${bottomOffset}px`;
+    
+    // ✅ NUEVO: Asegurar que la selección siga visible
+    if (isAndroid && this.lastSelectionRect) {
+        const currentScrollY = window.scrollY;
+        const selectionTop = this.lastSelectionRect.top;
+        
+        // Si la selección está muy arriba, ajustar scroll
+        if (selectionTop < currentScrollY + 50) {
+            requestAnimationFrame(() => {
+                window.scrollTo({
+                    top: Math.max(0, selectionTop - 100),
+                    behavior: 'instant'
+                });
+            });
+        }
+    }
 },
 
 bindSelectionViewportEvents: function() {
@@ -2326,7 +2472,8 @@ scheduleSelectionPanelUpdate: function(force = false) {
         this.selectionUpdateTimer = null;
     }
 
-    const delay = isAndroidDevice() ? 250 : isIOSDevice() ? 90 : 60;
+    // ✅ AJUSTADO: Tiempos optimizados para Android
+    const delay = isAndroidDevice() ? 150 : isIOSDevice() ? 90 : 60;
 
     this.selectionUpdateTimer = setTimeout(() => {
         const context = this.getSelectionContext();
