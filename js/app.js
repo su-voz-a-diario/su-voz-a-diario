@@ -1890,68 +1890,35 @@ highlightTextInElement: function(container, text, color = 'yellow') {
 },
 
 preventAndroidAutoScroll: function() {
-        if (!isAndroidDevice()) return;
+    if (!isAndroidDevice()) return;
+    
+    // ✅ CORREGIDO: Versión más simple que no interfiere con la selección
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e) => {
+        if (!this.$selectionPanel?.classList.contains('visible')) return;
+        touchStartY = e.touches[0].clientY;
+    };
+    
+    const handleTouchMove = (e) => {
+        if (!this.$selectionPanel?.classList.contains('visible')) return;
         
-        let lastScrollY = window.scrollY;
-        let scrollBlocked = false;
+        const touchY = e.touches[0].clientY;
+        const diff = touchStartY - touchY;
         
-        const blockScroll = () => {
-            if (!this.$selectionPanel?.classList.contains('visible')) return;
-            if (scrollBlocked) return;
-            
-            scrollBlocked = true;
-            window.scrollTo(0, lastScrollY);
-            
-            requestAnimationFrame(() => {
-                scrollBlocked = false;
-            });
-        };
-        
-        window.addEventListener('scroll', blockScroll, { passive: false });
-        window.addEventListener('touchmove', blockScroll, { passive: false });
-        
-        const cleanup = () => {
-            window.removeEventListener('scroll', blockScroll);
-            window.removeEventListener('touchmove', blockScroll);
-        };
-        
-        this._androidScrollCleanup = cleanup;
-    },
-
-saveSelectedHighlight: function(selectedText, color, dateStr) {
-    if (!selectedText || selectedText.trim().length < 3) {
-        this.showToast('Selecciona un texto un poco más largo');
-        return;
-    }
-
-    const cleanText = selectedText.replace(/\s+/g, ' ').trim();
-    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const highlights = this.getHighlights(dateStr);
-
-    const existsSameColor = highlights.some(item =>
-        normalize(item.text) === normalize(cleanText) && item.color === color
-    );
-
-    if (existsSameColor) {
-        this.removeSelectedHighlight(cleanText, dateStr, color);
-        return;
-    }
-
-    highlights.push({ text: cleanText, color });
-    this.saveHighlights(dateStr, highlights);
-
-    this.currentSelectionColorDraft = color;
-
-    if (this.$selectionColorButtons.length) {
-        this.$selectionColorButtons.forEach(btn => {
-            btn.classList.toggle('is-active', btn.getAttribute('data-color') === color);
-        });
-    }
-
-    this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
-    this.hideSelectionPanel();
-    window.getSelection()?.removeAllRanges();
-    this.rerenderCurrentReadingView(dateStr, true);
+        // Solo prevenir scroll hacia arriba que podría ocultar la selección
+        if (Math.abs(diff) > 10) {
+            e.preventDefault();
+        }
+    };
+    
+    document.addEventListener('touchstart', handleTouchStart, { passive: false });
+    document.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
+    this._androidScrollCleanup = () => {
+        document.removeEventListener('touchstart', handleTouchStart);
+        document.removeEventListener('touchmove', handleTouchMove);
+    };
 },
 
 getSelectionHighlightState: function(selectedText, dateStr) {
@@ -2055,84 +2022,48 @@ showSelectionPanel: function(context) {
         }
     }
 
-    // ✅ NUEVO: Guardar posición actual del scroll antes de mostrar el panel
+    // ✅ CORREGIDO: Solo guardar scroll, NO bloquear body inmediatamente
     this.selectionScrollY = window.scrollY;
     
-    // ✅ NUEVO: Obtener la posición exacta de la selección
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const rect = range.getBoundingClientRect();
-        
-        // Guardar referencia a la posición de la selección
-        this.lastSelectionRect = {
-            top: rect.top + window.scrollY,
-            bottom: rect.bottom + window.scrollY,
-            left: rect.left,
-            right: rect.right,
-            height: rect.height
-        };
-        
-        // ✅ CRÍTICO PARA ANDROID: Ajustar el scroll para que la selección quede visible
-        // sin que el panel la tape completamente
-        const viewportHeight = window.visualViewport 
-            ? window.visualViewport.height 
-            : window.innerHeight;
-        
-        const panelHeight = 180; // Altura base del panel sin expandir
-        const selectionBottom = rect.bottom;
-        const safeZone = viewportHeight - panelHeight - 40; // 40px de margen
-        
-        if (selectionBottom > safeZone) {
-            // Solo ajustar si la selección está demasiado abajo
-            const scrollAdjustment = selectionBottom - safeZone;
-            
-            // ✅ USAR requestAnimationFrame para suavizar el ajuste
-            requestAnimationFrame(() => {
-                window.scrollBy({
-                    top: scrollAdjustment,
-                    behavior: 'instant' // 'instant' es mejor que 'smooth' en Android para selección
-                });
-            });
-        }
-    }
-
-    // ✅ MEJORADO: Mostrar panel con un pequeño retraso para permitir ajustes de scroll
-    requestAnimationFrame(() => {
-        // Prevenir scroll del body mientras el panel está abierto
+    // Mostrar panel primero
+    panel.classList.add('visible');
+    document.body.classList.add('selection-panel-open');
+    
+    // ✅ CORREGIDO: Bloquear scroll DESPUÉS de mostrar el panel
+    setTimeout(() => {
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
         document.body.style.width = '100%';
         document.body.style.top = `-${this.selectionScrollY}px`;
-        
-        panel.classList.add('visible');
-        document.body.classList.add('selection-panel-open');
-        
-        // ✅ NUEVO: Ajustar posición del sheet para Android
-        this.updateSelectionSheetPosition();
-        
-        // ✅ NUEVO: Prevenir que Android haga scroll automático
-        if (isAndroidDevice()) {
-    this.preventAndroidAutoScroll(); 
-    setTimeout(() => {
-        window.scrollTo(0, this.selectionScrollY);
-    }, 50);
-}
-    });
+    }, 10);
+    
+    this.updateSelectionSheetPosition();
+    
+    // ✅ CORREGIDO: Llamar a preventAndroidAutoScroll si es Android
+    if (isAndroidDevice()) {
+        this.preventAndroidAutoScroll();
+    }
 },
     
 hideSelectionPanel: function(clearStoredSelection = true) {
+    // Limpiar listeners de Android
     if (this._androidScrollCleanup) {
         this._androidScrollCleanup();
         this._androidScrollCleanup = null;
     }
     
-    // ✅ NUEVO: Restaurar scroll del body
     const scrollY = this.selectionScrollY || 0;
+    
+    // ✅ CORREGIDO: Restaurar scroll del body PRIMERO
     document.body.style.overflow = '';
     document.body.style.position = '';
     document.body.style.width = '';
     document.body.style.top = '';
+    
+    // Restaurar posición de scroll
+    if (scrollY > 0) {
+        window.scrollTo(0, scrollY);
+    }
     
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
@@ -2145,13 +2076,6 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     }
 
     document.body.classList.remove('selection-panel-open');
-
-    // ✅ NUEVO: Restaurar posición de scroll
-    if (scrollY > 0) {
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollY);
-        });
-    }
 
     if (this.selectionUpdateTimer) {
         clearTimeout(this.selectionUpdateTimer);
@@ -2472,8 +2396,8 @@ scheduleSelectionPanelUpdate: function(force = false) {
         this.selectionUpdateTimer = null;
     }
 
-    // ✅ AJUSTADO: Tiempos optimizados para Android
-    const delay = isAndroidDevice() ? 150 : isIOSDevice() ? 90 : 60;
+    // ✅ CORREGIDO: Mayor delay para Android
+    const delay = isAndroidDevice() ? 300 : isIOSDevice() ? 90 : 60;
 
     this.selectionUpdateTimer = setTimeout(() => {
         const context = this.getSelectionContext();
