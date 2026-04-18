@@ -1717,11 +1717,12 @@ restoreHighlightsInDOMForVerses: function(dateStr) {
     if (!container) return;
     
     const highlights = this.getHighlights(dateStr);
-    if (!highlights.length) return;
+    const selectionNotes = this.getSelectionNotes(dateStr);
     
     const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const verseItems = container.querySelectorAll('.verse-item');
     
+    // Restaurar resaltados
     highlights.forEach(highlight => {
         const highlightText = normalize(highlight.text);
         
@@ -1732,6 +1733,30 @@ restoreHighlightsInDOMForVerses: function(dateStr) {
             
             if (verseText === highlightText || verseText.includes(highlightText)) {
                 verseItem.classList.add(`highlight-${highlight.color}`);
+                break;
+            }
+        }
+    });
+    
+    // Restaurar íconos de nota
+    selectionNotes.forEach(note => {
+        const noteText = normalize(note.text);
+        
+        for (const verseItem of verseItems) {
+            const verseText = normalize(verseItem.getAttribute('data-verse-full') || 
+                                         verseItem.getAttribute('data-verse-text') || 
+                                         verseItem.textContent || '');
+            
+            if (verseText === noteText || verseText.includes(noteText)) {
+                verseItem.setAttribute('data-has-note', 'true');
+                // Agregar ícono si no existe
+                if (!verseItem.querySelector('.verse-note-icon')) {
+                    const icon = document.createElement('span');
+                    icon.className = 'verse-note-icon';
+                    icon.textContent = '📝';
+                    icon.title = 'Este versículo tiene una nota guardada';
+                    verseItem.appendChild(icon);
+                }
                 break;
             }
         }
@@ -2018,6 +2043,17 @@ saveSelectionNoteFromPanel: function() {
     }
 
     this.showToast('Nota guardada');
+    // Actualizar ícono de nota en el versículo actual
+if (this.currentSelectedVerse) {
+    this.currentSelectedVerse.setAttribute('data-has-note', 'true');
+    if (!this.currentSelectedVerse.querySelector('.verse-note-icon')) {
+        const icon = document.createElement('span');
+        icon.className = 'verse-note-icon';
+        icon.textContent = '📝';
+        icon.title = 'Este versículo tiene una nota guardada';
+        this.currentSelectedVerse.appendChild(icon);
+    }
+}
     this.hideSelectionPanel();
     window.getSelection()?.removeAllRanges();
     this.rerenderCurrentReadingView(dateStr, true);
@@ -2403,15 +2439,25 @@ renderVerseText: function(htmlContent, dateStr) {
     }
     
     // Renderizar cada versículo como un elemento seleccionable
-    return verses.map(verse => `
+return verses.map(verse => {
+    // Verificar si este versículo tiene una nota guardada
+    const verseFullText = verse.number + ' ' + verse.text;
+    const cleanVerseText = verseFullText.replace(/\s+/g, ' ').trim();
+    const existingNote = this.getSelectionNoteByText(dateStr, cleanVerseText);
+    const hasNote = existingNote !== null;
+    
+    return `
         <div class="verse-item verse-selectable" 
              data-verse-number="${verse.number}"
              data-verse-text="${this.escapeHtml(verse.text)}"
-             data-verse-full="${this.escapeHtml(verse.number + ' ' + verse.text)}">
+             data-verse-full="${this.escapeHtml(verseFullText)}"
+             data-has-note="${hasNote}">
             <span class="verse-number">${verse.number}</span>
             <span class="verse-text-content">${verse.text}</span>
+            ${hasNote ? '<span class="verse-note-icon" title="Este versículo tiene una nota guardada">📝</span>' : ''}
         </div>
-    `).join('');
+    `;
+}).join('');
 },
 
 handleVerseClick: function(e) {
@@ -3752,6 +3798,17 @@ if (this.$headerSettingsBtn) {
     if (verseItem) {
         e.stopPropagation();
         this.handleVerseClick(e);
+        return;
+    }
+
+    const noteIcon = e.target.closest('.verse-note-icon');
+    if (noteIcon) {
+        e.stopPropagation();
+        const verseItem = noteIcon.closest('.verse-selectable');
+        if (verseItem) {
+            // Simular clic en el versículo
+            this.handleVerseClick({ target: verseItem });
+        }
         return;
     }
 
