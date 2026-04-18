@@ -740,7 +740,8 @@ body.dark-mode .badge-corona {
 .bible-back-btn {
     position: absolute;
     left: 0.75rem;
-    top: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
     z-index: 10;
     background: transparent;
     box-shadow: none;
@@ -748,14 +749,9 @@ body.dark-mode .badge-corona {
     color: var(--accent-primary, #4a90e2);
     font-size: 0.9rem;
     border: none;
+    white-space: nowrap;
 }
 
-.bible-back-btn:hover {
-    background: var(--hover-bg, #f5f5f5);
-    border-radius: 8px;
-}
-
-/* Título principal "Biblia" o nombre del libro */
 .bible-title {
     font-size: 2rem;
     font-weight: 700;
@@ -763,8 +759,11 @@ body.dark-mode .badge-corona {
     color: var(--text-primary, #1a1a1a);
     line-height: 1.2;
     width: 100%;
-    padding: 0 1rem;
+    /* Esto evita que el texto se encime con el botón de volver */
+    padding-left: 70px !important;
+    padding-right: 70px !important;
     word-break: break-word;
+    box-sizing: border-box;
 }
 
 /* Subtítulo con la versión de la Biblia */
@@ -779,6 +778,28 @@ body.dark-mode .badge-corona {
     border-radius: 20px;
     display: inline-block;
     margin-top: 0.25rem;
+    /* También aseguramos que el subtítulo no se encime */
+    max-width: calc(100% - 40px);
+}
+
+.bible-back-btn:hover {
+    background: var(--hover-bg, #f5f5f5);
+    border-radius: 8px;
+}
+
+/* Para pantallas pequeñas, ajustamos el padding */
+@media (max-width: 480px) {
+    .bible-title {
+        padding-left: 60px !important;
+        padding-right: 60px !important;
+        font-size: 1.6rem;
+    }
+    
+    .bible-back-btn {
+        left: 0.5rem;
+        padding: 0.4rem 0.5rem;
+        font-size: 0.85rem;
+    }
 }
 
 /* Modo oscuro - ajustes automáticos */
