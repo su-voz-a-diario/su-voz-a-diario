@@ -2378,42 +2378,13 @@ renderVerseText: function(htmlContent, dateStr) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
     
-    // ✅ ELIMINAR todos los spans que NO sean de versículo (como párrafos, notas, etc.)
+    // ✅ ELIMINAR solo los spans que NO son de versículo
     const allSpans = tempDiv.querySelectorAll('span');
     allSpans.forEach(span => {
-        // Mantener SOLO los spans con clase 'v' (versículos)
         if (!span.classList.contains('v')) {
-            // Si no es un marcador de versículo, extraer solo su texto y eliminar el span
             const textNode = document.createTextNode(span.textContent);
             span.parentNode.replaceChild(textNode, span);
         }
-    });
-    
-    // ✅ LIMPIAR números duplicados en los textos
-    const walker = document.createTreeWalker(
-        tempDiv,
-        NodeFilter.SHOW_TEXT,
-        null
-    );
-    
-    const textNodes = [];
-    let node;
-    while ((node = walker.nextNode())) {
-        textNodes.push(node);
-    }
-    
-    textNodes.forEach(textNode => {
-        let text = textNode.textContent;
-        
-        // Eliminar patrones de números duplicados
-        // "1 1 En el principio..." -> "1 En el principio..."
-        text = text.replace(/^(\d+)\s+\1\s+/, '$1 ');
-        // "1 1En el principio..." -> "1 En el principio..."
-        text = text.replace(/^(\d+)\s+\1(\S)/, '$1 $2');
-        // "1 1. En el principio..." -> "1. En el principio..."
-        text = text.replace(/^(\d+)\s+\1\./, '$1.');
-        
-        textNode.textContent = text;
     });
     
     // Extraer versículos
@@ -2421,77 +2392,78 @@ renderVerseText: function(htmlContent, dateStr) {
     const verseSpans = tempDiv.querySelectorAll('.v');
     
     if (verseSpans.length > 0) {
-        let currentVerseNumber = '';
-        let currentVerseText = '';
-        let verseStarted = false;
+        let currentVerse = '';
+        let currentVerseNum = '';
         
-        const mainWalker = document.createTreeWalker(
+        const walker = document.createTreeWalker(
             tempDiv,
             NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
             null
         );
         
-        let currentNode;
-        while ((currentNode = mainWalker.nextNode())) {
-            if (currentNode.nodeType === Node.ELEMENT_NODE && currentNode.classList?.contains('v')) {
-                // Guardar versículo anterior si existe
-                if (verseStarted && currentVerseText.trim()) {
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === Node.ELEMENT_NODE && node.classList?.contains('v')) {
+                if (currentVerse) {
                     verses.push({
-                        number: currentVerseNumber,
-                        text: currentVerseText.trim()
+                        number: currentVerseNum,
+                        text: currentVerse.trim()
                     });
                 }
-                
-                // Iniciar nuevo versículo
-                currentVerseNumber = currentNode.textContent.trim();
-                currentVerseText = '';
-                verseStarted = true;
-                
-            } else if (verseStarted) {
-                // Agregar contenido al versículo actual
-                if (currentNode.nodeType === Node.TEXT_NODE) {
-                    currentVerseText += currentNode.textContent;
-                } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
-                    // Preservar formato HTML
-                    currentVerseText += currentNode.outerHTML || currentNode.textContent;
-                }
+                currentVerseNum = node.textContent.trim();
+                currentVerse = '';
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                currentVerse += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                currentVerse += node.textContent || '';
             }
         }
         
-        // Guardar el último versículo
-        if (verseStarted && currentVerseText.trim()) {
+        if (currentVerse) {
             verses.push({
-                number: currentVerseNumber,
-                text: currentVerseText.trim()
+                number: currentVerseNum,
+                text: currentVerse.trim()
             });
         }
+    } else {
+        const plainText = htmlContent.replace(/<[^>]+>/g, '').trim();
+        return `<div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">${htmlContent}</div>`;
     }
     
-    // Si no hay versículos, devolver el texto limpio
-    if (verses.length === 0) {
-        const cleanHtml = tempDiv.innerHTML;
-        return `<div class="verse-item verse-selectable">${cleanHtml}</div>`;
-    }
+    // ✅ OBTENER LOS RESALTADOS GUARDADOS PARA ESTA FECHA
+    const highlights = this.getHighlights(dateStr);
+    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     
-    // Renderizar versículos
+    // Renderizar cada versículo
     return verses.map(verse => {
-        // Limpiar cualquier número duplicado residual
+        // Limpiar número duplicado
         let cleanText = verse.text;
-        const regex = new RegExp(`^\\s*${verse.number}\\s+`, 'g');
-        cleanText = cleanText.replace(regex, '');
+        const duplicatePattern = new RegExp(`^\\s*${verse.number}\\s+`, 'g');
+        cleanText = cleanText.replace(duplicatePattern, '');
         
-        const verseFullText = verse.number + ' ' + cleanText.replace(/<[^>]+>/g, ' ').trim();
+        const verseFullText = verse.number + ' ' + cleanText;
         const cleanVerseText = verseFullText.replace(/\s+/g, ' ').trim();
         const existingNote = this.getSelectionNoteByText(dateStr, cleanVerseText);
         const hasNote = existingNote !== null;
         
+        // ✅ VERIFICAR SI ESTE VERSÍCULO TIENE RESALTADOS GUARDADOS
+        const verseHighlight = highlights.find(h => {
+            const highlightText = normalize(h.text);
+            const currentVerseText = normalize(verseFullText);
+            // Buscar si el texto resaltado está contenido en este versículo
+            return currentVerseText.includes(highlightText) || 
+                   highlightText.includes(currentVerseText);
+        });
+        
+        const highlightClass = verseHighlight ? `highlight-${verseHighlight.color}` : '';
+        
         return `
-            <div class="verse-item verse-selectable" 
+            <div class="verse-item verse-selectable ${highlightClass}" 
                  data-verse-number="${verse.number}"
                  data-verse-text="${this.escapeHtml(cleanText)}"
                  data-verse-full="${this.escapeHtml(verseFullText)}"
                  data-has-note="${hasNote}">
-                <span class="verse-number">${verse.number}.</span>
+                <span class="verse-number">${verse.number}</span>
                 <span class="verse-text-content">${cleanText}</span>
                 ${hasNote ? '<span class="verse-note-icon" title="Este versículo tiene una nota guardada">📝</span>' : ''}
             </div>
