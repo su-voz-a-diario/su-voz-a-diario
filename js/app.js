@@ -2458,66 +2458,78 @@ renderBibleVerseText: function(htmlContent, dateStr) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
 
-    const verses = [];
+    const blocks = [];
     let currentVerse = null;
 
-    const walker = document.createTreeWalker(
-        tempDiv,
-        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-        {
-            acceptNode: function(node) {
-                if (node.nodeType === Node.ELEMENT_NODE) {
-                    if (node.classList?.contains('v')) {
-                        return NodeFilter.FILTER_ACCEPT;
-                    }
-                    return NodeFilter.FILTER_SKIP;
-                }
+    const pushCurrentVerse = () => {
+        if (!currentVerse) return;
 
-                if (node.nodeType === Node.TEXT_NODE) {
-                    const text = node.nodeValue?.replace(/\s+/g, ' ').trim();
-                    if (!text) return NodeFilter.FILTER_REJECT;
+        const cleanNumber = this.normalizeBibleText(currentVerse.number);
+        const cleanText = this.normalizeBibleText(currentVerse.text);
 
-                    const parent = node.parentElement;
-                    if (parent?.classList?.contains('v')) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-
-                    return NodeFilter.FILTER_ACCEPT;
-                }
-
-                return NodeFilter.FILTER_REJECT;
-            }
+        if (cleanText) {
+            blocks.push({
+                type: 'verse',
+                number: cleanNumber,
+                text: cleanText
+            });
         }
-    );
 
-    let node;
-    while ((node = walker.nextNode())) {
-        if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('v')) {
-            if (currentVerse && currentVerse.text.trim()) {
-                verses.push({
-                    number: currentVerse.number,
-                    text: currentVerse.text.replace(/\s+/g, ' ').trim()
+        currentVerse = null;
+    };
+
+    const addTextToCurrentVerse = (text) => {
+        if (!currentVerse) return;
+        currentVerse.text += ` ${text}`;
+    };
+
+    const processNode = (node) => {
+        if (!node) return;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = this.normalizeBibleText(node.nodeValue);
+            if (text) {
+                addTextToCurrentVerse(text);
+            }
+            return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        // Si es título, lo cerramos como bloque independiente
+        if (this.isBibleTitleNode(node)) {
+            pushCurrentVerse();
+
+            const titleText = this.normalizeBibleText(node.textContent);
+            if (titleText) {
+                blocks.push({
+                    type: 'title',
+                    text: titleText
                 });
             }
+            return;
+        }
+
+        // Si es marcador de versículo
+        if (node.classList.contains('v') || node.hasAttribute('data-verse')) {
+            pushCurrentVerse();
 
             currentVerse = {
-                number: node.textContent.trim(),
+                number: this.normalizeBibleText(node.textContent),
                 text: ''
             };
-        } else if (node.nodeType === Node.TEXT_NODE && currentVerse) {
-            currentVerse.text += ' ' + node.nodeValue;
+            return;
         }
-    }
 
-    if (currentVerse && currentVerse.text.trim()) {
-        verses.push({
-            number: currentVerse.number,
-            text: currentVerse.text.replace(/\s+/g, ' ').trim()
-        });
-    }
+        // Recorrer hijos normalmente
+        Array.from(node.childNodes).forEach(child => processNode(child));
+    };
 
-    if (verses.length === 0) {
-        const plainText = tempDiv.textContent.replace(/\s+/g, ' ').trim();
+    Array.from(tempDiv.childNodes).forEach(node => processNode(node));
+    pushCurrentVerse();
+
+    if (!blocks.length) {
+        const plainText = this.normalizeBibleText(tempDiv.textContent);
         return `
             <div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">
                 <span class="verse-text-content">${this.escapeHtml(plainText)}</span>
@@ -2526,12 +2538,18 @@ renderBibleVerseText: function(htmlContent, dateStr) {
     }
 
     const highlights = this.getHighlights(dateStr);
-    const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const normalize = str => this.normalizeBibleText(str).toLowerCase();
 
-    return verses.map(verse => {
-        const cleanText = verse.text.replace(new RegExp(`^${verse.number}\\s+`), '').trim();
-        const verseFullText = `${verse.number} ${cleanText}`.replace(/\s+/g, ' ').trim();
+    return blocks.map(block => {
+        if (block.type === 'title') {
+            return `
+                <div class="bible-section-title" aria-label="Título de sección">
+                    ${this.escapeHtml(block.text)}
+                </div>
+            `;
+        }
 
+        const verseFullText = `${block.number} ${block.text}`.trim();
         const existingNote = this.getSelectionNoteByText(dateStr, verseFullText);
         const hasNote = existingNote !== null;
 
@@ -2545,16 +2563,50 @@ renderBibleVerseText: function(htmlContent, dateStr) {
 
         return `
             <div class="verse-item verse-selectable ${highlightClass}"
-                 data-verse-number="${this.escapeHtml(verse.number)}"
-                 data-verse-text="${this.escapeHtml(cleanText)}"
+                 data-verse-number="${this.escapeHtml(block.number)}"
+                 data-verse-text="${this.escapeHtml(block.text)}"
                  data-verse-full="${this.escapeHtml(verseFullText)}"
                  data-has-note="${hasNote}">
-                <span class="verse-number">${this.escapeHtml(verse.number)}</span>
-                <span class="verse-text-content">${this.escapeHtml(cleanText)}</span>
+                <span class="verse-number">${this.escapeHtml(block.number)}</span>
+                <span class="verse-text-content">${this.escapeHtml(block.text)}</span>
                 ${hasNote ? '<span class="verse-note-icon" title="Este versículo tiene una nota guardada">📝</span>' : ''}
             </div>
         `;
     }).join('');
+},
+
+isBibleTitleNode: function(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+
+    const classList = Array.from(node.classList || []);
+    const classText = classList.join(' ').toLowerCase();
+
+    // API.Bible suele usar clases de títulos/subtítulos tipo s, s1, s2, ms, ms1, etc.
+    // También contemplamos headings HTML por seguridad.
+    if (/^(s|s1|s2|s3|s4|ms|ms1|ms2|d|sp|sr)$/.test(classText)) {
+        return true;
+    }
+
+    if (classList.some(cls => /^(s|s1|s2|s3|s4|ms|ms1|ms2|d|sp|sr)$/i.test(cls))) {
+        return true;
+    }
+
+    const tag = node.tagName?.toLowerCase();
+    if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
+        return true;
+    }
+
+    // Si trae atributo de estilo semántico, también lo tomamos como título
+    const dataType = (node.getAttribute('data-type') || '').toLowerCase();
+    if (dataType.includes('title') || dataType.includes('heading')) {
+        return true;
+    }
+
+    return false;
+},
+
+normalizeBibleText: function(text) {
+    return (text || '').replace(/\s+/g, ' ').trim();
 },
 
 handleVerseClick: function(e) {
