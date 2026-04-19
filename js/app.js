@@ -67,7 +67,7 @@ async function getBibleChapter(bookId, chapterNumber) {
     const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
 
     const result = await apiBibleFetch(
-        `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`
+        `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=false`
     );
 
     return result.data;
