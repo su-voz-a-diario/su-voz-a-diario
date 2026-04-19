@@ -2852,12 +2852,14 @@ const introVideoHtml = showIntroVideo ? `
 renderBible: function() {
     if (!this.selectedBibleBook) {
         this.$content.innerHTML = `
-    <div class="bible-view">
-        <div class="bible-header-card">
-            <div class="bible-title">📖 Biblia</div>
-            <div class="bible-subtitle">La Nueva Biblia de las Américas (NBLA)</div>
-        </div>
+            <div class="bible-view">
+                <!-- Header principal SIN botón volver -->
+                <div class="bible-header-card">
+                    <div class="bible-title">📖 Biblia</div>
+                    <div class="bible-subtitle">La Nueva Biblia de las Américas (NBLA)</div>
+                </div>
 
+                <!-- Grid de libros -->
                 <div class="bible-books-grid">
                     ${this.bibleBooks.map(book => `
                         <button
@@ -2867,7 +2869,7 @@ renderBible: function() {
                             data-book-id="${book.id}"
                         >
                             <span class="bible-book-name">${this.escapeHtml(book.name)}</span>
-                            <span class="bible-book-meta">${book.chapters} capítulos</span>
+                            <span class="bible-book-meta">${book.chapters} cap.</span>
                         </button>
                     `).join('')}
                 </div>
@@ -2879,29 +2881,34 @@ renderBible: function() {
     const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
 
     if (!book) {
-    this.selectedBibleBook = null;
-    this.selectedBibleChapter = null;
-    this.renderBible();
-    return;
-}
+        this.selectedBibleBook = null;
+        this.selectedBibleChapter = null;
+        this.renderBible();
+        return;
+    }
 
     const chapters = Array.from({ length: book.chapters }, (_, i) => i + 1);
 
     this.$content.innerHTML = `
         <div class="bible-view">
-            <div class="bible-header-card">
+            <!-- ⭐⭐ BARRA DE NAVEGACIÓN SUPERIOR CON BOTÓN VOLVER ⭐⭐ -->
+            <div class="bible-nav-top">
                 <button
-                    class="btn-secondary bible-back-btn"
+                    class="bible-back-btn"
                     type="button"
                     data-action="back-to-bible-books"
                 >
                     ← Volver a libros
                 </button>
+            </div>
 
+            <!-- Header con el nombre del libro -->
+            <div class="bible-header-card">
                 <div class="bible-title">${this.escapeHtml(book.name)}</div>
                 <div class="bible-subtitle">Selecciona un capítulo</div>
             </div>
 
+            <!-- Grid de capítulos -->
             <div class="bible-chapters-grid">
                 ${chapters.map(chapter => `
                     <button
