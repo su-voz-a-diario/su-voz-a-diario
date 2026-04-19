@@ -1024,6 +1024,35 @@ body.dark-mode .badge-corona {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
 
+.bible-section-title {
+    display: block;
+    margin: 1.4rem 0 0.8rem;
+    padding: 0.35rem 0 0.2rem;
+    font-family: var(--font-ui);
+    font-size: 0.98rem;
+    font-weight: 700;
+    line-height: 1.35;
+    color: var(--text-main);
+    opacity: 0.9;
+    letter-spacing: 0.01em;
+    border-top: 1px solid var(--border-color);
+}
+
+.bible-section-title:first-child {
+    margin-top: 0;
+    border-top: 0;
+    padding-top: 0;
+}
+
+.verse-item + .bible-section-title {
+    margin-top: 1.6rem;
+}
+
+body.dark-mode .bible-section-title {
+    color: var(--text-main);
+    border-top-color: var(--border-color);
+}
+
 @media (max-width: 480px) {
     .bible-books-grid {
         grid-template-columns: 1fr 1fr;
