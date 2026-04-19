@@ -2937,12 +2937,19 @@ renderBibleReading: async function() {
     }
 
     this.$content.innerHTML = `
-        <div class="bible-reading-view">
-            <button class="btn-secondary" data-action="back-to-bible-books">
-                ← Volver
+    <div class="bible-reading-view">
+        <!-- Barra de navegación superior -->
+        <div class="bible-nav-top">
+            <button class="bible-back-btn" data-action="back-to-bible-books">
+                ← Volver a libros
             </button>
+        </div>
 
-            <h2>${this.escapeHtml(requestedBook.name)} ${requestedChapter}</h2>
+        <h2 style="text-align: center; margin: 1rem 0 0.25rem 0; color: var(--text-primary);">
+            ${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}
+        </h2>
+        
+        <div class="bible-reading-version">La Nueva Biblia de las Américas (NBLA)</div>
 
             <div class="loading">
                 <div class="spinner"></div>
