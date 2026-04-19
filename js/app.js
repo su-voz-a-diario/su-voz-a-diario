@@ -1716,27 +1716,9 @@ restoreHighlightsInDOMForVerses: function(dateStr) {
     const container = shell ? shell.querySelector('.verse-container') : null;
     if (!container) return;
     
-    const highlights = this.getHighlights(dateStr);
     const selectionNotes = this.getSelectionNotes(dateStr);
-    
     const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     const verseItems = container.querySelectorAll('.verse-item');
-    
-    // Restaurar resaltados
-    highlights.forEach(highlight => {
-        const highlightText = normalize(highlight.text);
-        
-        for (const verseItem of verseItems) {
-            const verseText = normalize(verseItem.getAttribute('data-verse-full') || 
-                                         verseItem.getAttribute('data-verse-text') || 
-                                         verseItem.textContent || '');
-            
-            if (verseText === highlightText || verseText.includes(highlightText)) {
-                verseItem.classList.add(`highlight-${highlight.color}`);
-                break;
-            }
-        }
-    });
     
     // Restaurar íconos de nota
     selectionNotes.forEach(note => {
@@ -1749,7 +1731,6 @@ restoreHighlightsInDOMForVerses: function(dateStr) {
             
             if (verseText === noteText || verseText.includes(noteText)) {
                 verseItem.setAttribute('data-has-note', 'true');
-                // Agregar ícono si no existe
                 if (!verseItem.querySelector('.verse-note-icon')) {
                     const icon = document.createElement('span');
                     icon.className = 'verse-note-icon';
@@ -2374,11 +2355,113 @@ changeHomeDay: function(direction) {
 // ========================================
 
 renderVerseText: function(htmlContent, dateStr) {
+    // Crear un contenedor temporal para parsear el HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
+    
+    // Extraer versículos del formato API.Bible
+    const verses = [];
+    const verseSpans = tempDiv.querySelectorAll('.v, [data-verse]');
+    
+    if (verseSpans.length > 0) {
+        // Si hay marcadores de versículo, separar por ellos
+        let currentVerse = '';
+        let currentVerseNum = '';
+        
+        const walker = document.createTreeWalker(
+            tempDiv,
+            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+            null
+        );
+        
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === Node.ELEMENT_NODE && 
+                (node.classList?.contains('v') || node.hasAttribute('data-verse'))) {
+                if (currentVerse) {
+                    verses.push({
+                        number: currentVerseNum,
+                        text: currentVerse.trim()
+                    });
+                }
+                currentVerseNum = node.textContent.trim();
+                currentVerse = '';
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                currentVerse += node.textContent;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+                currentVerse += node.textContent || '';
+            }
+        }
+        
+        if (currentVerse) {
+            verses.push({
+                number: currentVerseNum,
+                text: currentVerse.trim()
+            });
+        }
+    } else {
+        // Si no hay marcadores, intentar separar por números de versículo en el texto
+        const plainText = tempDiv.textContent;
+        const versePattern = /(\d+)\s+([^\d]+?)(?=\s*\d+\s+|$)/g;
+        let match;
+        
+        while ((match = versePattern.exec(plainText)) !== null) {
+            verses.push({
+                number: match[1],
+                text: match[2].trim()
+            });
+        }
+    }
+    
+    // Si no se pudieron extraer versículos, mostrar el texto completo
+    if (verses.length === 0) {
+        const plainText = htmlContent.replace(/<[^>]+>/g, '').trim();
+        return `<div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">${htmlContent}</div>`;
+    }
+    
+    // Renderizar cada versículo como un elemento seleccionable
+// Obtener los resaltados guardados para esta fecha
+const highlights = this.getHighlights(dateStr);
+const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+// Renderizar cada versículo como un elemento seleccionable
+return verses.map(verse => {
+    // Verificar si este versículo tiene una nota guardada
+    const verseFullText = verse.number + ' ' + verse.text;
+    const cleanVerseText = verseFullText.replace(/\s+/g, ' ').trim();
+    const existingNote = this.getSelectionNoteByText(dateStr, cleanVerseText);
+    const hasNote = existingNote !== null;
+    
+    // ✅ NUEVO: Verificar si este versículo tiene resaltados guardados
+    const verseHighlight = highlights.find(h => {
+        const highlightText = normalize(h.text);
+        const currentVerseText = normalize(verseFullText);
+        return currentVerseText.includes(highlightText) || 
+               highlightText.includes(currentVerseText);
+    });
+    
+    const highlightClass = verseHighlight ? `highlight-${verseHighlight.color}` : '';
+    
+    return `
+        <div class="verse-item verse-selectable ${highlightClass}" 
+             data-verse-number="${verse.number}"
+             data-verse-text="${this.escapeHtml(verse.text)}"
+             data-verse-full="${this.escapeHtml(verseFullText)}"
+             data-has-note="${hasNote}">
+            <span class="verse-number">${verse.number}</span>
+            <span class="verse-text-content">${verse.text}</span>
+            ${hasNote ? '<span class="verse-note-icon" title="Este versículo tiene una nota guardada">📝</span>' : ''}
+        </div>
+    `;
+}).join('');
+},
+
+renderBibleVerseText: function(htmlContent, dateStr) {
     // Crear un contenedor temporal
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
     
-    // ✅ ELIMINAR solo los spans que NO son de versículo
+    // Eliminar solo los spans que NO son de versículo (causan números de párrafo extra)
     const allSpans = tempDiv.querySelectorAll('span');
     allSpans.forEach(span => {
         if (!span.classList.contains('v')) {
@@ -2430,7 +2513,7 @@ renderVerseText: function(htmlContent, dateStr) {
         return `<div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">${htmlContent}</div>`;
     }
     
-    // ✅ OBTENER LOS RESALTADOS GUARDADOS PARA ESTA FECHA
+    // Obtener los resaltados guardados
     const highlights = this.getHighlights(dateStr);
     const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
     
@@ -2446,11 +2529,10 @@ renderVerseText: function(htmlContent, dateStr) {
         const existingNote = this.getSelectionNoteByText(dateStr, cleanVerseText);
         const hasNote = existingNote !== null;
         
-        // ✅ VERIFICAR SI ESTE VERSÍCULO TIENE RESALTADOS GUARDADOS
+        // Verificar si este versículo tiene resaltados guardados
         const verseHighlight = highlights.find(h => {
             const highlightText = normalize(h.text);
             const currentVerseText = normalize(verseFullText);
-            // Buscar si el texto resaltado está contenido en este versículo
             return currentVerseText.includes(highlightText) || 
                    highlightText.includes(currentVerseText);
         });
@@ -3021,7 +3103,7 @@ renderBibleReading: async function() {
 
                 <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
                     <div class="reading-text selection-surface verse-container" data-selection-surface="true">
-                        ${chapterData.content ? this.renderVerseText(chapterData.content, `bible-${requestedBookId}-${requestedChapter}`) : '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
+                        ${chapterData.content ? this.renderBibleVerseText(chapterData.content, `bible-${requestedBookId}-${requestedChapter}`) : '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
                     </div>
                 </div>
             </div>
