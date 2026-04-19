@@ -716,135 +716,227 @@ body.dark-mode .badge-corona {
 }
 
 /* ========================================
-   SECCIÓN BIBLIA - HEADER MEJORADO
+   SECCIÓN BIBLIA - DISEÑO PROFESIONAL (CORREGIDO)
    ======================================== */
 
-/* Contenedor principal del header en la vista de Biblia */
+/* Barra de navegación superior (donde va el botón Volver) */
+.bible-nav-top {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+    padding: 0 4px;
+}
+
+.bible-back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 18px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    color: var(--accent, #3182ce);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    min-height: 44px;
+    white-space: nowrap;
+}
+
+.bible-back-btn:hover {
+    background: var(--hover-bg, #f5f5f5);
+    border-color: var(--accent, #3182ce);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.bible-back-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+/* Header principal de la Biblia - LIMPIO Y CENTRADO */
 .bible-header-card {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 1.5rem 1rem 1.5rem 1rem;
-    background: var(--card-bg, #ffffff);
-    border-radius: 16px;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    padding: 28px 20px;
+    background: var(--surface-color, #ffffff);
+    border-radius: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
     border: 1px solid var(--border-color, #eaeaea);
-    min-height: 120px;
 }
 
-/* Botón de "Volver a libros" - Posicionado absolutamente a la izquierda */
-.bible-back-btn {
-    position: absolute;
-    left: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-    background: transparent;
-    box-shadow: none;
-    padding: 0.5rem 0.75rem;
-    color: var(--accent-primary, #4a90e2);
-    font-size: 0.9rem;
-    border: none;
-    white-space: nowrap;
-}
-
+/* Título principal "Biblia" o nombre del libro */
 .bible-title {
-    font-size: 2rem;
+    font-size: 2.4rem;
     font-weight: 700;
-    margin-bottom: 0.5rem;
-    color: var(--text-primary, #1a1a1a);
+    margin-bottom: 12px;
+    color: var(--primary, #1a202c);
     line-height: 1.2;
     width: 100%;
-    /* Esto evita que el texto se encime con el botón de volver */
-    padding-left: 70px !important;
-    padding-right: 70px !important;
-    word-break: break-word;
-    box-sizing: border-box;
 }
 
 /* Subtítulo con la versión de la Biblia */
 .bible-subtitle {
-    font-size: 0.95rem;
-    color: var(--text-secondary, #666666);
-    font-weight: 400;
-    letter-spacing: 0.3px;
+    font-size: 0.9rem;
+    color: var(--text-muted, #666666);
+    font-weight: 600;
+    letter-spacing: 0.5px;
     text-transform: uppercase;
     background: var(--tag-bg, #f0f0f0);
-    padding: 0.25rem 1rem;
-    border-radius: 20px;
+    padding: 6px 16px;
+    border-radius: 30px;
     display: inline-block;
-    margin-top: 0.25rem;
-    /* También aseguramos que el subtítulo no se encime */
-    max-width: calc(100% - 40px);
-}
-
-.bible-back-btn:hover {
-    background: var(--hover-bg, #f5f5f5);
-    border-radius: 8px;
-}
-
-/* Para pantallas pequeñas, ajustamos el padding */
-@media (max-width: 480px) {
-    .bible-title {
-        padding-left: 60px !important;
-        padding-right: 60px !important;
-        font-size: 1.6rem;
-    }
-    
-    .bible-back-btn {
-        left: 0.5rem;
-        padding: 0.4rem 0.5rem;
-        font-size: 0.85rem;
-    }
-}
-
-/* Modo oscuro - ajustes automáticos */
-.dark-mode .bible-header-card {
-    background: var(--card-bg-dark, #1e1e1e);
-    border-color: var(--border-color-dark, #333333);
-}
-
-.dark-mode .bible-title {
-    color: var(--text-primary-dark, #ffffff);
-}
-
-.dark-mode .bible-subtitle {
-    color: var(--text-secondary-dark, #aaaaaa);
-    background: var(--tag-bg-dark, #2a2a2a);
-}
-
-.dark-mode .bible-back-btn {
-    color: var(--accent-primary-dark, #6eb5ff);
-}
-
-.dark-mode .bible-back-btn:hover {
-    background: var(--hover-bg-dark, #2a2a2a);
 }
 
 /* Versión de la Biblia en la pantalla de lectura */
 .bible-reading-version {
     text-align: center;
-    margin-bottom: 1.25rem;
-    color: var(--text-secondary, #666666);
+    margin: 8px 0 20px 0;
+    color: var(--text-muted, #666666);
     font-size: 0.85rem;
-    font-weight: 400;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     opacity: 0.8;
 }
 
-.dark-mode .bible-reading-version {
-    color: var(--text-secondary-dark, #aaaaaa);
-}
-
+/* Grid de libros */
 .bible-books-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 12px;
+}
+
+.bible-book-card {
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-main);
+    border-radius: 14px;
+    padding: 16px 12px;
+    min-height: 92px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.bible-book-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+    border-color: var(--accent, #3182ce);
+}
+
+.bible-book-name {
+    font-size: 0.98rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1.3;
+}
+
+.bible-book-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.bible-chapters-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.bible-chapter-btn {
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-main);
+    border-radius: 12px;
+    min-height: 54px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.04);
+    transition: all 0.18s ease;
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bible-chapter-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent, #3182ce);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.08);
+    background: var(--accent, #3182ce);
+    color: white;
+}
+
+/* Modo oscuro */
+.dark-mode .bible-header-card,
+.dark-mode .bible-book-card,
+.dark-mode .bible-chapter-btn {
+    background: var(--surface-color, #0f1115);
+    border-color: var(--border-color, #1f2937);
+}
+
+.dark-mode .bible-title {
+    color: var(--primary, #f8fafc);
+}
+
+.dark-mode .bible-subtitle,
+.dark-mode .bible-reading-version {
+    color: var(--text-muted, #9ca3af);
+}
+
+.dark-mode .bible-subtitle {
+    background: var(--tag-bg-dark, #1f2937);
+}
+
+.dark-mode .bible-back-btn {
+    color: var(--accent, #60a5fa);
+    border-color: var(--border-color, #1f2937);
+}
+
+.dark-mode .bible-back-btn:hover {
+    background: var(--hover-bg-dark, #1f2937);
+    border-color: var(--accent, #60a5fa);
+}
+
+.dark-mode .bible-chapter-btn:hover {
+    background: var(--accent, #60a5fa);
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .bible-title {
+        font-size: 2rem;
+    }
+    
+    .bible-header-card {
+        padding: 20px 16px;
+    }
+    
+    .bible-back-btn {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+    }
+    
+    .bible-chapters-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 
 .bible-book-card {
