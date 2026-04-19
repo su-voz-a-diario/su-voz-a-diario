@@ -2378,49 +2378,64 @@ renderVerseText: function(htmlContent, dateStr) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
     
-    // ✅ PRIMERO: Limpiar números duplicados en el HTML
-    const allElements = tempDiv.querySelectorAll('*');
-    allElements.forEach(el => {
-        // Recorrer todos los nodos hijos
-        Array.from(el.childNodes).forEach(node => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                let text = node.textContent;
-                
-                // Patrones de números duplicados:
-                // "1 1 Texto" -> "1 Texto"
-                text = text.replace(/^(\d+)\s+\1\s+/, '$1 ');
-                // "1 1Texto" -> "1 Texto"
-                text = text.replace(/^(\d+)\s+\1(\S)/, '$1 $2');
-                // "1 1. Texto" -> "1. Texto"
-                text = text.replace(/^(\d+)\s+\1\./, '$1.');
-                
-                node.textContent = text;
-            }
-        });
+    // ✅ ELIMINAR todos los spans que NO sean de versículo (como párrafos, notas, etc.)
+    const allSpans = tempDiv.querySelectorAll('span');
+    allSpans.forEach(span => {
+        // Mantener SOLO los spans con clase 'v' (versículos)
+        if (!span.classList.contains('v')) {
+            // Si no es un marcador de versículo, extraer solo su texto y eliminar el span
+            const textNode = document.createTextNode(span.textContent);
+            span.parentNode.replaceChild(textNode, span);
+        }
     });
     
-    // Extraer versículos usando los marcadores .v
+    // ✅ LIMPIAR números duplicados en los textos
+    const walker = document.createTreeWalker(
+        tempDiv,
+        NodeFilter.SHOW_TEXT,
+        null
+    );
+    
+    const textNodes = [];
+    let node;
+    while ((node = walker.nextNode())) {
+        textNodes.push(node);
+    }
+    
+    textNodes.forEach(textNode => {
+        let text = textNode.textContent;
+        
+        // Eliminar patrones de números duplicados
+        // "1 1 En el principio..." -> "1 En el principio..."
+        text = text.replace(/^(\d+)\s+\1\s+/, '$1 ');
+        // "1 1En el principio..." -> "1 En el principio..."
+        text = text.replace(/^(\d+)\s+\1(\S)/, '$1 $2');
+        // "1 1. En el principio..." -> "1. En el principio..."
+        text = text.replace(/^(\d+)\s+\1\./, '$1.');
+        
+        textNode.textContent = text;
+    });
+    
+    // Extraer versículos
     const verses = [];
     const verseSpans = tempDiv.querySelectorAll('.v');
     
     if (verseSpans.length > 0) {
         let currentVerseNumber = '';
         let currentVerseText = '';
+        let verseStarted = false;
         
-        // Recorrer todos los nodos en orden
-        const walker = document.createTreeWalker(
+        const mainWalker = document.createTreeWalker(
             tempDiv,
             NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
             null
         );
         
-        let node;
-        let firstVerseFound = false;
-        
-        while ((node = walker.nextNode())) {
-            if (node.nodeType === Node.ELEMENT_NODE && node.classList?.contains('v')) {
-                // Si ya teníamos un versículo, guardarlo
-                if (firstVerseFound && currentVerseText.trim()) {
+        let currentNode;
+        while ((currentNode = mainWalker.nextNode())) {
+            if (currentNode.nodeType === Node.ELEMENT_NODE && currentNode.classList?.contains('v')) {
+                // Guardar versículo anterior si existe
+                if (verseStarted && currentVerseText.trim()) {
                     verses.push({
                         number: currentVerseNumber,
                         text: currentVerseText.trim()
@@ -2428,23 +2443,23 @@ renderVerseText: function(htmlContent, dateStr) {
                 }
                 
                 // Iniciar nuevo versículo
-                currentVerseNumber = node.textContent.trim();
+                currentVerseNumber = currentNode.textContent.trim();
                 currentVerseText = '';
-                firstVerseFound = true;
+                verseStarted = true;
                 
-            } else if (firstVerseFound) {
+            } else if (verseStarted) {
                 // Agregar contenido al versículo actual
-                if (node.nodeType === Node.TEXT_NODE) {
-                    currentVerseText += node.textContent;
-                } else if (node.nodeType === Node.ELEMENT_NODE) {
-                    // Si es un elemento, preservar su formato (negritas, cursivas, etc.)
-                    currentVerseText += node.outerHTML || node.textContent;
+                if (currentNode.nodeType === Node.TEXT_NODE) {
+                    currentVerseText += currentNode.textContent;
+                } else if (currentNode.nodeType === Node.ELEMENT_NODE) {
+                    // Preservar formato HTML
+                    currentVerseText += currentNode.outerHTML || currentNode.textContent;
                 }
             }
         }
         
         // Guardar el último versículo
-        if (firstVerseFound && currentVerseText.trim()) {
+        if (verseStarted && currentVerseText.trim()) {
             verses.push({
                 number: currentVerseNumber,
                 text: currentVerseText.trim()
@@ -2452,17 +2467,18 @@ renderVerseText: function(htmlContent, dateStr) {
         }
     }
     
-    // Si no se encontraron versículos, mostrar el texto completo
+    // Si no hay versículos, devolver el texto limpio
     if (verses.length === 0) {
-        const plainText = htmlContent.replace(/<[^>]+>/g, '').trim();
-        return `<div class="verse-item verse-selectable">${htmlContent}</div>`;
+        const cleanHtml = tempDiv.innerHTML;
+        return `<div class="verse-item verse-selectable">${cleanHtml}</div>`;
     }
     
-    // Renderizar cada versículo
+    // Renderizar versículos
     return verses.map(verse => {
-        // Eliminar cualquier número duplicado residual al inicio del texto
+        // Limpiar cualquier número duplicado residual
         let cleanText = verse.text;
-        cleanText = cleanText.replace(new RegExp(`^${verse.number}\\s+`), '');
+        const regex = new RegExp(`^\\s*${verse.number}\\s+`, 'g');
+        cleanText = cleanText.replace(regex, '');
         
         const verseFullText = verse.number + ' ' + cleanText.replace(/<[^>]+>/g, ' ').trim();
         const cleanVerseText = verseFullText.replace(/\s+/g, ' ').trim();
