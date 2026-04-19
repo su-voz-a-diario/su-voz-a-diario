@@ -2936,7 +2936,7 @@ renderBibleReading: async function() {
         return;
     }
 
-    // Mostrar loading - CORREGIDO: Sin usar chapterData aún
+    // ✅ CORREGIDO: Mostrar loading sin usar chapterData
     this.$content.innerHTML = `
         <div class="bible-reading-view">
             <div class="bible-nav-top">
@@ -2973,7 +2973,7 @@ renderBibleReading: async function() {
 
         this.currentBibleChapterData = chapterData;
 
-        // Renderizar el contenido COMPLETO (UNA SOLA VEZ)
+        // ✅ CORREGIDO: UN SOLO RENDERIZADO con la estructura correcta
         this.$content.innerHTML = `
             <div class="bible-reading-view">
                 <div class="bible-nav-top">
@@ -2988,7 +2988,7 @@ renderBibleReading: async function() {
                 
                 <div class="bible-reading-version">La Nueva Biblia de las Américas (NBLA)</div>
 
-                <div class="bible-nav-bar" style="display: flex; gap: 12px; justify-content: center; margin: 16px 0;">
+                <div style="display: flex; gap: 12px; justify-content: center; margin: 16px 0;">
                     <button
                         class="btn-secondary"
                         data-action="bible-prev-chapter"
@@ -3023,7 +3023,6 @@ renderBibleReading: async function() {
     } catch (error) {
         console.error('Error cargando capítulo bíblico:', error);
 
-        // Verificar que seguimos en la misma vista
         if (
             this.currentView !== 'bible-reading' ||
             this.selectedBibleBook !== requestedBookId ||
@@ -3032,7 +3031,6 @@ renderBibleReading: async function() {
             return;
         }
 
-        // Mostrar mensaje de error
         this.$content.innerHTML = `
             <div class="bible-reading-view">
                 <div class="bible-nav-top">
@@ -3041,11 +3039,16 @@ renderBibleReading: async function() {
                     </button>
                 </div>
 
-                <h2 style="text-align: center; margin: 1rem 0;">${this.escapeHtml(requestedBook.name)} ${requestedChapter}</h2>
+                <h2 style="text-align: center; margin: 1rem 0;">
+                    ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
+                </h2>
 
                 <div class="empty-state">
                     <h3>⚠️ No se pudo cargar el capítulo</h3>
                     <p>Intenta nuevamente más tarde.</p>
+                    <button class="btn-primary" data-action="back-to-bible-books" style="margin-top: 20px;">
+                        Volver a libros
+                    </button>
                 </div>
             </div>
         `;
