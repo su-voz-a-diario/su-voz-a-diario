@@ -2387,10 +2387,8 @@ renderVerseText: function(htmlContent, dateStr) {
                 currentVerseNum = node.textContent.trim();
                 currentVerse = '';
             } else if (node.nodeType === Node.TEXT_NODE) {
-                currentVerse += node.textContent;
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                currentVerse += node.textContent || '';
-            }
+    currentVerse += node.textContent;
+}
         }
         
         if (currentVerse) {
@@ -2457,96 +2455,102 @@ return verses.map(verse => {
 },
 
 renderBibleVerseText: function(htmlContent, dateStr) {
-    // Crear un contenedor temporal
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent;
-    
-    // Eliminar solo los spans que NO son de versículo (causan números de párrafo extra)
-    const allSpans = tempDiv.querySelectorAll('span');
-    allSpans.forEach(span => {
-        if (!span.classList.contains('v')) {
-            const textNode = document.createTextNode(span.textContent);
-            span.parentNode.replaceChild(textNode, span);
-        }
-    });
-    
-    // Extraer versículos
+
     const verses = [];
-    const verseSpans = tempDiv.querySelectorAll('.v');
-    
-    if (verseSpans.length > 0) {
-        let currentVerse = '';
-        let currentVerseNum = '';
-        
-        const walker = document.createTreeWalker(
-            tempDiv,
-            NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
-            null
-        );
-        
-        let node;
-        while ((node = walker.nextNode())) {
-            if (node.nodeType === Node.ELEMENT_NODE && node.classList?.contains('v')) {
-                if (currentVerse) {
-                    verses.push({
-                        number: currentVerseNum,
-                        text: currentVerse.trim()
-                    });
+    let currentVerse = null;
+
+    const walker = document.createTreeWalker(
+        tempDiv,
+        NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+        {
+            acceptNode: function(node) {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    if (node.classList?.contains('v')) {
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                    return NodeFilter.FILTER_SKIP;
                 }
-                currentVerseNum = node.textContent.trim();
-                currentVerse = '';
-            } else if (node.nodeType === Node.TEXT_NODE) {
-                currentVerse += node.textContent;
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-                currentVerse += node.textContent || '';
+
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const text = node.nodeValue?.replace(/\s+/g, ' ').trim();
+                    if (!text) return NodeFilter.FILTER_REJECT;
+
+                    const parent = node.parentElement;
+                    if (parent?.classList?.contains('v')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+
+                return NodeFilter.FILTER_REJECT;
             }
         }
-        
-        if (currentVerse) {
-            verses.push({
-                number: currentVerseNum,
-                text: currentVerse.trim()
-            });
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.classList.contains('v')) {
+            if (currentVerse && currentVerse.text.trim()) {
+                verses.push({
+                    number: currentVerse.number,
+                    text: currentVerse.text.replace(/\s+/g, ' ').trim()
+                });
+            }
+
+            currentVerse = {
+                number: node.textContent.trim(),
+                text: ''
+            };
+        } else if (node.nodeType === Node.TEXT_NODE && currentVerse) {
+            currentVerse.text += ' ' + node.nodeValue;
         }
-    } else {
-        const plainText = htmlContent.replace(/<[^>]+>/g, '').trim();
-        return `<div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">${htmlContent}</div>`;
     }
-    
-    // Obtener los resaltados guardados
+
+    if (currentVerse && currentVerse.text.trim()) {
+        verses.push({
+            number: currentVerse.number,
+            text: currentVerse.text.replace(/\s+/g, ' ').trim()
+        });
+    }
+
+    if (verses.length === 0) {
+        const plainText = tempDiv.textContent.replace(/\s+/g, ' ').trim();
+        return `
+            <div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">
+                <span class="verse-text-content">${this.escapeHtml(plainText)}</span>
+            </div>
+        `;
+    }
+
     const highlights = this.getHighlights(dateStr);
     const normalize = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    
-    // Renderizar cada versículo
+
     return verses.map(verse => {
-        // Limpiar número duplicado
-        let cleanText = verse.text;
-        const duplicatePattern = new RegExp(`^\\s*${verse.number}\\s+`, 'g');
-        cleanText = cleanText.replace(duplicatePattern, '');
-        
-        const verseFullText = verse.number + ' ' + cleanText;
-        const cleanVerseText = verseFullText.replace(/\s+/g, ' ').trim();
-        const existingNote = this.getSelectionNoteByText(dateStr, cleanVerseText);
+        const cleanText = verse.text.replace(new RegExp(`^${verse.number}\\s+`), '').trim();
+        const verseFullText = `${verse.number} ${cleanText}`.replace(/\s+/g, ' ').trim();
+
+        const existingNote = this.getSelectionNoteByText(dateStr, verseFullText);
         const hasNote = existingNote !== null;
-        
-        // Verificar si este versículo tiene resaltados guardados
+
         const verseHighlight = highlights.find(h => {
             const highlightText = normalize(h.text);
             const currentVerseText = normalize(verseFullText);
-            return currentVerseText.includes(highlightText) || 
-                   highlightText.includes(currentVerseText);
+            return currentVerseText.includes(highlightText) || highlightText.includes(currentVerseText);
         });
-        
+
         const highlightClass = verseHighlight ? `highlight-${verseHighlight.color}` : '';
-        
+
         return `
-            <div class="verse-item verse-selectable ${highlightClass}" 
-                 data-verse-number="${verse.number}"
+            <div class="verse-item verse-selectable ${highlightClass}"
+                 data-verse-number="${this.escapeHtml(verse.number)}"
                  data-verse-text="${this.escapeHtml(cleanText)}"
                  data-verse-full="${this.escapeHtml(verseFullText)}"
                  data-has-note="${hasNote}">
-                <span class="verse-number">${verse.number}</span>
-                <span class="verse-text-content">${cleanText}</span>
+                <span class="verse-number">${this.escapeHtml(verse.number)}</span>
+                <span class="verse-text-content">${this.escapeHtml(cleanText)}</span>
                 ${hasNote ? '<span class="verse-note-icon" title="Este versículo tiene una nota guardada">📝</span>' : ''}
             </div>
         `;
