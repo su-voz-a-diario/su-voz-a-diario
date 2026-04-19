@@ -2432,11 +2432,10 @@ return verses.map(verse => {
     
     // ✅ NUEVO: Verificar si este versículo tiene resaltados guardados
     const verseHighlight = highlights.find(h => {
-        const highlightText = normalize(h.text);
-        const currentVerseText = normalize(verseFullText);
-        return currentVerseText.includes(highlightText) || 
-               highlightText.includes(currentVerseText);
-    });
+    const highlightText = normalize(h.text);
+    const currentVerseText = normalize(verseFullText);
+    return highlightText === currentVerseText;
+});
     
     const highlightClass = verseHighlight ? `highlight-${verseHighlight.color}` : '';
     
@@ -2479,8 +2478,10 @@ renderBibleVerseText: function(htmlContent, dateStr) {
     };
 
     const addTextToCurrentVerse = (text) => {
-        if (!currentVerse) return;
-        currentVerse.text += ` ${text}`;
+    if (!currentVerse) return;
+    const cleanText = this.normalizeBibleText(text);
+    if (!cleanText) return;
+    currentVerse.text += ` ${cleanText}`;
     };
 
     const processNode = (node) => {
@@ -2511,7 +2512,10 @@ renderBibleVerseText: function(htmlContent, dateStr) {
         }
 
         // Si es marcador de versículo
-        if (node.classList.contains('v') || node.hasAttribute('data-verse')) {
+        if (
+    (node.classList && node.classList.contains('v')) ||
+    node.hasAttribute('data-verse')
+) {
             pushCurrentVerse();
 
             currentVerse = {
@@ -2529,13 +2533,15 @@ renderBibleVerseText: function(htmlContent, dateStr) {
     pushCurrentVerse();
 
     if (!blocks.length) {
-        const plainText = this.normalizeBibleText(tempDiv.textContent);
-        return `
-            <div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">
-                <span class="verse-text-content">${this.escapeHtml(plainText)}</span>
-            </div>
-        `;
-    }
+    const plainText = this.normalizeBibleText(tempDiv.textContent);
+    return plainText ? `
+        <div class="verse-item verse-selectable" data-verse-text="${this.escapeHtml(plainText)}">
+            <span class="verse-text-content">${this.escapeHtml(plainText)}</span>
+        </div>
+    ` : `
+        <p style="text-align: center; color: var(--text-muted);">No se pudo procesar el contenido.</p>
+    `;
+}
 
     const highlights = this.getHighlights(dateStr);
     const normalize = str => this.normalizeBibleText(str).toLowerCase();
@@ -2554,10 +2560,10 @@ renderBibleVerseText: function(htmlContent, dateStr) {
         const hasNote = existingNote !== null;
 
         const verseHighlight = highlights.find(h => {
-            const highlightText = normalize(h.text);
-            const currentVerseText = normalize(verseFullText);
-            return currentVerseText.includes(highlightText) || highlightText.includes(currentVerseText);
-        });
+    const highlightText = normalize(h.text);
+    const currentVerseText = normalize(verseFullText);
+    return highlightText === currentVerseText;
+});
 
         const highlightClass = verseHighlight ? `highlight-${verseHighlight.color}` : '';
 
@@ -2579,14 +2585,9 @@ isBibleTitleNode: function(node) {
     if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
 
     const classList = Array.from(node.classList || []);
-    const classText = classList.join(' ').toLowerCase();
 
     // API.Bible suele usar clases de títulos/subtítulos tipo s, s1, s2, ms, ms1, etc.
     // También contemplamos headings HTML por seguridad.
-    if (/^(s|s1|s2|s3|s4|ms|ms1|ms2|d|sp|sr)$/.test(classText)) {
-        return true;
-    }
-
     if (classList.some(cls => /^(s|s1|s2|s3|s4|ms|ms1|ms2|d|sp|sr)$/i.test(cls))) {
         return true;
     }
