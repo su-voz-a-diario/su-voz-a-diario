@@ -3264,3 +3264,188 @@ body.selection-panel-open {
 .dark-mode .verse-note-icon {
     opacity: 0.8;
 }
+
+/* ========================================
+   BÚSQUEDA EN LA BIBLIA
+   ======================================== */
+
+.bible-search-container {
+    margin-bottom: 20px;
+}
+
+.bible-search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.bible-search-input {
+    width: 100%;
+    padding: 16px 48px 16px 20px;
+    font-size: 1rem;
+    font-family: var(--font-ui);
+    background: var(--surface-color);
+    border: 2px solid var(--border-color);
+    border-radius: 30px;
+    color: var(--text-main);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.bible-search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(49, 130, 206, 0.15);
+}
+
+.bible-search-clear {
+    position: absolute;
+    right: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border-color);
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.bible-search-clear:hover {
+    background: var(--danger);
+    color: white;
+}
+
+.bible-search-stats {
+    padding: 12px 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.bible-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.bible-search-result-item {
+    padding: 16px;
+    background: var(--surface-color);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.bible-search-result-item:hover {
+    background: rgba(49, 130, 206, 0.05);
+    transform: translateX(4px);
+}
+
+.bible-search-result-reference {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-bottom: 8px;
+}
+
+.bible-search-result-text {
+    font-family: var(--font-reading);
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--text-main);
+}
+
+.search-highlight {
+    background: rgba(250, 204, 21, 0.4);
+    padding: 0 2px;
+    border-radius: 4px;
+    font-weight: 600;
+}
+
+.dark-mode .search-highlight {
+    background: rgba(250, 204, 21, 0.3);
+}
+
+.bible-search-placeholder {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.bible-search-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    opacity: 0.6;
+}
+
+.bible-search-placeholder h3 {
+    font-size: 1.2rem;
+    color: var(--text-main);
+    margin-bottom: 8px;
+}
+
+.bible-search-placeholder p {
+    color: var(--text-muted);
+    margin-bottom: 24px;
+}
+
+.bible-search-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+}
+
+.suggestion-tag {
+    padding: 8px 16px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 30px;
+    font-size: 0.9rem;
+    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggestion-tag:hover {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+/* Versículo encontrado en búsqueda (resaltado temporal) */
+.verse-searched {
+    animation: searchPulse 1s ease;
+    background: rgba(250, 204, 21, 0.2) !important;
+    border-radius: 8px;
+}
+
+@keyframes searchPulse {
+    0%, 100% { background: rgba(250, 204, 21, 0.2); }
+    50% { background: rgba(250, 204, 21, 0.5); }
+}
+
+.dark-mode .verse-searched {
+    background: rgba(250, 204, 21, 0.25) !important;
+}
+
+/* Títulos de sección en la Biblia */
+.bible-section-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-align: center;
+    margin: 20px 0 12px 0;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dark-mode .bible-section-title {
+    color: var(--accent);
+}
