@@ -625,50 +625,42 @@ resetScrollChrome: function() {
 },
 
 handleScrollChrome: function() {
-    // ✅ CORREGIDO: Versión simplificada que no interfiere con el scroll normal
-    if (!this.scrollCompactEnabled) {
-        return;
-    }
+    if (!this.scrollCompactEnabled) return;
 
     const currentY = window.scrollY || window.pageYOffset || 0;
-    const threshold = 15;
+    const delta = currentY - this.lastScrollY;
+    const threshold = 8;
     const compactStartOffset = 100;
 
-    // Solo activar/desactivar cuando hay un cambio significativo
-    if (Math.abs(currentY - this.lastScrollY) < threshold) {
-        return;
+    if (Math.abs(delta) < threshold) return;
+
+    const isScrollingDown = delta > 0;
+    const isScrollingUp = delta < 0;
+
+    if (isScrollingDown && currentY > compactStartOffset) {
+        this.setScrollCompactState(true);
     }
 
-    if (currentY > compactStartOffset) {
-        if (!this.scrollCompactActive) {
-            this.setScrollCompactState(true);
-        }
-    } else {
-        if (this.scrollCompactActive) {
-            this.setScrollCompactState(false);
-        }
+    if (isScrollingUp) {
+        this.setScrollCompactState(false);
     }
 
     this.lastScrollY = currentY;
 },
 
 bindScrollChrome: function() {
-    // ✅ CORREGIDO: Usar debounce para evitar múltiples llamadas
-    let scrollTimeout = null;
-    
     window.addEventListener('scroll', () => {
         if (!this.scrollCompactEnabled) return;
-        
-        // Cancelar timeout anterior
-        if (scrollTimeout) {
-            clearTimeout(scrollTimeout);
+
+        this.handleScrollChrome();
+
+        if (this.scrollIdleTimer) {
+            clearTimeout(this.scrollIdleTimer);
         }
-        
-        // Ejecutar después de que termine el scroll
-        scrollTimeout = setTimeout(() => {
-            this.handleScrollChrome();
-            scrollTimeout = null;
-        }, 50);
+
+        this.scrollIdleTimer = setTimeout(() => {
+            this.setScrollCompactState(false);
+        }, 140);
     }, { passive: true });
 },
 
