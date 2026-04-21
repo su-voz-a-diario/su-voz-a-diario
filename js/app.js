@@ -3190,8 +3190,8 @@ renderBibleSearch: function() {
                 ${this.bibleSearchFilter === 'all' ? 
                     `${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} totales` : 
                     `${this.bibleSearchResults.length} resultado${this.bibleSearchResults.length !== 1 ? 's' : ''} en este testamento`}
-                ${this.bibleSearchFilter !== 'all' && this._allBibleSearchResults ? 
-                    ` (de ${this._allBibleSearchResults.length} mostrados)` : ''}
+                    ${this.bibleSearchFilter !== 'all' ? 
+    ` (${this.bibleSearchResults.length} mostrados)` : ''}
             </div>
             <div class="bible-search-results">
                 ${this.bibleSearchResults.map(result => {
