@@ -3042,6 +3042,47 @@ const introVideoHtml = showIntroVideo ? `
 // FUNCIONES DE BÚSQUEDA EN LA BIBLIA
 // ========================================
 
+// ========================================
+// FUNCIÓN PARA EXTRAER CAPÍTULO Y VERSÍCULO
+// ========================================
+extractChapterVerse: function(result) {
+    // Si ya tiene chapter y verse definidos, usarlos
+    if (result.chapter && result.verse) {
+        return {
+            chapter: result.chapter,
+            verse: result.verse
+        };
+    }
+    
+    // Si tiene reference, extraer de ahí (ej: "Juan 3:16")
+    if (result.reference) {
+        const match = result.reference.match(/(\d+):(\d+)/);
+        if (match) {
+            return {
+                chapter: match[1],
+                verse: match[2]
+            };
+        }
+    }
+    
+    // Si tiene id en formato "JHN.3.16"
+    if (result.id) {
+        const parts = result.id.split('.');
+        if (parts.length >= 3) {
+            return {
+                chapter: parts[1],
+                verse: parts[2]
+            };
+        }
+    }
+    
+    // Si no se pudo extraer, devolver valores por defecto
+    return {
+        chapter: '1',
+        verse: '1'
+    };
+},
+
 renderBibleSearch: function() {
     const hasResults = this.bibleSearchResults.length > 0;
     const isLoading = this.bibleSearchLoading;
@@ -3062,24 +3103,25 @@ renderBibleSearch: function() {
             </div>
             <div class="bible-search-results">
                 ${this.bibleSearchResults.map(result => {
-                    const book = this.getBibleBookById(result.bookId);
-                    const bookName = book ? book.name : result.bookId;
-                    
-                    return `
-                        <div class="bible-search-result-item" 
-                             data-action="navigate-to-verse"
-                             data-book-id="${result.bookId}"
-                             data-chapter="${result.chapter}"
-                             data-verse="${result.verse}">
-                            <div class="bible-search-result-reference">
-                                ${bookName} ${result.chapter}:${result.verse}
-                            </div>
-                            <div class="bible-search-result-text">
-                                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
-                            </div>
-                        </div>
-                    `;
-                }).join('')}
+    const book = this.getBibleBookById(result.bookId);
+    const bookName = book ? book.name : result.bookId;
+    const { chapter, verse } = this.extractChapterVerse(result);
+    
+    return `
+        <div class="bible-search-result-item" 
+             data-action="navigate-to-verse"
+             data-book-id="${result.bookId}"
+             data-chapter="${chapter}"
+             data-verse="${verse}">
+            <div class="bible-search-result-reference">
+                ${bookName} ${chapter}:${verse}
+            </div>
+            <div class="bible-search-result-text">
+                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
+            </div>
+        </div>
+    `;
+}).join('')}
             </div>
         `;
     } else if (this.bibleSearchQuery.length >= 3) {
@@ -3248,24 +3290,25 @@ updateBibleSearchResults: function() {
             `;
         } else if (hasResults) {
             resultsContainer.innerHTML = this.bibleSearchResults.map(result => {
-                const book = this.getBibleBookById(result.bookId);
-                const bookName = book ? book.name : result.bookId;
-                
-                return `
-                    <div class="bible-search-result-item" 
-                         data-action="navigate-to-verse"
-                         data-book-id="${result.bookId}"
-                         data-chapter="${result.chapter}"
-                         data-verse="${result.verse}">
-                        <div class="bible-search-result-reference">
-                            ${bookName} ${result.chapter}:${result.verse}
-                        </div>
-                        <div class="bible-search-result-text">
-                            ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+    const book = this.getBibleBookById(result.bookId);
+    const bookName = book ? book.name : result.bookId;
+    const { chapter, verse } = this.extractChapterVerse(result);
+    
+    return `
+        <div class="bible-search-result-item" 
+             data-action="navigate-to-verse"
+             data-book-id="${result.bookId}"
+             data-chapter="${chapter}"
+             data-verse="${verse}">
+            <div class="bible-search-result-reference">
+                ${bookName} ${chapter}:${verse}
+            </div>
+            <div class="bible-search-result-text">
+                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
+            </div>
+        </div>
+    `;
+}).join('');
         } else if (this.bibleSearchQuery.length >= 3) {
             resultsContainer.innerHTML = `
                 <div class="empty-state" style="padding: 40px 20px;">
