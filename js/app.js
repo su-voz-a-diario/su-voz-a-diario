@@ -3370,50 +3370,6 @@ performBibleSearch: async function(query, isLoadMore = false) {
         this.updateBibleSearchResults();
     }
 },
-    
-    this.bibleSearchQuery = query;
-    this.bibleSearchLoading = true;
-
-    // Si NO es "cargar más", reseteamos el offset y guardamos TODOS los resultados
-    if (!isLoadMore) {
-        this.bibleSearchOffset = 0;
-        this.bibleSearchFilter = 'all';
-        // Guardar todos los resultados sin filtrar para referencia
-        this._allBibleSearchResults = [];
-    }
-    
-    this.updateBibleSearchResults();
-    
-    try {
-        const result = await searchBible(query, this.bibleSearchOffset, 30);
-        const newVerses = result.verses || [];
-        
-        if (isLoadMore) {
-            // Añadir los nuevos resultados a los existentes
-            this._allBibleSearchResults = [...(this._allBibleSearchResults || []), ...newVerses];
-        } else {
-            this._allBibleSearchResults = newVerses;
-        }
-        
-        // Aplicar filtro actual
-        this.bibleSearchResults = this.filterResultsByTestament(this._allBibleSearchResults, this.bibleSearchFilter);
-        this.bibleSearchTotal = result.total || 0;
-        
-        // Determinar si hay más resultados por cargar (basado en el total de la API)
-        this.bibleSearchHasMore = (this.bibleSearchOffset + newVerses.length) < this.bibleSearchTotal;
-    } catch (error) {
-        console.error('Error en búsqueda:', error);
-        if (!isLoadMore) {
-            this.bibleSearchResults = [];
-            this._allBibleSearchResults = [];
-            this.bibleSearchTotal = 0;
-        }
-        this.showToast('Error al buscar. Intenta de nuevo.');
-    } finally {
-        this.bibleSearchLoading = false;
-        this.updateBibleSearchResults();
-    }
-},
 
 loadMoreSearchResults: function() {
     if (this.bibleSearchLoading) return;
@@ -3465,6 +3421,18 @@ setBibleSearchFilter: function(filter) {
     this.syncBibleSearchStateFromBucket(filter);
     this.updateBibleSearchResults();
     this.performBibleSearch(this.bibleSearchQuery, false);
+},
+
+clearBibleSearch: function() {
+
+    this.bibleSearchQuery = '';
+    this.bibleSearchLoading = false;
+    this.bibleSearchFilter = 'all';
+    this.resetAllBibleSearchBuckets();
+    this.syncBibleSearchStateFromBucket('all');
+    this.updateFilterButtonsUI();
+    this.updateBibleSearchResults();
+
 },
 
 updateFilterButtonsUI: function() {
@@ -4678,7 +4646,6 @@ if (clearSearchBtn) {
     this.bibleSearchQuery = '';
     this.bibleSearchResults = [];
     this.bibleSearchTotal = 0;
-    this.bibleSearchOffset = 0;
     this.bibleSearchHasMore = false;
     this.renderBibleSearch();
     return;
