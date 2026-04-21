@@ -73,14 +73,15 @@ async function getBibleChapter(bookId, chapterNumber) {
     return result.data;
 }
 
-async function searchBible(query) {
+async function searchBible(query, offset = 0, limit = 30) {
     if (!query || query.length < 3) {
         return { verses: [], total: 0 };
     }
     
     try {
+        // ⭐ CAMBIO IMPORTANTE: Añadimos sort=canonical, offset y limit
         const result = await apiBibleFetch(
-            `/bibles/${API_BIBLE_ID}/search?query=${encodeURIComponent(query)}&limit=30`
+            `/bibles/${API_BIBLE_ID}/search?query=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}&sort=canonical`
         );
         
         return {
@@ -204,6 +205,8 @@ const App = {
     bibleSearchTotal: 0,
     searchTimeout: null,
     targetVerse: null,
+    bibleSearchOffset: 0,
+    bibleSearchHasMore: false,
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
@@ -3096,39 +3099,39 @@ renderBibleSearch: function() {
                 Buscando en la Biblia...
             </div>
         `;
-    } else if (hasResults) {
+        } else if (hasResults) {
         resultsHtml = `
             <div class="bible-search-stats">
-                ${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} encontrado${this.bibleSearchTotal !== 1 ? 's' : ''}
+                ${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} encontrado${this.bibleSearchTotal !== 1 ? 's' : ''} (mostrando ${this.bibleSearchResults.length})
             </div>
             <div class="bible-search-results">
                 ${this.bibleSearchResults.map(result => {
-    const book = this.getBibleBookById(result.bookId);
-    const bookName = book ? book.name : result.bookId;
-    const { chapter, verse } = this.extractChapterVerse(result);
-    
-    return `
-        <div class="bible-search-result-item" 
-             data-action="navigate-to-verse"
-             data-book-id="${result.bookId}"
-             data-chapter="${chapter}"
-             data-verse="${verse}">
-            <div class="bible-search-result-reference">
-                ${bookName} ${chapter}:${verse}
-            </div>
-            <div class="bible-search-result-text">
-                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
-            </div>
-        </div>
-    `;
-}).join('')}
-            </div>
-        `;
-    } else if (this.bibleSearchQuery.length >= 3) {
-        resultsHtml = `
-            <div class="empty-state" style="padding: 40px 20px;">
-                <h3>🔍 No se encontraron resultados</h3>
-                <p>Intenta con otras palabras clave</p>
+                    const book = this.getBibleBookById(result.bookId);
+                    const bookName = book ? book.name : result.bookId;
+                    const { chapter, verse } = this.extractChapterVerse(result);
+                    
+                    return `
+                        <div class="bible-search-result-item" 
+                             data-action="navigate-to-verse"
+                             data-book-id="${result.bookId}"
+                             data-chapter="${chapter}"
+                             data-verse="${verse}">
+                            <div class="bible-search-result-reference">
+                                ${bookName} ${chapter}:${verse}
+                            </div>
+                            <div class="bible-search-result-text">
+                                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                ${this.bibleSearchHasMore ? `
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn-secondary" data-action="load-more-search" style="width: auto; display: inline-flex; padding-left: 24px; padding-right: 24px;">
+                        Cargar más resultados (${this.bibleSearchTotal - this.bibleSearchResults.length} restantes)
+                    </button>
+                </div>
+                ` : ''}
             </div>
         `;
     } else {
@@ -3209,32 +3212,61 @@ highlightSearchTerm: function(text, query) {
     return highlighted;
 },
 
-performBibleSearch: async function(query) {
+performBibleSearch: async function(query, isLoadMore = false) {
     if (!query || query.length < 3) {
         this.bibleSearchResults = [];
         this.bibleSearchTotal = 0;
         this.bibleSearchQuery = query;
+        this.bibleSearchOffset = 0;
+        this.bibleSearchHasMore = false;
         this.updateBibleSearchResults();
         return;
     }
     
     this.bibleSearchQuery = query;
     this.bibleSearchLoading = true;
+
+    // Si NO es "cargar más", reseteamos el offset
+    if (!isLoadMore) {
+        this.bibleSearchOffset = 0;
+        this.bibleSearchResults = [];
+    }
+    
     this.updateBibleSearchResults();
     
     try {
-        const result = await searchBible(query);
-        this.bibleSearchResults = result.verses || [];
+        const result = await searchBible(query, this.bibleSearchOffset, 30);
+        const newVerses = result.verses || [];
+        
+        if (isLoadMore) {
+            // Añadir los nuevos resultados a los existentes
+            this.bibleSearchResults = [...this.bibleSearchResults, ...newVerses];
+        } else {
+            this.bibleSearchResults = newVerses;
+        }
+        
         this.bibleSearchTotal = result.total || 0;
+        // Determinar si hay más resultados por cargar
+        this.bibleSearchHasMore = (this.bibleSearchOffset + newVerses.length) < this.bibleSearchTotal;
     } catch (error) {
         console.error('Error en búsqueda:', error);
-        this.bibleSearchResults = [];
-        this.bibleSearchTotal = 0;
+        if (!isLoadMore) {
+            this.bibleSearchResults = [];
+            this.bibleSearchTotal = 0;
+        }
         this.showToast('Error al buscar. Intenta de nuevo.');
     } finally {
         this.bibleSearchLoading = false;
         this.updateBibleSearchResults();
     }
+},
+
+loadMoreSearchResults: function() {
+    if (this.bibleSearchLoading || !this.bibleSearchHasMore) return;
+    
+    // Incrementar el offset para la siguiente página
+    this.bibleSearchOffset += 30;
+    this.performBibleSearch(this.bibleSearchQuery, true);
 },
 
 updateBibleSearchResults: function() {
@@ -3288,27 +3320,38 @@ updateBibleSearchResults: function() {
                     Buscando en la Biblia...
                 </div>
             `;
-        } else if (hasResults) {
-            resultsContainer.innerHTML = this.bibleSearchResults.map(result => {
-    const book = this.getBibleBookById(result.bookId);
-    const bookName = book ? book.name : result.bookId;
-    const { chapter, verse } = this.extractChapterVerse(result);
-    
-    return `
-        <div class="bible-search-result-item" 
-             data-action="navigate-to-verse"
-             data-book-id="${result.bookId}"
-             data-chapter="${chapter}"
-             data-verse="${verse}">
-            <div class="bible-search-result-reference">
-                ${bookName} ${chapter}:${verse}
-            </div>
-            <div class="bible-search-result-text">
-                ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
-            </div>
-        </div>
-    `;
-}).join('');
+                } else if (hasResults) {
+            const resultsHtml = this.bibleSearchResults.map(result => {
+                const book = this.getBibleBookById(result.bookId);
+                const bookName = book ? book.name : result.bookId;
+                const { chapter, verse } = this.extractChapterVerse(result);
+                
+                return `
+                    <div class="bible-search-result-item" 
+                         data-action="navigate-to-verse"
+                         data-book-id="${result.bookId}"
+                         data-chapter="${chapter}"
+                         data-verse="${verse}">
+                        <div class="bible-search-result-reference">
+                            ${bookName} ${chapter}:${verse}
+                        </div>
+                        <div class="bible-search-result-text">
+                            ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // ⭐ AQUÍ ESTÁ EL CAMBIO: Añadir el botón "Cargar más" si es necesario
+            const loadMoreButton = this.bibleSearchHasMore ? `
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn-secondary" data-action="load-more-search" style="width: auto; display: inline-flex; padding-left: 24px; padding-right: 24px;">
+                        Cargar más resultados (${this.bibleSearchTotal - this.bibleSearchResults.length} restantes)
+                    </button>
+                </div>
+            ` : '';
+            
+            resultsContainer.innerHTML = resultsHtml + loadMoreButton;
         } else if (this.bibleSearchQuery.length >= 3) {
             resultsContainer.innerHTML = `
                 <div class="empty-state" style="padding: 40px 20px;">
@@ -4421,12 +4464,22 @@ if (suggestionTag) {
 }
 
 // Limpiar búsqueda
+// Limpiar búsqueda
 const clearSearchBtn = e.target.closest('[data-action="clear-search"]');
 if (clearSearchBtn) {
     this.bibleSearchQuery = '';
     this.bibleSearchResults = [];
     this.bibleSearchTotal = 0;
+    this.bibleSearchOffset = 0;
+    this.bibleSearchHasMore = false;
     this.renderBibleSearch();
+    return;
+}
+
+// ⭐ NUEVO EVENTO: Cargar más resultados
+const loadMoreBtn = e.target.closest('[data-action="load-more-search"]');
+if (loadMoreBtn) {
+    this.loadMoreSearchResults();
     return;
 }
 
