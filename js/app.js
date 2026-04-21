@@ -207,6 +207,7 @@ const App = {
     targetVerse: null,
     bibleSearchOffset: 0,
     bibleSearchHasMore: false,
+    bibleSearchFilter: 'all', // 'all', 'old', 'new'
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
@@ -3046,6 +3047,31 @@ const introVideoHtml = showIntroVideo ? `
 // ========================================
 
 // ========================================
+// FUNCIÓN PARA FILTRAR POR TESTAMENTO
+// ========================================
+filterResultsByTestament: function(results, filter) {
+    if (filter === 'all') return results;
+    
+    // Libros del Antiguo Testamento (Génesis a Malaquías)
+    const oldTestamentBooks = ['gen', 'exo', 'lev', 'num', 'deu', 'jos', 'jdg', 'rut', 
+        '1sa', '2sa', '1ki', '2ki', '1ch', '2ch', 'ezr', 'neh', 'est', 'job', 'psa', 
+        'pro', 'ecc', 'sng', 'isa', 'jer', 'lam', 'ezk', 'dan', 'hos', 'jol', 'amo', 
+        'oba', 'jon', 'mic', 'nam', 'hab', 'zep', 'hag', 'zec', 'mal'];
+    
+    // Libros del Nuevo Testamento (Mateo a Apocalipsis)
+    const newTestamentBooks = ['mat', 'mrk', 'luk', 'jhn', 'act', 'rom', '1co', '2co', 
+        'gal', 'eph', 'php', 'col', '1th', '2th', '1ti', '2ti', 'tit', 'phm', 'heb', 
+        'jas', '1pe', '2pe', '1jn', '2jn', '3jn', 'jud', 'rev'];
+    
+    const targetBooks = filter === 'old' ? oldTestamentBooks : newTestamentBooks;
+    
+    return results.filter(result => {
+        const ourBookId = this.bibleApiIdMap[result.bookId.toUpperCase()] || result.bookId.toLowerCase();
+        return targetBooks.includes(ourBookId);
+    });
+},
+
+// ========================================
 // FUNCIÓN PARA EXTRAER CAPÍTULO Y VERSÍCULO
 // ========================================
 extractChapterVerse: function(result) {
@@ -3101,8 +3127,12 @@ renderBibleSearch: function() {
         `;
         } else if (hasResults) {
         resultsHtml = `
-            <div class="bible-search-stats">
-                ${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} encontrado${this.bibleSearchTotal !== 1 ? 's' : ''} (mostrando ${this.bibleSearchResults.length})
+                        <div class="bible-search-stats">
+                ${this.bibleSearchFilter === 'all' ? 
+                    `${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} totales` : 
+                    `${this.bibleSearchResults.length} resultado${this.bibleSearchResults.length !== 1 ? 's' : ''} en este testamento`}
+                ${this.bibleSearchFilter !== 'all' && this._allBibleSearchResults ? 
+                    ` (de ${this._allBibleSearchResults.length} mostrados)` : ''}
             </div>
             <div class="bible-search-results">
                 ${this.bibleSearchResults.map(result => {
@@ -3160,9 +3190,22 @@ renderBibleSearch: function() {
                 </button>
             </div>
             
-            <div class="bible-header-card" style="padding: 20px;">
+                        <div class="bible-header-card" style="padding: 20px;">
                 <div class="bible-title">🔍 Buscar</div>
                 <div class="bible-subtitle">La Nueva Biblia de las Américas</div>
+            </div>
+            
+            <!-- ⭐ NUEVO: PESTAÑAS DE FILTRO POR TESTAMENTO ⭐ -->
+            <div class="bible-search-filters">
+                <button class="bible-filter-btn ${this.bibleSearchFilter === 'all' ? 'active' : ''}" data-action="set-bible-filter" data-filter="all">
+                    📖 Todos
+                </button>
+                <button class="bible-filter-btn ${this.bibleSearchFilter === 'old' ? 'active' : ''}" data-action="set-bible-filter" data-filter="old">
+                    📜 Antiguo Testamento
+                </button>
+                <button class="bible-filter-btn ${this.bibleSearchFilter === 'new' ? 'active' : ''}" data-action="set-bible-filter" data-filter="new">
+                    ✝️ Nuevo Testamento
+                </button>
             </div>
             
             <div class="bible-search-container">
@@ -3219,6 +3262,7 @@ performBibleSearch: async function(query, isLoadMore = false) {
         this.bibleSearchQuery = query;
         this.bibleSearchOffset = 0;
         this.bibleSearchHasMore = false;
+        this.bibleSearchFilter = 'all';
         this.updateBibleSearchResults();
         return;
     }
@@ -3226,10 +3270,12 @@ performBibleSearch: async function(query, isLoadMore = false) {
     this.bibleSearchQuery = query;
     this.bibleSearchLoading = true;
 
-    // Si NO es "cargar más", reseteamos el offset
+    // Si NO es "cargar más", reseteamos el offset y guardamos TODOS los resultados
     if (!isLoadMore) {
         this.bibleSearchOffset = 0;
-        this.bibleSearchResults = [];
+        this.bibleSearchFilter = 'all';
+        // Guardar todos los resultados sin filtrar para referencia
+        this._allBibleSearchResults = [];
     }
     
     this.updateBibleSearchResults();
@@ -3240,18 +3286,22 @@ performBibleSearch: async function(query, isLoadMore = false) {
         
         if (isLoadMore) {
             // Añadir los nuevos resultados a los existentes
-            this.bibleSearchResults = [...this.bibleSearchResults, ...newVerses];
+            this._allBibleSearchResults = [...(this._allBibleSearchResults || []), ...newVerses];
         } else {
-            this.bibleSearchResults = newVerses;
+            this._allBibleSearchResults = newVerses;
         }
         
+        // Aplicar filtro actual
+        this.bibleSearchResults = this.filterResultsByTestament(this._allBibleSearchResults, this.bibleSearchFilter);
         this.bibleSearchTotal = result.total || 0;
-        // Determinar si hay más resultados por cargar
+        
+        // Determinar si hay más resultados por cargar (basado en el total de la API)
         this.bibleSearchHasMore = (this.bibleSearchOffset + newVerses.length) < this.bibleSearchTotal;
     } catch (error) {
         console.error('Error en búsqueda:', error);
         if (!isLoadMore) {
             this.bibleSearchResults = [];
+            this._allBibleSearchResults = [];
             this.bibleSearchTotal = 0;
         }
         this.showToast('Error al buscar. Intenta de nuevo.');
@@ -3267,6 +3317,19 @@ loadMoreSearchResults: function() {
     // Incrementar el offset para la siguiente página
     this.bibleSearchOffset += 30;
     this.performBibleSearch(this.bibleSearchQuery, true);
+},
+
+setBibleSearchFilter: function(filter) {
+    if (this.bibleSearchFilter === filter) return;
+    
+    this.bibleSearchFilter = filter;
+    
+    // Aplicar filtro a los resultados guardados
+    if (this._allBibleSearchResults) {
+        this.bibleSearchResults = this.filterResultsByTestament(this._allBibleSearchResults, filter);
+    }
+    
+    this.updateBibleSearchResults();
 },
 
 updateBibleSearchResults: function() {
@@ -3300,8 +3363,10 @@ updateBibleSearchResults: function() {
     // Actualizar estadísticas
     if (statsContainer) {
         if (!isLoading && hasResults) {
-            statsContainer.innerHTML = `
-                ${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} encontrado${this.bibleSearchTotal !== 1 ? 's' : ''}
+                        statsContainer.innerHTML = `
+                ${this.bibleSearchFilter === 'all' ? 
+                    `${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''} totales` : 
+                    `${this.bibleSearchResults.length} resultado${this.bibleSearchResults.length !== 1 ? 's' : ''} en este testamento`}
             `;
             statsContainer.style.display = 'block';
         } else if (!isLoading && this.bibleSearchQuery.length >= 3 && !hasResults) {
@@ -4480,6 +4545,14 @@ if (clearSearchBtn) {
 const loadMoreBtn = e.target.closest('[data-action="load-more-search"]');
 if (loadMoreBtn) {
     this.loadMoreSearchResults();
+    return;
+}
+
+// ⭐ NUEVO EVENTO: Cambiar filtro de testamento
+const filterBtn = e.target.closest('[data-action="set-bible-filter"]');
+if (filterBtn) {
+    const filter = filterBtn.getAttribute('data-filter');
+    this.setBibleSearchFilter(filter);
     return;
 }
 
