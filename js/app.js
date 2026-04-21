@@ -3238,11 +3238,13 @@ renderBibleSearch: function() {
     `;
     
     setTimeout(() => {
-        const searchInput = document.getElementById('bible-search-input');
-        if (searchInput) {
-            searchInput.focus();
-        }
-    }, 100);
+    const searchInput = document.getElementById('bible-search-input');
+    if (searchInput) {
+        searchInput.focus();
+    }
+    // Sincronizar botones de filtro
+    this.updateFilterButtonsUI();
+}, 100);
 },
 
 highlightSearchTerm: function(text, query) {
@@ -3329,7 +3331,23 @@ setBibleSearchFilter: function(filter) {
         this.bibleSearchResults = this.filterResultsByTestament(this._allBibleSearchResults, filter);
     }
     
+    // Actualizar resultados y estadísticas
     this.updateBibleSearchResults();
+    
+    // Actualizar la apariencia de los botones de filtro
+    this.updateFilterButtonsUI();
+},
+
+updateFilterButtonsUI: function() {
+    const filterButtons = document.querySelectorAll('.bible-filter-btn');
+    filterButtons.forEach(btn => {
+        const filter = btn.getAttribute('data-filter');
+        if (filter === this.bibleSearchFilter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 },
 
 updateBibleSearchResults: function() {
