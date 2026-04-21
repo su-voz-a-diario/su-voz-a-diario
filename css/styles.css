@@ -3449,3 +3449,63 @@ body.selection-panel-open {
 .dark-mode .bible-section-title {
     color: var(--accent);
 }
+
+/* ========================================
+   PESTAÑAS DE FILTRO PARA BÚSQUEDA
+   ======================================== */
+
+.bible-search-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 4px;
+    background: var(--surface-color);
+    border-radius: 40px;
+    border: 1px solid var(--border-color);
+}
+
+.bible-filter-btn {
+    flex: 1;
+    padding: 10px 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.bible-filter-btn:hover {
+    background: rgba(49, 130, 206, 0.1);
+    color: var(--accent);
+}
+
+.bible-filter-btn.active {
+    background: var(--accent);
+    color: white;
+    box-shadow: 0 2px 8px rgba(49, 130, 206, 0.3);
+}
+
+.dark-mode .bible-filter-btn {
+    color: var(--text-muted);
+}
+
+.dark-mode .bible-filter-btn:hover {
+    background: rgba(96, 165, 250, 0.15);
+    color: var(--accent);
+}
+
+.dark-mode .bible-filter-btn.active {
+    background: var(--accent);
+    color: white;
+}
+
+@media (max-width: 480px) {
+    .bible-filter-btn {
+        font-size: 0.75rem;
+        padding: 8px 4px;
+    }
+}
