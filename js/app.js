@@ -3350,6 +3350,18 @@ updateFilterButtonsUI: function() {
     });
 },
 
+updateFilterButtonsUI: function() {
+    const filterButtons = document.querySelectorAll('.bible-filter-btn');
+    filterButtons.forEach(btn => {
+        const filter = btn.getAttribute('data-filter');
+        if (filter === this.bibleSearchFilter) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+},
+
 updateBibleSearchResults: function() {
     // Guardar el elemento activo actual (el input)
     const activeElement = document.activeElement;
