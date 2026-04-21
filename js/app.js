@@ -174,6 +174,27 @@ const App = {
     { id: 'jud', name: 'Judas', chapters: 1 },
     { id: 'rev', name: 'Apocalipsis', chapters: 22 }
     ],
+     // ⭐⭐⭐ MAPA DE IDs DE API.BIBLE A NUESTROS IDs ⭐⭐⭐
+    bibleApiIdMap: {
+        'GEN': 'gen', 'EXO': 'exo', 'LEV': 'lev', 'NUM': 'num', 'DEU': 'deu',
+        'JOS': 'jos', 'JDG': 'jdg', 'RUT': 'rut', '1SA': '1sa', '2SA': '2sa',
+        '1KI': '1ki', '2KI': '2ki', '1CH': '1ch', '2CH': '2ch', 'EZR': 'ezr',
+        'NEH': 'neh', 'EST': 'est', 'JOB': 'job', 'PSA': 'psa', 'PRO': 'pro',
+        'ECC': 'ecc', 'SNG': 'sng', 'ISA': 'isa', 'JER': 'jer', 'LAM': 'lam',
+        'EZK': 'ezk', 'DAN': 'dan', 'HOS': 'hos', 'JOL': 'jol', 'AMO': 'amo',
+        'OBA': 'oba', 'JON': 'jon', 'MIC': 'mic', 'NAM': 'nam', 'HAB': 'hab',
+        'ZEP': 'zep', 'HAG': 'hag', 'ZEC': 'zec', 'MAL': 'mal',
+        'MAT': 'mat', 'MRK': 'mrk', 'LUK': 'luk', 'JHN': 'jhn', 'ACT': 'act',
+        'ROM': 'rom', '1CO': '1co', '2CO': '2co', 'GAL': 'gal', 'EPH': 'eph',
+        'PHP': 'php', 'COL': 'col', '1TH': '1th', '2TH': '2th', '1TI': '1ti',
+        '2TI': '2ti', 'TIT': 'tit', 'PHM': 'phm', 'HEB': 'heb', 'JAS': 'jas',
+        '1PE': '1pe', '2PE': '2pe', '1JN': '1jn', '2JN': '2jn', '3JN': '3jn',
+        'JUD': 'jud', 'REV': 'rev'
+    },
+    getBibleBookById: function(apiBookId) {
+        const ourId = this.bibleApiIdMap[apiBookId.toUpperCase()] || apiBookId.toLowerCase();
+        return this.bibleBooks.find(b => b.id === ourId);
+    },
     selectedBibleBook: null,
     selectedBibleChapter: null,
     currentBibleChapterData: null,
@@ -3041,7 +3062,7 @@ renderBibleSearch: function() {
             </div>
             <div class="bible-search-results">
                 ${this.bibleSearchResults.map(result => {
-                    const book = this.bibleBooks.find(b => b.id === result.bookId);
+                    const book = this.getBibleBookById(result.bookId);
                     const bookName = book ? book.name : result.bookId;
                     
                     return `
@@ -3227,7 +3248,7 @@ updateBibleSearchResults: function() {
             `;
         } else if (hasResults) {
             resultsContainer.innerHTML = this.bibleSearchResults.map(result => {
-                const book = this.bibleBooks.find(b => b.id === result.bookId);
+                const book = this.getBibleBookById(result.bookId);
                 const bookName = book ? book.name : result.bookId;
                 
                 return `
@@ -3278,10 +3299,23 @@ updateBibleSearchResults: function() {
     }
 },
 
-navigateToVerse: function(bookId, chapter, verse) {
-    this.selectedBibleBook = bookId;
-    this.selectedBibleChapter = chapter;
-    this.targetVerse = verse;
+navigateToVerse: function(apiBookId, chapter, verse) {
+    // Convertir ID de API a nuestro ID
+    const ourBookId = this.bibleApiIdMap[apiBookId.toUpperCase()] || apiBookId.toLowerCase();
+    
+    // Verificar que el libro existe
+    const book = this.bibleBooks.find(b => b.id === ourBookId);
+    if (!book) {
+        console.error('Libro no encontrado:', apiBookId);
+        this.showToast('No se pudo encontrar el libro');
+        return;
+    }
+    
+    this.selectedBibleBook = ourBookId;
+    this.selectedBibleChapter = parseInt(chapter);
+    this.targetVerse = parseInt(verse);
+    
+    // Navegar directamente a bible-reading
     this.navigate('bible-reading');
 },
 
@@ -4375,8 +4409,19 @@ if (backToBibleBooksBtn) {
     }
     return;
 }
-
+         
 const openBibleChapterBtn = e.target.closest('[data-action="open-bible-chapter"]');
+if (openBibleChapterBtn) {
+    const bookId = openBibleChapterBtn.getAttribute('data-book-id');
+    const chapter = Number(openBibleChapterBtn.getAttribute('data-chapter'));
+
+    this.selectedBibleBook = bookId;
+    this.selectedBibleChapter = chapter;
+
+    this.navigate('bible-reading');
+    return;
+}
+
 const prevChapterBtn = e.target.closest('[data-action="bible-prev-chapter"]');
 if (prevChapterBtn) {
     if (this.selectedBibleChapter > 1) {
@@ -4394,16 +4439,6 @@ if (nextChapterBtn) {
         this.selectedBibleChapter += 1;
         this.navigate('bible-reading');
     }
-    return;
-}
-if (openBibleChapterBtn) {
-    const bookId = openBibleChapterBtn.getAttribute('data-book-id');
-    const chapter = Number(openBibleChapterBtn.getAttribute('data-chapter'));
-
-    this.selectedBibleBook = bookId;
-    this.selectedBibleChapter = chapter;
-
-    this.navigate('bible-reading');
     return;
 }
            
