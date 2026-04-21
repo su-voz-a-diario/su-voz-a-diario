@@ -208,6 +208,8 @@ resetBibleSearchBucket: function(filter) {
     bucket.offset = 0;
     bucket.total = 0;
     bucket.hasMore = false;
+    bucket.apiOffset = 0;
+    bucket.exhausted = false;
 },
 
 resetAllBibleSearchBuckets: function() {
@@ -245,9 +247,49 @@ filterResultsByTestament: function(results, filter = this.bibleSearchFilter) {
     });
 },
 
+collectBibleSearchPage: async function(query, filter, apiOffset, desiredCount = 30) {
+    const collected = [];
+    let currentOffset = apiOffset;
+    let total = 0;
+    let exhausted = false;
+
+    while (collected.length < desiredCount && !exhausted) {
+        const page = await searchBible(query, currentOffset, 30);
+        const verses = page.verses || [];
+        total = page.total || 0;
+
+        if (!verses.length) {
+            exhausted = true;
+            break;
+        }
+
+        const filtered = this.filterResultsByTestament(verses, filter);
+        collected.push(...filtered);
+
+        currentOffset += verses.length;
+
+        if (verses.length < 30 || currentOffset >= total) {
+            exhausted = true;
+            break;
+        }
+    }
+
+    return {
+        results: collected.slice(0, desiredCount),
+        nextApiOffset: currentOffset,
+        total,
+        exhausted
+    };
+},
+
 getBibleSearchRemainingCount: function() {
     const bucket = this.getBibleSearchBucket();
-    return Math.max(0, (bucket.total || 0) - (bucket.results?.length || 0));
+
+    if (this.bibleSearchFilter === 'all') {
+        return Math.max(0, (bucket.total || 0) - (bucket.results?.length || 0));
+    }
+
+    return 0;
 },
     
     selectedBibleBook: null,
@@ -263,9 +305,9 @@ getBibleSearchRemainingCount: function() {
     bibleSearchFilter: 'all', // 'all', 'old', 'new'
 
     bibleSearchStore: {
-    all: { results: [], offset: 0, total: 0, hasMore: false },
-    old: { results: [], offset: 0, total: 0, hasMore: false },
-    new: { results: [], offset: 0, total: 0, hasMore: false }
+    all: { results: [], offset: 0, total: 0, hasMore: false, apiOffset: 0, exhausted: false },
+    old: { results: [], offset: 0, total: 0, hasMore: false, apiOffset: 0, exhausted: false },
+    new: { results: [], offset: 0, total: 0, hasMore: false, apiOffset: 0, exhausted: false }
     },
     openNoteDate: null,
     activeNoteField: null,
@@ -3320,6 +3362,7 @@ performBibleSearch: async function(query, isLoadMore = false) {
     const normalizedQuery = (query || '').trim();
     const activeFilter = this.bibleSearchFilter;
     const bucket = this.getBibleSearchBucket(activeFilter);
+    const pageSize = 30;
 
     if (!normalizedQuery || normalizedQuery.length < 3) {
         this.bibleSearchQuery = normalizedQuery;
@@ -3342,18 +3385,39 @@ performBibleSearch: async function(query, isLoadMore = false) {
     this.updateBibleSearchResults();
 
     try {
-        const result = await searchBible(normalizedQuery, bucket.offset, 30);
-        const fetchedVerses = result.verses || [];
-        const filteredVerses = this.filterResultsByTestament(fetchedVerses, activeFilter);
+        if (activeFilter === 'all') {
+            const result = await searchBible(normalizedQuery, bucket.apiOffset, pageSize);
+            const fetchedVerses = result.verses || [];
 
-        if (isLoadMore) {
-            bucket.results = [...bucket.results, ...filteredVerses];
+            if (isLoadMore) {
+                bucket.results = [...bucket.results, ...fetchedVerses];
+            } else {
+                bucket.results = fetchedVerses;
+            }
+
+            bucket.total = result.total || 0;
+            bucket.apiOffset += fetchedVerses.length;
+            bucket.exhausted = fetchedVerses.length < pageSize || bucket.apiOffset >= bucket.total;
+            bucket.hasMore = !bucket.exhausted;
         } else {
-            bucket.results = filteredVerses;
-        }
+            const collected = await this.collectBibleSearchPage(
+                normalizedQuery,
+                activeFilter,
+                bucket.apiOffset,
+                pageSize
+            );
 
-        bucket.total = result.total || 0;
-        bucket.hasMore = fetchedVerses.length === 30;
+            if (isLoadMore) {
+                bucket.results = [...bucket.results, ...collected.results];
+            } else {
+                bucket.results = collected.results;
+            }
+
+            bucket.total = collected.total || 0;
+            bucket.apiOffset = collected.nextApiOffset;
+            bucket.exhausted = collected.exhausted;
+            bucket.hasMore = !bucket.exhausted;
+        }
 
         this.syncBibleSearchStateFromBucket(activeFilter);
     } catch (error) {
@@ -3377,18 +3441,10 @@ loadMoreSearchResults: function() {
     const bucket = this.getBibleSearchBucket();
     if (!bucket.hasMore) return;
 
-    const resultsContainer = document.getElementById('bible-search-results-container');
     const previousWindowScrollY = window.scrollY || window.pageYOffset || 0;
-    const previousContainerScrollTop = resultsContainer ? resultsContainer.scrollTop : 0;
-
-    bucket.offset += 30;
 
     this.performBibleSearch(this.bibleSearchQuery, true).finally(() => {
         requestAnimationFrame(() => {
-            if (resultsContainer) {
-                resultsContainer.scrollTop = previousContainerScrollTop;
-            }
-
             window.scrollTo({
                 top: previousWindowScrollY,
                 behavior: 'auto'
@@ -3523,7 +3579,9 @@ updateBibleSearchResults: function() {
                         data-action="load-more-search"
                         style="width: auto; display: inline-flex; padding-left: 24px; padding-right: 24px;"
                     >
-                        ${isLoading ? 'Cargando...' : `Cargar más resultados${remainingCount > 0 ? ` (${remainingCount} restantes)` : ''}`}
+                        ${isLoading ? 'Cargando...' : this.bibleSearchFilter === 'all'
+    ? `Cargar más resultados${remainingCount > 0 ? ` (${remainingCount} restantes)` : ''}`
+    : 'Cargar más resultados'}
                     </button>
                 </div>
             ` : '';
