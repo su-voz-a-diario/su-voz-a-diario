@@ -67,8 +67,8 @@ async function getBibleChapter(bookId, chapterNumber) {
     const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
 
     const result = await apiBibleFetch(
-        `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`
-    );
+    `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`
+);
 
     return result.data;
 }
@@ -2558,9 +2558,14 @@ renderBibleVerseText: function(htmlContent, dateStr) {
 
         // Si es marcador de versículo
         if (
-    (node.classList && node.classList.contains('v')) ||
-    node.hasAttribute('data-verse')
-) {
+    const classList = Array.from(node.classList || []);
+const isVerseMarker =
+    classList.includes('v') ||
+    node.hasAttribute('data-verse') ||
+    /^v\d*$/i.test(node.className || '');
+
+if (isVerseMarker) {
+    
             pushCurrentVerse();
 
             currentVerse = {
@@ -3960,7 +3965,7 @@ if (this.targetVerse) {
 
                 <div class="empty-state">
                     <h3>⚠️ No se pudo cargar el capítulo</h3>
-                    <p>Intenta nuevamente más tarde.</p>
+                    <p>${this.escapeHtml(error?.message || 'Intenta nuevamente más tarde.')}</p>
                     <button class="btn-primary" data-action="back-to-bible-books" style="margin-top: 20px;">
                         Volver a libros
                     </button>
