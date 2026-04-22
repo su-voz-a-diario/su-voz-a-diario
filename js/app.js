@@ -2218,9 +2218,10 @@ if (this.$selectionPanel) {
 
 expandSelectionPanelForNote: function(expand = true) {
     if (!this.$selectionPanel) return;
-    
+
     if (expand) {
         this.$selectionPanel.classList.add('note-mode');
+
         setTimeout(() => {
             this.$selectionNote?.focus();
         }, 120);
