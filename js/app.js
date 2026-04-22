@@ -3898,8 +3898,8 @@ renderBibleReading: async function() {
                 </div>
 
                 <h2 style="text-align: center; margin: 1rem 0 0.25rem 0; color: var(--text-primary);">
-                    ${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}
-                </h2>
+    ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
+</h2>
                 
                 <div class="bible-reading-version">Versión Biblia Libre (VBL)</div>
 
