@@ -3901,7 +3901,7 @@ renderBibleReading: async function() {
                     ${this.escapeHtml(chapterData.reference || `${requestedBook.name} ${requestedChapter}`)}
                 </h2>
                 
-                <div class="bible-reading-version">La Nueva Biblia de las Américas (NBLA)</div>
+                <div class="bible-reading-version">Versión Biblia Libre (VBL)</div>
 
                 <div style="display: flex; gap: 12px; justify-content: center; margin: 16px 0;">
                     <button
