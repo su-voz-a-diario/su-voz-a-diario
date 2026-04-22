@@ -3260,20 +3260,67 @@ tokenizeBibleText: function(text) {
 },
 
 loadLocalBibleSearchData: async function() {
+    await this.buildSearchIndexFromAPI();
+},
+
+buildSearchIndexFromAPI: async function() {
     if (this.bibleSearchIndexReady) return;
 
-    const response = await fetch('./data/bible-index-rvr60.json', {
-        cache: 'force-cache'
-    });
+    this.bibleSearchIndex = new Map();
+    this.bibleSearchVerseMap = new Map();
 
-    if (!response.ok) {
-        throw new Error('No se pudo cargar el índice bíblico local');
+    const books = this.getAllBibleBooks(); // ya lo tienes
+
+    for (const book of books) {
+        for (let chapter = 1; chapter <= book.chapters; chapter++) {
+
+            try {
+                const data = await getBibleChapter(book.id, chapter);
+
+                if (!data || !data.data || !data.data.content) continue;
+
+                const verses = data.data.content;
+
+                for (const item of verses) {
+
+                    if (!item.items) continue;
+
+                    for (const v of item.items) {
+
+                        if (!v.text || !v.attrs || !v.attrs.verseId) continue;
+
+                        const verseId = v.attrs.verseId;
+
+                        const verseObj = {
+                            id: `${book.id}.${chapter}.${verseId}`,
+                            bookId: book.id,
+                            bookName: book.name,
+                            testament: this.getTestamentFromBookId(book.id),
+                            bookOrder: book.order || 999,
+                            chapter: chapter,
+                            verse: verseId,
+                            text: v.text
+                        };
+
+                        this.bibleSearchVerseMap.set(verseObj.id, verseObj);
+
+                        const words = new Set(this.tokenizeBibleText(v.text));
+
+                        for (const w of words) {
+                            if (!this.bibleSearchIndex.has(w)) {
+                                this.bibleSearchIndex.set(w, []);
+                            }
+                            this.bibleSearchIndex.get(w).push(verseObj.id);
+                        }
+                    }
+                }
+
+            } catch (e) {
+                console.warn('Error cargando', book.id, chapter);
+            }
+        }
     }
 
-    const verses = await response.json();
-
-    this.bibleSearchData = Array.isArray(verses) ? verses : [];
-    this.buildLocalBibleSearchIndex();
     this.bibleSearchIndexReady = true;
 },
 
