@@ -2303,6 +2303,8 @@ this.resetScrollChrome();
     this.renderHome();
 } else if (view === 'bible') {
     this.renderBible();
+} else if (view === 'bible-search') {
+    this.$content.innerHTML = this.renderBibleSearch();
 } else if (view === 'bible-reading') {
     await this.renderBibleReading();
 } else if (view === 'calendar') {
@@ -4775,7 +4777,6 @@ if (openBibleBookBtn) {
 }
 
 // Abrir búsqueda
-// Abrir búsqueda
 const openSearchBtn = e.target.closest('[data-action="open-bible-search"]');
 if (openSearchBtn) {
     this.bibleSearchFilter = 'all';
@@ -4785,7 +4786,7 @@ if (openSearchBtn) {
     this.bibleSearchTotal = 0;
     this.bibleSearchTotalPages = 0;
     this.bibleSearchPage = 1;
-    this.renderBibleSearch();
+    this.navigate('bible-search');
     return;
 }
 
