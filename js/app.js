@@ -3262,24 +3262,9 @@ tokenizeBibleText: function(text) {
 },
 
 loadLocalBibleSearchData: async function() {
-    if (this.bibleSearchIndexReady) return;
-
-    const response = await fetch('./data/bible-index-rvr60.json');
-    if (!response.ok) {
-        throw new Error('No se pudo cargar el índice local de la Biblia');
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-        throw new Error('El índice local de la Biblia no tiene un formato válido');
-    }
-
-    this.bibleSearchData = data;
-    this.buildLocalBibleSearchIndex();
-    this.bibleSearchIndexReady = true;
+    await this.buildSearchIndexFromAPI();
 },
-
+    
 buildSearchIndexFromAPI: async function() {
     if (this.bibleSearchIndexReady) return;
 
