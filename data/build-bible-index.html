@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Generador índice Biblia</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.5; }
+    button { padding: 12px 18px; font-size: 16px; cursor: pointer; }
+    #log {
+      margin-top: 20px;
+      white-space: pre-wrap;
+      background: #f4f4f4;
+      padding: 12px;
+      border-radius: 8px;
+      max-height: 400px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Generar índice local de la Biblia</h1>
+  <p>Esto descargará todos los capítulos y creará un archivo JSON.</p>
+
+  <button id="startBtn">Generar JSON</button>
+  <div id="log"></div>
+
+  <script>
+    const API_BIBLE_KEY = 'Y88btYy9BAJg7e1ocp6p3';
+    const API_BIBLE_BASE = 'https://api.scripture.api.bible/v1';
+    const API_BIBLE_ID = '65eec8e0b60e656b-01';
+
+    const bibleBooks = [
+      { id: 'GEN', name: 'Génesis', chapters: 50 },
+      { id: 'EXO', name: 'Éxodo', chapters: 40 },
+      { id: 'LEV', name: 'Levítico', chapters: 27 },
+      { id: 'NUM', name: 'Números', chapters: 36 },
+      { id: 'DEU', name: 'Deuteronomio', chapters: 34 },
+      { id: 'JOS', name: 'Josué', chapters: 24 },
+      { id: 'JDG', name: 'Jueces', chapters: 21 },
+      { id: 'RUT', name: 'Rut', chapters: 4 },
+      { id: '1SA', name: '1 Samuel', chapters: 31 },
+      { id: '2SA', name: '2 Samuel', chapters: 24 },
+      { id: '1KI', name: '1 Reyes', chapters: 22 },
+      { id: '2KI', name: '2 Reyes', chapters: 25 },
+      { id: '1CH', name: '1 Crónicas', chapters: 29 },
+      { id: '2CH', name: '2 Crónicas', chapters: 36 },
+      { id: 'EZR', name: 'Esdras', chapters: 10 },
+      { id: 'NEH', name: 'Nehemías', chapters: 13 },
+      { id: 'EST', name: 'Ester', chapters: 10 },
+      { id: 'JOB', name: 'Job', chapters: 42 },
+      { id: 'PSA', name: 'Salmos', chapters: 150 },
+      { id: 'PRO', name: 'Proverbios', chapters: 31 },
+      { id: 'ECC', name: 'Eclesiastés', chapters: 12 },
+      { id: 'SNG', name: 'Cantares', chapters: 8 },
+      { id: 'ISA', name: 'Isaías', chapters: 66 },
+      { id: 'JER', name: 'Jeremías', chapters: 52 },
+      { id: 'LAM', name: 'Lamentaciones', chapters: 5 },
+      { id: 'EZK', name: 'Ezequiel', chapters: 48 },
+      { id: 'DAN', name: 'Daniel', chapters: 12 },
+      { id: 'HOS', name: 'Oseas', chapters: 14 },
+      { id: 'JOL', name: 'Joel', chapters: 3 },
+      { id: 'AMO', name: 'Amós', chapters: 9 },
+      { id: 'OBA', name: 'Abdías', chapters: 1 },
+      { id: 'JON', name: 'Jonás', chapters: 4 },
+      { id: 'MIC', name: 'Miqueas', chapters: 7 },
+      { id: 'NAM', name: 'Nahúm', chapters: 3 },
+      { id: 'HAB', name: 'Habacuc', chapters: 3 },
+      { id: 'ZEP', name: 'Sofonías', chapters: 3 },
+      { id: 'HAG', name: 'Hageo', chapters: 2 },
+      { id: 'ZEC', name: 'Zacarías', chapters: 14 },
+      { id: 'MAL', name: 'Malaquías', chapters: 4 },
+      { id: 'MAT', name: 'Mateo', chapters: 28 },
+      { id: 'MRK', name: 'Marcos', chapters: 16 },
+      { id: 'LUK', name: 'Lucas', chapters: 24 },
+      { id: 'JHN', name: 'Juan', chapters: 21 },
+      { id: 'ACT', name: 'Hechos', chapters: 28 },
+      { id: 'ROM', name: 'Romanos', chapters: 16 },
+      { id: '1CO', name: '1 Corintios', chapters: 16 },
+      { id: '2CO', name: '2 Corintios', chapters: 13 },
+      { id: 'GAL', name: 'Gálatas', chapters: 6 },
+      { id: 'EPH', name: 'Efesios', chapters: 6 },
+      { id: 'PHP', name: 'Filipenses', chapters: 4 },
+      { id: 'COL', name: 'Colosenses', chapters: 4 },
+      { id: '1TH', name: '1 Tesalonicenses', chapters: 5 },
+      { id: '2TH', name: '2 Tesalonicenses', chapters: 3 },
+      { id: '1TI', name: '1 Timoteo', chapters: 6 },
+      { id: '2TI', name: '2 Timoteo', chapters: 4 },
+      { id: 'TIT', name: 'Tito', chapters: 3 },
+      { id: 'PHM', name: 'Filemón', chapters: 1 },
+      { id: 'HEB', name: 'Hebreos', chapters: 13 },
+      { id: 'JAS', name: 'Santiago', chapters: 5 },
+      { id: '1PE', name: '1 Pedro', chapters: 5 },
+      { id: '2PE', name: '2 Pedro', chapters: 3 },
+      { id: '1JN', name: '1 Juan', chapters: 5 },
+      { id: '2JN', name: '2 Juan', chapters: 1 },
+      { id: '3JN', name: '3 Juan', chapters: 1 },
+      { id: 'JUD', name: 'Judas', chapters: 1 },
+      { id: 'REV', name: 'Apocalipsis', chapters: 22 }
+    ];
+
+    const oldTestamentIds = new Set([
+      'GEN','EXO','LEV','NUM','DEU','JOS','JDG','RUT','1SA','2SA','1KI','2KI','1CH','2CH','EZR','NEH','EST',
+      'JOB','PSA','PRO','ECC','SNG','ISA','JER','LAM','EZK','DAN','HOS','JOL','AMO','OBA','JON','MIC','NAM',
+      'HAB','ZEP','HAG','ZEC','MAL'
+    ]);
+
+    const logEl = document.getElementById('log');
+
+    function log(message) {
+      logEl.textContent += message + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    async function apiBibleFetch(path) {
+      const response = await fetch(`${API_BIBLE_BASE}${path}`, {
+        headers: { 'api-key': API_BIBLE_KEY }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Error consultando API.Bible');
+      }
+
+      return data;
+    }
+
+    function normalizeText(text) {
+      return (text || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function extractVersesFromHtml(htmlContent) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent || '';
+
+      const verses = [];
+      let currentVerse = null;
+
+      const pushCurrentVerse = () => {
+        if (!currentVerse) return;
+        const number = normalizeText(currentVerse.number);
+        const text = normalizeText(currentVerse.text);
+        if (number && text) {
+          verses.push({ number, text });
+        }
+        currentVerse = null;
+      };
+
+      const processNode = (node) => {
+        if (!node) return;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+          if (currentVerse) currentVerse.text += node.textContent || '';
+          return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        const classList = Array.from(node.classList || []);
+        const isVerseMarker =
+          classList.includes('v') ||
+          node.hasAttribute('data-verse') ||
+          /^v\d*$/i.test(node.className || '');
+
+        if (isVerseMarker) {
+          pushCurrentVerse();
+          currentVerse = { number: node.textContent || '', text: '' };
+          return;
+        }
+
+        Array.from(node.childNodes).forEach(child => processNode(child));
+      };
+
+      Array.from(tempDiv.childNodes).forEach(node => processNode(node));
+      pushCurrentVerse();
+
+      return verses;
+    }
+
+    async function generateBibleIndex() {
+      const output = [];
+      let bookOrder = 0;
+
+      for (const book of bibleBooks) {
+        bookOrder += 1;
+        log(`Procesando ${book.name}...`);
+
+        for (let chapter = 1; chapter <= book.chapters; chapter++) {
+          log(`  ${book.name} ${chapter}`);
+
+          const chapterId = `${book.id}.${chapter}`;
+          const result = await apiBibleFetch(
+            `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true`
+          );
+
+          const verses = extractVersesFromHtml(result?.data?.content || '');
+
+          for (const verse of verses) {
+            const verseNumber = Number(verse.number);
+            if (!verseNumber || !verse.text) continue;
+
+            output.push({
+              id: `${book.id.toLowerCase()}.${chapter}.${verseNumber}`,
+              bookId: book.id.toLowerCase(),
+              bookName: book.name,
+              testament: oldTestamentIds.has(book.id) ? 'old' : 'new',
+              bookOrder,
+              chapter,
+              verse: verseNumber,
+              text: verse.text
+            });
+          }
+        }
+      }
+
+      const blob = new Blob([JSON.stringify(output, null, 2)], {
+        type: 'application/json'
+      });
+
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bible-index-bla.json';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      log('Listo. Se descargó bible-index-bla.json');
+    }
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      logEl.textContent = '';
+      try {
+        await generateBibleIndex();
+      } catch (error) {
+        console.error(error);
+        log('ERROR: ' + error.message);
+      }
+    });
+  </script>
+</body>
+</html>
