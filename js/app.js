@@ -31,7 +31,7 @@ function isAndroidDevice() {
     return /Android/i.test(navigator.userAgent);
 }
 
-const API_BIBLE_KEY = 'Y88btYy9BAJg7e1ocp6p3';
+const API_BIBLE_KEY = '1zk_NbpHDImQF6S313FsR';
 const API_BIBLE_BASE = 'https://rest.api.bible/v1';
 const API_BIBLE_ID = 'ce11b813f9a27e20-01';
 
