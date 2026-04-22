@@ -3269,59 +3269,115 @@ buildSearchIndexFromAPI: async function() {
     this.bibleSearchIndex = new Map();
     this.bibleSearchVerseMap = new Map();
 
-    const books = this.getAllBibleBooks(); // ya lo tienes
+    const books = this.bibleBooks.map((book, index) => ({
+        ...book,
+        bookOrder: index + 1
+    }));
 
     for (const book of books) {
         for (let chapter = 1; chapter <= book.chapters; chapter++) {
-
             try {
-                const data = await getBibleChapter(book.id, chapter);
+                const chapterData = await getBibleChapter(book.id, chapter);
+                const verses = this.extractVersesFromBibleHtml(chapterData?.content || '');
 
-                if (!data || !data.data || !data.data.content) continue;
+                for (const verse of verses) {
+                    const verseNumber = Number(verse.number);
 
-                const verses = data.data.content;
+                    if (!verse.text || !verseNumber) continue;
 
-                for (const item of verses) {
+                    const verseObj = {
+                        id: `${book.id}.${chapter}.${verseNumber}`,
+                        bookId: book.id,
+                        bookName: book.name,
+                        testament: this.getTestamentFromBookId(book.id),
+                        bookOrder: book.bookOrder,
+                        chapter,
+                        verse: verseNumber,
+                        text: verse.text
+                    };
 
-                    if (!item.items) continue;
+                    this.bibleSearchVerseMap.set(verseObj.id, verseObj);
 
-                    for (const v of item.items) {
+                    const words = new Set(this.tokenizeBibleText(verse.text));
 
-                        if (!v.text || !v.attrs || !v.attrs.verseId) continue;
-
-                        const verseId = v.attrs.verseId;
-
-                        const verseObj = {
-                            id: `${book.id}.${chapter}.${verseId}`,
-                            bookId: book.id,
-                            bookName: book.name,
-                            testament: this.getTestamentFromBookId(book.id),
-                            bookOrder: book.order || 999,
-                            chapter: chapter,
-                            verse: verseId,
-                            text: v.text
-                        };
-
-                        this.bibleSearchVerseMap.set(verseObj.id, verseObj);
-
-                        const words = new Set(this.tokenizeBibleText(v.text));
-
-                        for (const w of words) {
-                            if (!this.bibleSearchIndex.has(w)) {
-                                this.bibleSearchIndex.set(w, []);
-                            }
-                            this.bibleSearchIndex.get(w).push(verseObj.id);
+                    for (const word of words) {
+                        if (!this.bibleSearchIndex.has(word)) {
+                            this.bibleSearchIndex.set(word, []);
                         }
+                        this.bibleSearchIndex.get(word).push(verseObj.id);
                     }
                 }
-
-            } catch (e) {
-                console.warn('Error cargando', book.id, chapter);
+            } catch (error) {
+                console.warn('Error cargando índice bíblico:', book.id, chapter, error);
             }
         }
     }
 
     this.bibleSearchIndexReady = true;
+},
+
+extractVersesFromBibleHtml: function(htmlContent) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent || '';
+
+    const verses = [];
+    let currentVerse = null;
+
+    const pushCurrentVerse = () => {
+        if (!currentVerse) return;
+
+        const cleanNumber = this.normalizeBibleText(currentVerse.number);
+        const cleanText = this.normalizeBibleText(currentVerse.text);
+
+        if (cleanNumber && cleanText) {
+            verses.push({
+                number: cleanNumber,
+                text: cleanText
+            });
+        }
+
+        currentVerse = null;
+    };
+
+    const processNode = (node) => {
+        if (!node) return;
+
+        if (node.nodeType === Node.TEXT_NODE) {
+            if (currentVerse) {
+                currentVerse.text += node.textContent || '';
+            }
+            return;
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+        if (this.isBibleTitleNode(node)) {
+            pushCurrentVerse();
+            return;
+        }
+
+        const classList = Array.from(node.classList || []);
+        const isVerseMarker =
+            classList.includes('v') ||
+            node.hasAttribute('data-verse') ||
+            /^v\d*$/i.test(node.className || '');
+
+        if (isVerseMarker) {
+            pushCurrentVerse();
+            currentVerse = {
+                number: node.textContent || '',
+                text: ''
+            };
+            return;
+        }
+
+        Array.from(node.childNodes).forEach(child => processNode(child));
+    };
+
+    Array.from(tempDiv.childNodes).forEach(node => processNode(node));
+    pushCurrentVerse();
+
+    return verses;
 },
 
 buildLocalBibleSearchIndex: function() {
