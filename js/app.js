@@ -33,7 +33,7 @@ function isAndroidDevice() {
 
 const API_BIBLE_KEY = 'wNtIC6e2aKALJdpFovm2R';
 const API_BIBLE_BASE = 'https://rest.api.bible/v1';
-const API_BIBLE_ID = 'ce11b813f9a27e20-01';
+const API_BIBLE_ID = '592420522e16049f-01';
 
 async function apiBibleFetch(path) {
     const response = await fetch(`${API_BIBLE_BASE}${path}`, {
@@ -3764,7 +3764,7 @@ renderBible: function() {
                 <!-- Header principal SIN botón volver -->
                 <div class="bible-header-card">
     <div class="bible-title">📖 Biblia</div>
-    <div class="bible-subtitle">La Nueva Biblia de las Américas (NBLA)</div>
+    <div class="bible-subtitle">Reina Valera 1909 (RV1909)</div>
 </div>
 
 <!-- Botón de búsqueda -->
@@ -3864,7 +3864,7 @@ renderBibleReading: async function() {
                 ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
             </h2>
             
-            <div class="bible-reading-version">La Nueva Biblia de las Américas (NBLA)</div>
+            <div class="bible-reading-version">Reina Valera 1909 (RV1909)</div>
 
             <div class="loading">
                 <div class="spinner"></div>
