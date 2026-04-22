@@ -4672,11 +4672,16 @@ if (openBibleBookBtn) {
 }
 
 // Abrir búsqueda
+// Abrir búsqueda
 const openSearchBtn = e.target.closest('[data-action="open-bible-search"]');
 if (openSearchBtn) {
+    this.bibleSearchFilter = 'all';
     this.bibleSearchQuery = '';
     this.bibleSearchResults = [];
+    this.bibleSearchLoading = false;
     this.bibleSearchTotal = 0;
+    this.bibleSearchTotalPages = 0;
+    this.bibleSearchPage = 1;
     this.renderBibleSearch();
     return;
 }
