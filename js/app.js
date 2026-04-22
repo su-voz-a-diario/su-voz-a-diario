@@ -3919,10 +3919,10 @@ renderBibleReading: async function() {
                 </div>
 
                 <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
-                    <div class="reading-text selection-surface verse-container" data-selection-surface="true">
-                        ${chapterData.content ? this.renderBibleVerseText(chapterData.content, `bible-${requestedBookId}-${requestedChapter}`) : '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
-                    </div>
-                </div>
+    <div class="reading-text bible-api-content">
+        ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
+    </div>
+</div>
             </div>
         `;
 
