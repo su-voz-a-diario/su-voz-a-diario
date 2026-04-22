@@ -3509,3 +3509,40 @@ body.selection-panel-open {
         padding: 8px 4px;
     }
 }
+
+/* ========================================
+   PAGINACIÓN BUSCADOR BÍBLICO
+   ======================================== */
+
+.bible-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 18px;
+}
+
+.bible-page-btn {
+    min-width: 40px;
+    height: 40px;
+    padding: 0 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-main);
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bible-page-btn.active {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.bible-page-btn:disabled {
+    opacity: 0.4;
+}
