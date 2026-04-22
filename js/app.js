@@ -2558,7 +2558,6 @@ renderBibleVerseText: function(htmlContent, dateStr) {
         }
 
         // Si es marcador de versículo
-        if (
     const classList = Array.from(node.classList || []);
 const isVerseMarker =
     classList.includes('v') ||
