@@ -2034,8 +2034,8 @@ hideSelectionPanel: function(clearStoredSelection = true) {
         this.$selectionSheet.style.maxHeight = '';
     }
     
-    // ✅ QUITAR la clase que bloquea el scroll
     document.body.classList.remove('selection-panel-open');
+    document.body.classList.remove('keyboard-open');
     
     // ✅ RESTAURAR la posición del scroll guardada
     if (this._savedScrollY !== undefined && this._savedScrollY !== null) {
@@ -2187,29 +2187,29 @@ bindSelectionPanelEvents: function() {
 }
 
     if (this.$selectionNote) {
-
     this.$selectionNote.addEventListener('focus', () => {
-    this.selectionPanelLocked = true;
-    this.expandSelectionPanelForNote(true);
-    document.body.classList.add('keyboard-open');
-});
+        this.selectionPanelLocked = true;
+        this.expandSelectionPanelForNote(true);
+        document.body.classList.add('keyboard-open');
+    });
 
-   this.$selectionNote.addEventListener('blur', () => {
-    setTimeout(() => {
-        const stillInsidePanel =
-            this.$selectionPanel &&
-            document.activeElement &&
-            this.$selectionPanel.contains(document.activeElement);
+    this.$selectionNote.addEventListener('blur', () => {
+        setTimeout(() => {
+            const stillInsidePanel =
+                this.$selectionPanel &&
+                document.activeElement &&
+                this.$selectionPanel.contains(document.activeElement);
 
-        if (!stillInsidePanel) {
-            this.selectionPanelLocked = false;
-            this.expandSelectionPanelForNote(false);
-            document.body.classList.remove('keyboard-open');
-        }
-    }, 180);
-});
+            if (!stillInsidePanel) {
+                this.selectionPanelLocked = false;
+                this.expandSelectionPanelForNote(false);
+                document.body.classList.remove('keyboard-open');
+            }
+        }, 180);
+    });
+}
 
-    if (this.$selectionColorButtons.length) {
+if (this.$selectionColorButtons.length) {
     this.$selectionColorButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.preventDefault();
