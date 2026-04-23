@@ -619,27 +619,16 @@ isReadingLikeView: function(view = this.currentView) {
 },
 
 setScrollCompactState: function(isCompact) {
-    if (this.scrollCompactActive === isCompact) return;
-    
-    this.scrollCompactActive = isCompact;
-    
-    // ✅ CORREGIDO: Usar classList en lugar de toggle con fuerza
-    if (isCompact) {
-        document.body.classList.add('reading-scroll-compact');
-    } else {
-        document.body.classList.remove('reading-scroll-compact');
-    }
+    this.scrollCompactActive = false;
+    document.body.classList.remove('reading-scroll-compact');
 },
 
 resetScrollChrome: function() {
     this.lastScrollY = window.scrollY || window.pageYOffset || 0;
-    this.scrollCompactEnabled = this.isReadingLikeView();
-    
-    // ✅ CORREGIDO: Resetear estado correctamente
-    if (this.scrollCompactActive) {
-        this.setScrollCompactState(false);
-    }
-    
+    this.scrollCompactEnabled = false;
+    this.scrollCompactActive = false;
+    document.body.classList.remove('reading-scroll-compact');
+
     if (this.scrollIdleTimer) {
         clearTimeout(this.scrollIdleTimer);
         this.scrollIdleTimer = null;
@@ -647,43 +636,12 @@ resetScrollChrome: function() {
 },
 
 handleScrollChrome: function() {
-    if (!this.scrollCompactEnabled) return;
-
-    const currentY = window.scrollY || window.pageYOffset || 0;
-    const delta = currentY - this.lastScrollY;
-    const threshold = 8;
-    const compactStartOffset = 100;
-
-    if (Math.abs(delta) < threshold) return;
-
-    const isScrollingDown = delta > 0;
-    const isScrollingUp = delta < 0;
-
-    if (isScrollingDown && currentY > compactStartOffset) {
-        this.setScrollCompactState(true);
-    }
-
-    if (isScrollingUp) {
-        this.setScrollCompactState(false);
-    }
-
-    this.lastScrollY = currentY;
+    return;
 },
 
 bindScrollChrome: function() {
-    window.addEventListener('scroll', () => {
-        if (!this.scrollCompactEnabled) return;
-
-        this.handleScrollChrome();
-
-        if (this.scrollIdleTimer) {
-            clearTimeout(this.scrollIdleTimer);
-        }
-
-        this.scrollIdleTimer = setTimeout(() => {
-            this.setScrollCompactState(false);
-        }, 140);
-    }, { passive: true });
+    document.body.classList.remove('reading-scroll-compact');
+    this.scrollCompactEnabled = false;
 },
 
 bindHeaderControlsToggle: function() {
