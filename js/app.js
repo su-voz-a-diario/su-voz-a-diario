@@ -330,7 +330,6 @@ _selectionPanelEventsBound: false,
     this.loadSettings();
     this.loadStreak();
     this.loadFontSize();
-    this.loadControlsState();
     this.loadCommunityLastSeen();
     localStorage.removeItem('su-voz-last-reminder-date');
        
@@ -343,7 +342,7 @@ _selectionPanelEventsBound: false,
 this.initNotifications();
 this.setupSWCommunication();
 this.bindEvents();
-this.bindFloatingToggle();
+this.bindHeaderControlsToggle();
 this.bindScrollChrome();
     await this.initAuth();
 await this.loadData();
@@ -375,9 +374,8 @@ cacheDOM: function() {
     this.$communityBadge = document.getElementById('community-badge');
     this.$streakIndicator = document.getElementById('streak-indicator');
     this.$streakCount = document.getElementById('streak-count');
-    this.$floatingControls = document.getElementById('floating-controls');
-    this.$floatingToggle = document.getElementById('floating-toggle');
-
+    this.$headerControlsBtn = document.getElementById('header-controls-btn');
+    this.$headerControlsDropdown = document.getElementById('header-controls-dropdown');
     this.$selectionPanel = document.getElementById('selectionPanel');
     this.$selectionBackdrop = this.$selectionPanel?.querySelector('.selection-panel-backdrop') || null;
     this.$selectionSheet = this.$selectionPanel?.querySelector('.selection-sheet-full') || null;
@@ -617,32 +615,6 @@ getPlatformLabel: function() {
         }
     },
 
-    loadControlsState: function() {
-    const saved = localStorage.getItem('su-voz-controls-collapsed');
-    this.controlsCollapsed = saved === 'true';
-
-    if (this.$floatingControls) {
-        this.$floatingControls.classList.toggle('collapsed', this.controlsCollapsed);
-    }
-
-    if (this.$floatingToggle) {
-        this.$floatingToggle.textContent = this.controlsCollapsed ? '☰' : '◀';
-    }
-},
-
-toggleFloatingControls: function() {
-    this.controlsCollapsed = !this.controlsCollapsed;
-    localStorage.setItem('su-voz-controls-collapsed', String(this.controlsCollapsed));
-
-    if (this.$floatingControls) {
-        this.$floatingControls.classList.toggle('collapsed', this.controlsCollapsed);
-    }
-
-    if (this.$floatingToggle) {
-        this.$floatingToggle.textContent = this.controlsCollapsed ? '☰' : '◀';
-    }
-},
-
 isReadingLikeView: function(view = this.currentView) {
     return ['home', 'reading', 'bible-reading'].includes(view);
 },
@@ -715,12 +687,24 @@ bindScrollChrome: function() {
     }, { passive: true });
 },
 
-bindFloatingToggle: function() {
-    if (this.$floatingToggle) {
-        this.$floatingToggle.addEventListener('click', () => {
-            this.toggleFloatingControls();
-        });
-    }
+bindHeaderControlsToggle: function() {
+    if (!this.$headerControlsBtn) return;
+
+    this.$headerControlsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.$headerControlsDropdown.classList.toggle('show');
+    });
+
+    // Cerrar al hacer clic fuera del dropdown
+    document.addEventListener('click', (e) => {
+        if (
+            this.$headerControlsDropdown &&
+            !this.$headerControlsDropdown.contains(e.target) &&
+            !this.$headerControlsBtn.contains(e.target)
+        ) {
+            this.$headerControlsDropdown.classList.remove('show');
+        }
+    });
 },
     
     // ========================================
