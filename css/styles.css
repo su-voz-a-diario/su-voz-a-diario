@@ -1638,21 +1638,22 @@ body.dark-mode .toast-message {
    ======================================== */
 .bottom-nav {
     position: fixed;
-    bottom: 0;
     left: 0;
     right: 0;
+    bottom: 0;
     height: calc(var(--nav-height) + env(safe-area-inset-bottom));
     background-color: var(--surface-color);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: stretch;
     box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.05);
-    z-index: 10;
+    z-index: 1200;
     padding-bottom: env(safe-area-inset-bottom);
-    transition:
-        background-color 0.3s ease,
-        transform 0.22s ease,
-        opacity 0.22s ease;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    will-change: auto;
+    transition: background-color 0.3s ease;
 }
 
 .nav-btn {
@@ -3551,4 +3552,17 @@ body.reading-scroll-compact .header-left-btn {
 
 .dropdown-streak:hover {
   background: var(--bg-color);  /* que no cambie al pasar el mouse */
+}
+
+body.keyboard-open .bottom-nav {
+    opacity: 0;
+    pointer-events: none;
+}
+
+body.keyboard-open {
+    padding-bottom: 0;
+}
+
+body.keyboard-open .app-header {
+    transform: none !important;
 }
