@@ -209,108 +209,6 @@ body.dark-mode .header-settings-btn:hover {
     outline-offset: 2px;
 }
 
-.floating-controls {
-    position: fixed;
-    top: calc(env(safe-area-inset-top) + 65px);
-    left: 6px;
-    z-index: 1200;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-start;
-}
-
-.floating-toggle-btn {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    min-height: 42px;
-    padding: 0;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--text-main);
-    font-size: 1rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-    cursor: pointer;
-    transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.floating-toggle-btn:active {
-    transform: scale(0.96);
-}
-
-.floating-btn,
-.floating-streak {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    min-height: 42px;
-    padding: 0;
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-    background: rgba(255, 255, 255, 0.82);
-    color: var(--text-main);
-    font-size: 0.78rem;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
-    cursor: pointer;
-    transition: opacity 0.22s ease, transform 0.22s ease;
-}
-
-.floating-controls.collapsed .floating-streak,
-.floating-controls.collapsed .floating-btn {
-    opacity: 0;
-    transform: translateX(-14px);
-    pointer-events: none;
-}
-
-.floating-controls.collapsed .floating-toggle-btn {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-}
-
-.floating-btn:hover {
-    transform: none;
-}
-
-.floating-btn:active {
-    transform: scale(0.97);
-}
-
-.floating-streak {
-    background: linear-gradient(135deg, #ff9f43, #ffc36b);
-    color: #ffffff;
-    font-weight: 700;
-    border-color: rgba(255, 159, 67, 0.28);
-}
-
-.floating-btn.version-btn {
-    width: 52px;
-    min-width: 52px;
-    font-size: 0.72rem;
-}
-
-.floating-btn.version-btn.active {
-    background: var(--accent);
-    color: #fff;
-    border-color: var(--accent);
-}
-
 /* ========================================
    CONTENIDO PRINCIPAL
    ======================================== */
@@ -2031,37 +1929,6 @@ body.reading-scroll-compact .compact-header h1 {
     height: 17px;
 }
 
-    .floating-controls {
-    top: calc(env(safe-area-inset-top) + 65px);
-    left: 6px;
-    gap: 6px;
-    }
-
-    .floating-btn,
-    .floating-streak {
-        width: 40px;
-        min-width: 40px;
-        height: 40px;
-        min-height: 40px;
-        font-size: 0.74rem;
-        border-radius: 10px;
-    }
-
-    .floating-toggle-btn {
-        width: 40px;
-        min-width: 40px;
-        height: 40px;
-        min-height: 40px;
-        font-size: 0.9rem;
-        border-radius: 10px;
-    }
-
-    .floating-btn.version-btn {
-        width: 50px;
-        min-width: 50px;
-        font-size: 0.7rem;
-    }
-
     .reading-date-header {
     font-size: 0.9rem;
     padding: 7px 16px;
@@ -2080,33 +1947,6 @@ body.reading-scroll-compact .compact-header h1 {
 
 .mark-read-feedback {
     animation: pulse 0.3s ease;
-}
-
-/* ========================================
-   MEJORA BOTÓN FLOTANTE EN MODO OSCURO
-   ======================================== */
-body.dark-mode .floating-toggle-btn,
-body.dark-mode .floating-btn,
-body.dark-mode .floating-streak {
-    background: rgba(99, 179, 237, 0.15);
-    border: 1px solid rgba(99, 179, 237, 0.25);
-    color: #ffffff;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
-}
-
-body.dark-mode .floating-streak {
-    background: linear-gradient(135deg, #ff9f43, #ffc36b);
-    color: #ffffff;
-    border-color: rgba(255, 159, 67, 0.28);
-}
-
-body.light-mode .floating-toggle-btn,
-body.light-mode .floating-btn {
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12);
-    border: 1px solid rgba(203, 213, 225, 0.9);
 }
 
 /* ========================================
@@ -3545,4 +3385,151 @@ body.selection-panel-open {
 
 .bible-page-btn:disabled {
     opacity: 0.4;
+}
+
+/* ========================================
+   HEADER CON MENÚ HAMBURGUESA (NUEVO)
+   ======================================== */
+.app-header {
+  position: relative; /* Para que el dropdown se posicione respecto al header */
+}
+
+.header-left-btn {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.18s ease, transform 0.22s ease, opacity 0.18s ease;
+}
+
+.header-left-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .header-left-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.header-left-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Dropdown */
+.header-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 16px;
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+  padding: 16px;
+  min-width: 220px;
+  z-index: 9999;
+  animation: fadeInDown 0.2s ease;
+  display: none; /* se muestra con .show */
+}
+
+.header-dropdown.show {
+  display: block;
+}
+
+@keyframes fadeInDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-section {
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dropdown-section:last-child {
+  margin-bottom: 0;
+}
+
+.dropdown-btn {
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.dropdown-btn:hover {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.dropdown-btn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.dropdown-streak {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-main);
+}
+
+/* Ajuste para el botón de settings (ya existente) */
+.header-settings-btn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  /* El resto de sus estilos se conservan */
+}
+
+/* Modo compacto al hacer scroll (esconder también el nuevo botón) */
+body.reading-scroll-compact .header-left-btn {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%) scale(0.88);
+}
+
+/* Ajuste responsive para móviles */
+@media (max-width: 480px) {
+  .header-left-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    left: 10px;
+    font-size: 18px;
+  }
+  
+  .header-dropdown {
+    left: 10px;
+    min-width: 200px;
+    padding: 14px;
+  }
+  
+  .dropdown-btn {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
 }
