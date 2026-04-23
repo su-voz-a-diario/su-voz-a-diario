@@ -3438,7 +3438,7 @@ body.dark-mode .header-left-btn:hover {
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
   padding: 12px;
-  min-width: 160px;
+  min-width: 150px
   z-index: 9999;
   animation: fadeInDown 0.2s ease;
   display: none; /* se muestra con .show */
@@ -3454,11 +3454,10 @@ body.dark-mode .header-left-btn:hover {
 }
 
 .dropdown-section {
-  margin-bottom: 10px;
-  display: flex;
-  flex-direction: column;   /* ← ahora los botones se apilan */
-  align-items: stretch;     /* para que ocupen el ancho completo */
-  gap: 6px;
+  flex-direction: column;  /* ya lo pusiste en la respuesta anterior */
+  align-items: stretch;    /* para que todo ocupe el ancho completo */
+  gap: 6px;                /* espacio entre elementos */
+  margin-bottom: 8px;      /* un poco menos de separación entre secciones */
 }
 
 .dropdown-section:last-child {
@@ -3522,16 +3521,34 @@ body.reading-scroll-compact .header-left-btn {
     min-height: 32px;
     left: 10px;
     font-size: 18px;
-  }
+}
   
   .header-dropdown {
     left: 10px;
-    min-width: 140px;
+    min-width: 130px;
     padding: 10px;
-  }
+}
   
   .dropdown-btn {
     padding: 6px 10px;       /* antes 8px 14px */
     font-size: 13px;         /* antes 14px */
   }
+    
+.dropdown-streak {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: var(--bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  gap: 6px;
+}
+
+.dropdown-streak:hover {
+  background: var(--bg-color);  /* que no cambie al pasar el mouse */
 }
