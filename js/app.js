@@ -301,7 +301,6 @@ const App = {
     
 // Estado de render y controles
 renderScheduled: false,
-controlsCollapsed: false,
 selectionPanelLocked: false,
 activeSelectionSurface: null,
 currentSelectedVerse: null,       
