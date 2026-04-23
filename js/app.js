@@ -2187,32 +2187,27 @@ bindSelectionPanelEvents: function() {
 }
 
     if (this.$selectionNote) {
+
     this.$selectionNote.addEventListener('focus', () => {
-        this.selectionPanelLocked = true;
-        this.expandSelectionPanelForNote(true);
+    this.selectionPanelLocked = true;
+    this.expandSelectionPanelForNote(true);
+    document.body.classList.add('keyboard-open');
+});
 
-        setTimeout(() => {
-            this.$selectionNote?.scrollIntoView({
-                block: 'center',
-                behavior: 'smooth'
-            });
-        }, 180);
-    });
+   this.$selectionNote.addEventListener('blur', () => {
+    setTimeout(() => {
+        const stillInsidePanel =
+            this.$selectionPanel &&
+            document.activeElement &&
+            this.$selectionPanel.contains(document.activeElement);
 
-    this.$selectionNote.addEventListener('blur', () => {
-        setTimeout(() => {
-            const stillInsidePanel =
-                this.$selectionPanel &&
-                document.activeElement &&
-                this.$selectionPanel.contains(document.activeElement);
-
-            if (!stillInsidePanel) {
-                this.selectionPanelLocked = false;
-                this.expandSelectionPanelForNote(false);
-            }
-        }, 180);
-    });
-}
+        if (!stillInsidePanel) {
+            this.selectionPanelLocked = false;
+            this.expandSelectionPanelForNote(false);
+            document.body.classList.remove('keyboard-open');
+        }
+    }, 180);
+});
 
     if (this.$selectionColorButtons.length) {
     this.$selectionColorButtons.forEach(btn => {
