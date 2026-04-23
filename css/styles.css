@@ -3454,11 +3454,11 @@ body.dark-mode .header-left-btn:hover {
 }
 
 .dropdown-section {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;   /* ← ahora los botones se apilan */
+  align-items: stretch;     /* para que ocupen el ancho completo */
+  gap: 6px;
 }
 
 .dropdown-section:last-child {
@@ -3475,6 +3475,8 @@ body.dark-mode .header-left-btn:hover {
   cursor: pointer;
   color: var(--text-main);
   transition: background 0.2s, color 0.2s, border-color 0.2s;
+  width: 100%;              /* que cada botón ocupe todo el ancho */
+  justify-content: center;  /* texto centrado */
 }
 
 .dropdown-btn:hover {
