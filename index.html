@@ -44,11 +44,18 @@
 </div>
 
 <header class="app-header compact-header">
+    <!-- ⬅️ NUEVO: botón tres rayitas (izquierda) -->
+    <button id="header-controls-btn" class="icon-btn header-left-btn" aria-label="Controles de lectura" title="Ajustes de lectura">
+        ☰
+    </button>
+
+    <!-- Título y subtítulo centrados -->
     <div class="app-header-main">
         <h1>Su voz a diario</h1>
         <p>LECTURA BÍBLICA DEL DÍA</p>
     </div>
 
+    <!-- ➡️ Botón de ajustes original (sin cambios) -->
     <button id="header-settings-btn" class="header-settings-btn" title="Abrir ajustes" aria-label="Abrir ajustes">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -56,33 +63,34 @@
             <circle cx="12" cy="12" r="3" />
         </svg>
     </button>
-</header>
 
-<div class="floating-controls" id="floating-controls">
-    <button id="floating-toggle" class="floating-toggle-btn" title="Mostrar u ocultar controles">☰</button>
+    <!-- 📂 MENÚ DESPLEGABLE (oculto por defecto) -->
+    <div id="header-controls-dropdown" class="header-dropdown" style="display: none;">
+        <!-- Racha -->
+        <div class="dropdown-section">
+            <div id="streak-indicator" class="dropdown-streak">
+                🔥 <span id="streak-count">0</span>
+            </div>
+        </div>
 
-    <div id="streak-indicator" class="floating-streak">
-        🔥 <span id="streak-count">0</span>
+        <!-- Tamaño de letra -->
+        <div class="dropdown-section">
+            <button class="dropdown-btn" data-action="font-decrease">A−</button>
+            <button class="dropdown-btn" data-action="font-increase">A+</button>
+        </div>
+
+        <!-- Versiones -->
+        <div class="dropdown-section">
+            <button class="dropdown-btn version-btn active" data-version="rvr60">RVR60</button>
+            <button class="dropdown-btn version-btn" data-version="ntv">NTV</button>
+        </div>
+
+        <!-- Tema -->
+        <div class="dropdown-section">
+            <button id="theme-toggle" class="dropdown-btn" title="Cambiar tema">🌙</button>
+        </div>
     </div>
-
-    <button id="theme-toggle" class="floating-btn" title="Cambiar tema">☀️</button>
-
-    <button class="floating-btn" data-action="font-decrease" title="Reducir tamaño">
-        A−
-    </button>
-
-    <button class="floating-btn" data-action="font-increase" title="Aumentar tamaño">
-        A+
-    </button>
-
-    <button class="floating-btn version-btn" data-version="rvr60">
-        RVR60
-    </button>
-
-    <button class="floating-btn version-btn" data-version="ntv">
-        NTV
-    </button>
-</div>
+</header>
 
     <main id="app-content" class="container fade-in">
         <div class="loading">Cargando la lectura de hoy...</div>
