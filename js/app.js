@@ -337,13 +337,14 @@ _selectionPanelEventsBound: false,
         this.currentVersion = savedVersion;
     }
        
-    this.initTheme();
+this.initTheme();
 this.initNotifications();
 this.setupSWCommunication();
 this.bindEvents();
 this.bindHeaderControlsToggle();
 this.bindScrollChrome();
-    await this.initAuth();
+this.bindKeyboardViewportFix();
+await this.initAuth();
 await this.loadData();
 await this.refreshCommunityBadge();
 
@@ -385,9 +386,88 @@ cacheDOM: function() {
     this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
     this.$selectionNoteBtn = document.getElementById('noteBtn');
     this.$selectionColorButtons = Array.from(document.querySelectorAll('.color-btn'));
+    this.$bottomNav = document.querySelector('.bottom-nav');
+    this._keyboardHandlersBound = false;
+    this._baseViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 },
 
-    showAprilMessageIfNeeded: function() {
+bindKeyboardViewportFix: function() {
+
+    if (this._keyboardHandlersBound) return;
+
+    const updateKeyboardState = () => {
+
+        const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+        const baseHeight = this._baseViewportHeight || currentHeight;
+
+        const keyboardOpen = (baseHeight - currentHeight) > 140;
+
+        document.body.classList.toggle('keyboard-open', keyboardOpen);
+
+    };
+
+    if (window.visualViewport) {
+
+        window.visualViewport.addEventListener('resize', updateKeyboardState);
+
+        window.visualViewport.addEventListener('scroll', updateKeyboardState);
+
+    } else {
+
+        window.addEventListener('resize', updateKeyboardState);
+
+    }
+
+    document.addEventListener('focusin', (e) => {
+
+        const el = e.target;
+
+        const isTextInput =
+
+            el &&
+
+            (el.tagName === 'TEXTAREA' ||
+
+             (el.tagName === 'INPUT' && /text|search|url|email|tel|password/.test(el.type)));
+
+        if (isTextInput) {
+
+            document.body.classList.add('keyboard-open');
+
+        }
+
+    });
+
+    document.addEventListener('focusout', () => {
+
+        setTimeout(() => {
+
+            const active = document.activeElement;
+
+            const stillTyping =
+
+                active &&
+
+                (active.tagName === 'TEXTAREA' ||
+
+                 (active.tagName === 'INPUT' && /text|search|url|email|tel|password/.test(active.type)));
+
+            if (!stillTyping) {
+
+                document.body.classList.remove('keyboard-open');
+
+            }
+
+        }, 120);
+
+    });
+
+    this._keyboardHandlersBound = true;
+
+},
+
+showAprilMessageIfNeeded: function() {
     const aprilMessage = document.getElementById('april-message');
     if (!aprilMessage) return;
 
