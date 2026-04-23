@@ -3437,8 +3437,8 @@ body.dark-mode .header-left-btn:hover {
   border: 1px solid var(--border-color);
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
-  padding: 16px;
-  min-width: 220px;
+  padding: 12px;
+  min-width: 160px;
   z-index: 9999;
   animation: fadeInDown 0.2s ease;
   display: none; /* se muestra con .show */
@@ -3526,12 +3526,12 @@ body.reading-scroll-compact .header-left-btn {
   
   .header-dropdown {
     left: 10px;
-    min-width: 200px;
-    padding: 14px;
+    min-width: 140px;
+    padding: 10px;
   }
   
   .dropdown-btn {
-    padding: 6px 12px;
-    font-size: 13px;
+    padding: 6px 10px;       /* antes 8px 14px */
+    font-size: 13px;         /* antes 14px */
   }
 }
