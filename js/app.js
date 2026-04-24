@@ -2839,18 +2839,8 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     this.showToast(`Texto resaltado en ${this.getHighlightColorLabel(color)}`);
     
     // ✅ CORREGIDO: Aplicar clase CSS inmediatamente al versículo seleccionado
-    if (this.currentSelectedVerse) {
-        // Remover clases de resaltado anteriores
-        this.currentSelectedVerse.classList.remove('highlight-yellow', 'highlight-blue', 'highlight-green', 'highlight-rose');
-        // Agregar la nueva clase
-        this.currentSelectedVerse.classList.add(`highlight-${color}`);
-    }
-    
-    // Cerrar el panel
-    this.hideSelectionPanel();
-    
-    // No es necesario re-renderizar todo, solo guardamos el estado
-    // this.rerenderCurrentReadingView(dateStr, true);
+  this.hideSelectionPanel();
+this.rerenderCurrentReadingView(dateStr, true);
 },
     
    getTodayDateStr: function() {
