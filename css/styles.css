@@ -2780,19 +2780,12 @@ body.dark-mode .community-reply-item {
    PANEL DE SELECCIÓN (MEJORADO - ANDROID + iOS)
    ======================================== */
 
-/* ========================================
-   PANEL DE SELECCIÓN (MEJORADO - ANDROID + iOS)
-   ======================================== */
-
 .selection-panel {
     position: fixed;
     inset: 0;
     z-index: 25000;
     pointer-events: none;
-    /* ✅ NUEVO: Prevenir parpadeo en Android */
-    -webkit-transform: translateZ(0);
     transform: translateZ(0);
-    will-change: transform;
 }
 
 .selection-panel.visible {
@@ -2807,10 +2800,12 @@ body.selection-panel-open {
 .selection-panel-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.58);
     opacity: 0;
-    transition: opacity 0.25s ease;
+    transition: opacity 0.22s ease;
     pointer-events: none;
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
 }
 
 .selection-panel.visible .selection-panel-backdrop {
@@ -2818,206 +2813,272 @@ body.selection-panel-open {
     pointer-events: auto;
 }
 
-/* SHEET - MEJORADO */
 .selection-sheet-full {
     position: absolute;
     left: 0;
     right: 0;
     bottom: 0;
-    height: auto;
-    max-height: min(34vh, 260px);
-    background: var(--surface-color);
-    border-radius: 20px 20px 0 0;
-    transform: translateY(100%);
-    /* ✅ NUEVO: Transición más suave */
-    transition: transform 0.2s ease-out, bottom 0.2s ease, max-height 0.2s ease;
+
+    background: linear-gradient(180deg, #1b2029 0%, #151922 100%);
+    color: #f8fafc;
+
+    border-radius: 32px 32px 0 0;
+    padding: 26px 26px max(24px, env(safe-area-inset-bottom));
+
+    transform: translateY(105%);
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+
+    box-shadow:
+        0 -24px 60px rgba(0, 0, 0, 0.48),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: none;
+
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    will-change: transform, bottom;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+    gap: 16px;
+
+    max-height: calc(88vh - env(safe-area-inset-top));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .selection-panel.visible .selection-sheet-full {
     transform: translateY(0);
 }
 
-/* ✅ NUEVO: Modo nota expandido */
-.selection-panel.note-mode .selection-sheet-full {
-    max-height: min(70vh, 560px) !important;
-    display: flex;
-    flex-direction: column;
-}
-
-.selection-panel.note-mode .selection-bottom {
-    display: flex !important;
-    flex-direction: column;
-}
-
-.selection-panel.note-mode .selection-bottom textarea {
-    min-height: 120px;
-    display: block !important;
-}
-
-/* HEADER */
-.selection-sheet-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-.selection-actions-left {
-    display: flex;
-    gap: 10px;
-}
-
-/* BOTONES - MEJORADOS PARA TÁCTIL */
-.color-btn {
-    width: 40px;
-    min-width: 40px;
-    height: 40px;
-    min-height: 40px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    touch-action: manipulation;
-    flex-shrink: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-.color-btn:active {
-    transform: scale(0.92);
-}
-
-.color-btn.is-active {
-    border-color: var(--text-main);
-    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.5);
-}
-
-.color-btn.yellow { 
-    background: #facc15; 
-}
-.color-btn.blue { 
-    background: #3b82f6; 
-}
-
-.action-btn {
-    font-size: 14px;
-    background: none;
-    border: none;
-    color: var(--text-main);
-    cursor: pointer;
-    padding: 8px 12px;
-    border-radius: 8px;
-    touch-action: manipulation;
-    transition: background-color 0.15s ease;
-}
-
-.action-btn:active {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-.action-btn.danger {
-    color: var(--danger);
+.selection-sheet-handle {
+    width: 56px;
+    height: 6px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.38);
+    margin: 0 auto 8px;
 }
 
 .close-btn {
-    font-size: 20px;
-    background: none;
+    position: absolute;
+    top: 52px;
+    right: 26px;
+
+    width: 54px;
+    height: 54px;
+    border-radius: 999px;
+
     border: none;
-    color: var(--text-main);
-    cursor: pointer;
-    width: 36px;
-    height: 36px;
+    background: rgba(255, 255, 255, 0.10);
+    color: #ffffff;
+
+    font-size: 30px;
+    line-height: 1;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    touch-action: manipulation;
-    transition: background-color 0.15s ease;
+
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
 }
 
 .close-btn:active {
-    background: rgba(0, 0, 0, 0.05);
+    transform: scale(0.94);
+    background: rgba(255, 255, 255, 0.16);
 }
 
-/* PARTE INFERIOR */
-.selection-bottom {
-    padding: 12px 16px;
-    padding-bottom: max(12px, env(safe-area-inset-bottom));
-    border-top: 1px solid var(--border-color);
+.selection-sheet-title {
+    padding-right: 70px;
+}
+
+.selection-sheet-title h3 {
+    margin: 0;
+    font-size: 1.65rem;
+    line-height: 1.1;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    color: #ffffff;
+}
+
+.selection-sheet-title p {
+    margin: 8px 0 0;
+    font-size: 1rem;
+    color: rgba(226, 232, 240, 0.72);
+    font-weight: 500;
+}
+
+.selection-section-label {
+    margin-top: 8px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: rgba(226, 232, 240, 0.62);
+}
+
+.selection-color-card {
+    min-height: 78px;
+    padding: 18px 22px;
+    border-radius: 18px;
+
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 255, 255, 0.055);
+
     display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.color-btn {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    min-height: 42px;
+
+    border-radius: 999px;
+    border: 2px solid transparent;
+    cursor: pointer;
+
+    box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.color-btn:active {
+    transform: scale(0.9);
+}
+
+.color-btn.is-active {
+    border-color: #ffffff;
+    box-shadow:
+        0 0 0 4px rgba(255, 255, 255, 0.20),
+        0 8px 18px rgba(0, 0, 0, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.color-btn.yellow {
+    background: #ffd84a;
+}
+
+.color-btn.blue {
+    background: #4b8df7;
+}
+
+.color-btn.green {
+    background: #55c878;
+}
+
+.color-btn.rose {
+    background: #f26677;
+}
+
+.selection-actions-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+}
+
+.action-btn {
+    min-height: 58px;
+    border: none;
+    border-radius: 16px;
+
+    background: rgba(255, 255, 255, 0.075);
+    color: #f8fafc;
+
+    font-family: var(--font-ui);
+    font-size: 0.98rem;
+    font-weight: 700;
+
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.action-btn:active {
+    transform: scale(0.97);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.action-btn.danger {
+    color: #ff6b6b;
+}
+
+.selection-bottom {
+    display: none;
     flex-direction: column;
     gap: 12px;
-    flex-shrink: 0;
+    padding-top: 2px;
+}
+
+.selection-panel.note-mode .selection-bottom {
+    display: flex;
 }
 
 .selection-bottom textarea {
     width: 100%;
-    min-height: 68px;
-    max-height: 90px;
-    border-radius: 12px;
-    padding: 12px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-color);
-    color: var(--text-main);
+    min-height: 96px;
+    max-height: 160px;
+
+    border-radius: 16px;
+    padding: 14px 16px;
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(2, 6, 23, 0.38);
+    color: #f8fafc;
+
     resize: none;
     font-family: var(--font-ui);
-    font-size: 0.95rem;
+    font-size: 1rem;
     line-height: 1.5;
-    -webkit-overflow-scrolling: touch;
+}
+
+.selection-bottom textarea::placeholder {
+    color: rgba(226, 232, 240, 0.48);
 }
 
 .selection-bottom textarea:focus {
     outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.15);
+    border-color: rgba(96, 165, 250, 0.75);
+    box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.14);
 }
 
 .selection-bottom .btn-primary {
-    padding: 14px;
+    border-radius: 16px;
+    padding: 15px;
     font-size: 1rem;
-    border-radius: 12px;
-    touch-action: manipulation;
+    font-weight: 800;
+    box-shadow: none;
 }
 
-/* ✅ NUEVO: Ajustes específicos para móviles */
-@media (max-width: 768px) {
-    /* Dar espacio al panel cuando está visible */
-    .selection-panel.visible ~ .reading-text,
-    .selection-panel.visible ~ .reading-card .reading-text {
-        padding-bottom: 200px !important;
+.selection-status {
+    margin: 4px 0 0;
+    color: rgba(226, 232, 240, 0.52);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+@media (max-width: 420px) {
+    .selection-sheet-full {
+        padding-left: 20px;
+        padding-right: 20px;
+        border-radius: 28px 28px 0 0;
     }
-    
-    /* Mejorar área de selección en pantallas táctiles */
-    .selection-surface {
-        -webkit-user-select: text !important;
-        user-select: text !important;
-        -webkit-touch-callout: default !important;
-        touch-action: pan-y pinch-zoom !important;
+
+    .selection-sheet-title h3 {
+        font-size: 1.45rem;
     }
-    
-    /* Aumentar espaciado para facilitar selección */
-    .reading-text {
-        line-height: 1.85 !important;
-        word-spacing: 0.05em !important;
+
+    .selection-color-card {
+        gap: 22px;
+        padding-left: 18px;
+        padding-right: 18px;
     }
-    
-    /* Hacer más fácil tocar los botones del panel */
-    
+
     .action-btn {
-        padding: 10px 14px;
-        font-size: 15px;
+        font-size: 0.92rem;
     }
-    
+
     .close-btn {
-        width: 40px;
-        height: 40px;
+        right: 20px;
     }
 }
 
@@ -3073,6 +3134,26 @@ mark.user-highlight-yellow {
 mark.user-highlight-blue {
     background: rgba(96, 165, 250, 0.22);
     box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
+}
+
+mark.user-highlight-green {
+    background: rgba(34, 197, 94, 0.22);
+    box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.18);
+}
+
+mark.user-highlight-rose {
+    background: rgba(244, 63, 94, 0.20);
+    box-shadow: 0 0 0 1px rgba(225, 29, 72, 0.16);
+}
+
+body.dark-mode mark.user-highlight-green {
+    background: rgba(34, 197, 94, 0.16);
+    box-shadow: inset 0 -1px 0 rgba(34, 197, 94, 0.12);
+}
+
+body.dark-mode mark.user-highlight-rose {
+    background: rgba(244, 63, 94, 0.15);
+    box-shadow: inset 0 -1px 0 rgba(244, 63, 94, 0.12);
 }
 
 body.dark-mode mark.user-highlight-yellow {
