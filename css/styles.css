@@ -599,10 +599,6 @@ body.dark-mode .badge-corona {
     margin: 16px 0 26px 0;
 }
 
-.action-group > .reading-action-card + .reading-action-card {
-    margin-top: 16px;
-}
-
 .reading-action-card {
     width: 100%;
     min-height: 92px;
