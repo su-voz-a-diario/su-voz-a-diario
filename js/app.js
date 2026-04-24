@@ -2976,11 +2976,24 @@ const introVideoHtml = showIntroVideo ? `
                </div>
             
             <div class="main-action">
-                <button class="btn-secondary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
-                    ${this.openNoteDate === reading.date ? '✕ Ocultar sección' : '🔎 Profundiza en Su voz'}
-                    ${this.hasNote(reading.date) ? ' ✓' : ''}
-                </button>
-            </div>
+    <button class="reading-action-card reading-action-primary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
+        <span class="reading-action-icon">🔎</span>
+
+        <span class="reading-action-content">
+            <span class="reading-action-title">
+                ${this.openNoteDate === reading.date ? 'Ocultar sección' : 'Profundiza en Su voz'}
+                ${this.hasNote(reading.date) ? '<span class="reading-action-check">✓</span>' : ''}
+                ${this.hasNote(reading.date) ? '<span class="reading-action-dot"></span>' : ''}
+            </span>
+
+            <span class="reading-action-subtitle">
+                Explora más sobre este pasaje
+            </span>
+        </span>
+
+        <span class="reading-action-chevron"></span>
+    </button>
+</div>
 
            ${this.openNoteDate === reading.date ? `
     <div class="note-box">
@@ -3015,16 +3028,30 @@ const introVideoHtml = showIntroVideo ? `
     </div>
 ` : ''}
             
-            <div class="main-action">
-                ${this.isRead(reading.date)
-                    ? `<button class="btn-primary" disabled>✓ Leído hoy</button>`
-                    : `<button class="btn-primary" data-action="mark-read" data-date="${reading.date}">✓ Marcar como leído</button>`
-                }
-            </div>
+            <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
+    <span class="reading-action-icon reading-action-icon-check">✓</span>
+
+    <span class="reading-action-content">
+        <span class="reading-action-title">
+            ${this.isRead(reading.date) ? 'Leído hoy' : 'Marcar como leído'}
+        </span>
+
+        <span class="reading-action-subtitle">
+            ${this.isRead(reading.date) ? '¡Buen trabajo! Sigue así' : 'Guarda tu avance de hoy'}
+        </span>
+    </span>
+</button>
             
-           <div class="action-group">
-    <button class="btn-secondary" data-action="share-reading" data-date="${reading.date}">📤 Compartir lectura</button>
-</div>
+          <button class="reading-action-card reading-action-share" data-action="share-reading" data-date="${reading.date}">
+    <span class="reading-action-icon">📤</span>
+
+    <span class="reading-action-content">
+        <span class="reading-action-title">Compartir lectura</span>
+        <span class="reading-action-subtitle">Comparte inspiración con otros</span>
+    </span>
+
+    <span class="reading-action-chevron"></span>
+</button>
             
             ${isHome ? `
     <div class="home-reading-bar">
