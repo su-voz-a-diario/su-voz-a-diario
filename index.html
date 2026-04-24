@@ -161,18 +161,30 @@
   <div class="selection-panel-backdrop"></div>
 
   <div class="selection-sheet-full">
+    <div class="selection-sheet-handle"></div>
 
-    <div class="selection-sheet-header">
-      <div class="selection-actions-left">
-        <button class="color-btn yellow" data-color="yellow" aria-label="Resaltar en amarillo"></button>
-        <button class="color-btn blue" data-color="blue" aria-label="Resaltar en azul"></button>
+    <button class="close-btn" id="closePanel" aria-label="Cerrar panel">✕</button>
 
-        <button class="action-btn" id="copyBtn" aria-label="Copiar texto">📋 Copiar</button>
-        <button class="action-btn" id="noteBtn" aria-label="Agregar nota">📝 Nota</button>
-        <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">🗑️ Quitar</button>
-      </div>
+    <div class="selection-sheet-title">
+      <h3>Acciones de selección</h3>
+      <p>Elige una opción para este pasaje</p>
+    </div>
 
-      <button class="close-btn" id="closePanel" aria-label="Cerrar panel">✕</button>
+    <div class="selection-section-label">RESALTAR TEXTO</div>
+
+    <div class="selection-color-card">
+      <button class="color-btn yellow" data-color="yellow" aria-label="Resaltar en amarillo"></button>
+      <button class="color-btn blue" data-color="blue" aria-label="Resaltar en azul"></button>
+      <button class="color-btn green" data-color="green" aria-label="Resaltar en verde"></button>
+      <button class="color-btn rose" data-color="rose" aria-label="Resaltar en rosa"></button>
+    </div>
+
+    <div class="selection-section-label">ACCIONES</div>
+
+    <div class="selection-actions-row">
+      <button class="action-btn" id="copyBtn" aria-label="Copiar texto">Copiar</button>
+      <button class="action-btn" id="noteBtn" aria-label="Agregar nota">Nota</button>
+      <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">Quitar</button>
     </div>
 
     <div class="selection-bottom">
@@ -180,6 +192,7 @@
       <button class="btn-primary" id="saveNoteBtn">Guardar nota</button>
     </div>
 
+    <p class="selection-status">Tu selección está guardada en este dispositivo.</p>
   </div>
 </div>
    
