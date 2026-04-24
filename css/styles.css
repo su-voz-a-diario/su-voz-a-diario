@@ -3833,9 +3833,14 @@ body.reading-scroll-compact .header-left-btn {
   background: var(--bg-color);  /* que no cambie al pasar el mouse */
 }
 
-body.keyboard-open .bottom-nav {
-    opacity: 0;
-    pointer-events: none;
+body.keyboard-open .bottom-nav,
+body.keyboard-open .home-reading-bar {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+body.keyboard-open .home-reading-bar {
+    transform: translateX(-50%) translateY(24px) !important;
 }
 
 body.keyboard-open {
