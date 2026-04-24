@@ -1644,10 +1644,11 @@ body.dark-mode .toast-message {
     height: 74px;
 
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(5, auto);
+    justify-content: space-between;
     align-items: stretch;
 
-    padding: 6px 8px;
+    padding: 6px 16px;
 
     z-index: 1200;
 
@@ -1683,7 +1684,7 @@ body.dark-mode .toast-message {
     justify-content: center;
 
     width: 100%;
-    min-width: 0;
+    min-width: 58px;
     height: 100%;
 
     cursor: pointer;
@@ -1694,9 +1695,12 @@ body.dark-mode .toast-message {
 .nav-btn span {
     display: block;
     width: 100%;
-    font-size: 0.72rem;
-    margin-top: 5px;
-    font-weight: 500;
+
+    font-size: 0.68rem;     /* ← CAMBIADO */
+    margin-top: 4px;        /* ← CAMBIADO */
+    font-weight: 500;       /* ← AJUSTADO */
+    letter-spacing: -0.01em;/* ← NUEVO */
+
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
