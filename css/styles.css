@@ -2244,9 +2244,9 @@ body.dark-mode .community-reaction-btn {
     height: 38px;
     border: none;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.09);
-    color: #ffffff;
-    font-size: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.92);
+    font-size: 0;
     font-weight: 700;
     cursor: pointer;
 
@@ -2255,6 +2255,25 @@ body.dark-mode .community-reaction-btn {
     justify-content: center;
 
     transition: background 0.18s ease, transform 0.14s ease, opacity 0.18s ease;
+}
+
+.home-reading-bar-btn::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-top: 3px solid currentColor;
+    border-right: 3px solid currentColor;
+    display: block;
+}
+
+.home-reading-bar-btn:first-child::before {
+    transform: rotate(-135deg);
+    margin-left: 3px;
+}
+
+.home-reading-bar-btn:last-child::before {
+    transform: rotate(45deg);
+    margin-right: 3px;
 }
 
 .home-reading-bar-btn:active {
