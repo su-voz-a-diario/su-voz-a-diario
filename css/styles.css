@@ -595,7 +595,7 @@ body.dark-mode .badge-corona {
 .action-group {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     margin: 16px 0 26px 0;
 }
 
