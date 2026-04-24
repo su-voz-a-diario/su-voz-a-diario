@@ -213,7 +213,7 @@ body.dark-mode .header-settings-btn:hover {
    CONTENIDO PRINCIPAL
    ======================================== */
 .container {
-    padding: 6px 12px 24px;
+    padding: 6px 12px calc(24px + var(--nav-height) + 86px);
     max-width: 600px;
     margin: 0 auto;
 }
@@ -1878,7 +1878,7 @@ body.light-mode .community-badge {
 
 @media (max-width: 480px) {
     .container {
-        padding: 4px 10px 16px;
+    padding: 4px 10px calc(20px + var(--nav-height) + 86px);
     }
     
     .reading-card {
@@ -2212,39 +2212,53 @@ body.dark-mode .community-reaction-btn {
 .home-reading-bar {
     position: fixed;
     left: 50%;
-    bottom: calc(var(--nav-height) + 4px + env(safe-area-inset-bottom));
-    transform: translate(-50%, 0);
-    width: min(92vw, 420px);
-    height: 44px;
-    padding: 0 8px;
-    border-radius: 14px;
+    bottom: calc(var(--nav-height) + 14px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: min(92vw, 430px);
+    height: 54px;
+    padding: 0 12px;
+    border-radius: 999px;
+
     display: grid;
-    grid-template-columns: 40px 1fr 40px;
+    grid-template-columns: 44px 1fr 44px;
     align-items: center;
-    gap: 4px;
-    z-index: 40;
+    gap: 8px;
 
-    background: rgba(255, 255, 255, 0.14);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
+    z-index: 1190;
 
-    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
-    transition: transform 0.22s ease, opacity 0.22s ease;
+    background: rgba(20, 24, 32, 0.72);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+
+    box-shadow:
+        0 12px 32px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255,255,255,0.08);
+
+    transition: opacity 0.2s ease, transform 0.2s ease;
 }
 
 .home-reading-bar-btn {
-    width: 32px;
-    height: 32px;
+    width: 38px;
+    height: 38px;
     border: none;
     border-radius: 999px;
-    background: transparent;
-    font-size: 17px;
-    font-weight: 600;
+    background: rgba(255, 255, 255, 0.09);
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 700;
     cursor: pointer;
+
     display: flex;
     align-items: center;
     justify-content: center;
+
+    transition: background 0.18s ease, transform 0.14s ease, opacity 0.18s ease;
+}
+
+.home-reading-bar-btn:active {
+    transform: scale(0.92);
 }
 
 .home-reading-bar-btn:disabled {
@@ -2255,19 +2269,23 @@ body.dark-mode .community-reaction-btn {
 .home-reading-bar-title {
     min-width: 0;
     text-align: center;
-    font-size: 12px;
-    font-weight: 500;
+    font-size: 14px;
+    font-weight: 600;
     letter-spacing: 0.01em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    padding: 0 4px;
+    color: #ffffff;
+    opacity: 0.94;
+    padding: 0 6px;
 }
 
 body.light-mode .home-reading-bar {
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(255, 255, 255, 0.92);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.10);
+    background: rgba(255, 255, 255, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.95);
+    box-shadow:
+        0 12px 30px rgba(15, 23, 42, 0.16),
+        inset 0 1px 0 rgba(255,255,255,0.7);
 }
 
 body.light-mode .home-reading-bar-btn,
@@ -2276,9 +2294,11 @@ body.light-mode .home-reading-bar-title {
 }
 
 body.dark-mode .home-reading-bar {
-    background: rgba(15, 23, 42, 0.60);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24);
+    background: rgba(20, 24, 32, 0.76);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 14px 34px rgba(0, 0, 0, 0.38),
+        inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
 body.dark-mode .home-reading-bar-btn,
