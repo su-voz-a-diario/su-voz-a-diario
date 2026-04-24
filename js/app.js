@@ -2014,7 +2014,7 @@ removeSelectedHighlight: function(selectedText, dateStr, color = null) {
 
     this.showToast(
         color
-            ? `Resaltado ${color === 'yellow' ? 'amarillo' : 'azul'} eliminado`
+            ? `Resaltado ${this.getHighlightColorLabel(color)} eliminado`
             : 'Resaltado eliminado'
     );
 
@@ -2782,6 +2782,17 @@ positionSelectionSheet: function() {
     this.$selectionSheet.style.bottom = '0px';
 },
 
+getHighlightColorLabel: function(color) {
+    const labels = {
+        yellow: 'amarillo',
+        blue: 'azul',
+        green: 'verde',
+        rose: 'rosa'
+    };
+
+    return labels[color] || color || 'color';
+},
+
 saveSelectedHighlight: function(selectedText, color, dateStr) {
     const cleanText = (selectedText || '').replace(/\s+/g, ' ').trim();
     
@@ -2800,7 +2811,7 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
     );
     
     if (existingIndex >= 0) {
-        this.showToast(`Este texto ya está resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+        this.showToast(`Este texto ya está resaltado en ${this.getHighlightColorLabel(color)}`);
         return;
     }
     
@@ -2825,12 +2836,12 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
         });
     }
     
-    this.showToast(`Texto resaltado en ${color === 'yellow' ? 'amarillo' : 'azul'}`);
+    this.showToast(`Texto resaltado en ${this.getHighlightColorLabel(color)}`);
     
     // ✅ CORREGIDO: Aplicar clase CSS inmediatamente al versículo seleccionado
     if (this.currentSelectedVerse) {
         // Remover clases de resaltado anteriores
-        this.currentSelectedVerse.classList.remove('highlight-yellow', 'highlight-blue');
+        this.currentSelectedVerse.classList.remove('highlight-yellow', 'highlight-blue', 'highlight-green', 'highlight-rose');
         // Agregar la nueva clase
         this.currentSelectedVerse.classList.add(`highlight-${color}`);
     }
