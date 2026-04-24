@@ -3028,30 +3028,32 @@ const introVideoHtml = showIntroVideo ? `
     </div>
 ` : ''}
             
-            <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
-    <span class="reading-action-icon reading-action-icon-check">✓</span>
+         <div class="action-group">
+    <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
+        <span class="reading-action-icon reading-action-icon-check">✓</span>
 
-    <span class="reading-action-content">
-        <span class="reading-action-title">
-            ${this.isRead(reading.date) ? 'Leído hoy' : 'Marcar como leído'}
+        <span class="reading-action-content">
+            <span class="reading-action-title">
+                ${this.isRead(reading.date) ? 'Leído hoy' : 'Marcar como leído'}
+            </span>
+
+            <span class="reading-action-subtitle">
+                ${this.isRead(reading.date) ? '¡Buen trabajo! Sigue así' : 'Guarda tu avance de hoy'}
+            </span>
+        </span>
+    </button>
+
+    <button class="reading-action-card reading-action-share" data-action="share-reading" data-date="${reading.date}">
+        <span class="reading-action-icon">📤</span>
+
+        <span class="reading-action-content">
+            <span class="reading-action-title">Compartir lectura</span>
+            <span class="reading-action-subtitle">Comparte inspiración con otros</span>
         </span>
 
-        <span class="reading-action-subtitle">
-            ${this.isRead(reading.date) ? '¡Buen trabajo! Sigue así' : 'Guarda tu avance de hoy'}
-        </span>
-    </span>
-</button>
-            
-          <button class="reading-action-card reading-action-share" data-action="share-reading" data-date="${reading.date}">
-    <span class="reading-action-icon">📤</span>
-
-    <span class="reading-action-content">
-        <span class="reading-action-title">Compartir lectura</span>
-        <span class="reading-action-subtitle">Comparte inspiración con otros</span>
-    </span>
-
-    <span class="reading-action-chevron"></span>
-</button>
+        <span class="reading-action-chevron"></span>
+    </button>
+</div>
             
             ${isHome ? `
     <div class="home-reading-bar">
