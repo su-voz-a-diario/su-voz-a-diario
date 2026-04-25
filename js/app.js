@@ -2337,23 +2337,38 @@ document.addEventListener('click', (e) => {
 const editSelectionNoteBtn = document.getElementById('editSelectionNoteBtn');
 if (editSelectionNoteBtn) {
     editSelectionNoteBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+        e.preventDefault();
+        e.stopPropagation();
 
-    const notePanel = document.getElementById('noteViewPanel');
+        const notePanel = document.getElementById('noteViewPanel');
 
-    // Cierra panel de vista
-    notePanel?.classList.remove('visible');
+        notePanel?.classList.remove('visible');
 
-    // Abre panel original en modo edición
-    this.expandSelectionPanelForNote(true);
+        if (this.$selectionPanel) {
+            this.$selectionPanel.classList.add('visible');
+            this.$selectionPanel.classList.add('note-mode');
+            this.$selectionPanel.classList.remove('note-view-mode');
+        }
 
-    this.selectionPanelLocked = true;
+        document.body.classList.add('selection-panel-open');
 
-    setTimeout(() => {
-        this.$selectionNote?.focus();
-    }, 140);
-});
+        this.selectionPanelLocked = true;
+
+        if (this.$selectionNote) {
+            const existingNote = this.getSelectionNoteByText(
+                this.currentSelectionDate,
+                this.currentSelectedText
+            );
+
+            this.$selectionNote.value = existingNote?.note || '';
+        }
+
+        this.positionSelectionSheet();
+
+        setTimeout(() => {
+            this.$selectionNote?.focus();
+        }, 180);
+    });
 }
 
 const deleteSelectionNoteBtn = document.getElementById('deleteSelectionNoteBtn');
@@ -2395,14 +2410,75 @@ const closeNoteViewer = () => {
 closeNoteViewPanel?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    closeNoteViewer();
+    closeNoteViewerWithAnimation();
 });
 
 // Tap fuera (fondo oscuro)
 noteBackdrop?.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
-    closeNoteViewer();
+    closeNoteViewerWithAnimation();
+});
+
+// ========================================
+// SWIPE PARA CERRAR PANEL DE NOTA
+// ========================================
+
+const noteViewSheet = noteViewPanel?.querySelector('.note-view-sheet');
+
+let noteStartY = 0;
+let noteCurrentY = 0;
+let noteDragging = false;
+
+const closeNoteViewerWithAnimation = () => {
+    if (!noteViewPanel || !noteViewSheet) return;
+
+    noteViewSheet.style.transition = 'transform 0.24s cubic-bezier(0.32, 0.72, 0, 1)';
+    noteViewSheet.style.transform = 'translateY(100%)';
+
+    setTimeout(() => {
+        noteViewPanel.classList.remove('visible');
+        noteViewSheet.style.transition = '';
+        noteViewSheet.style.transform = '';
+        document.body.classList.remove('selection-panel-open');
+        this.clearVerseSelection();
+    }, 240);
+};
+
+noteViewSheet?.addEventListener('touchstart', (e) => {
+    noteStartY = e.touches[0].clientY;
+    noteCurrentY = noteStartY;
+    noteDragging = true;
+
+    noteViewSheet.style.transition = 'none';
+}, { passive: true });
+
+noteViewSheet?.addEventListener('touchmove', (e) => {
+    if (!noteDragging) return;
+
+    noteCurrentY = e.touches[0].clientY;
+    const diff = Math.max(0, noteCurrentY - noteStartY);
+
+    noteViewSheet.style.transform = `translateY(${diff}px)`;
+}, { passive: true });
+
+noteViewSheet?.addEventListener('touchend', () => {
+    if (!noteDragging) return;
+
+    const diff = Math.max(0, noteCurrentY - noteStartY);
+    noteDragging = false;
+
+    if (diff > 90) {
+        closeNoteViewerWithAnimation();
+        return;
+    }
+
+    noteViewSheet.style.transition = 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)';
+    noteViewSheet.style.transform = 'translateY(0)';
+
+    setTimeout(() => {
+        noteViewSheet.style.transition = '';
+    }, 280);
 });
     
     this._selectionPanelEventsBound = true;
