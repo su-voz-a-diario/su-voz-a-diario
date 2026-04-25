@@ -192,55 +192,46 @@
       <button class="btn-primary" id="saveNoteBtn">Guardar nota</button>
     </div>
 
-   <div id="selectionNoteViewer" class="selection-note-viewer">
-
-    
-
-    <div class="selection-note-viewer-header">
-
-        <div class="selection-note-icon">📝</div>
-
-        <div>
-
-            <div class="selection-note-title">Nota guardada</div>
-
-            <div class="selection-note-subtitle">Reflexión sobre el texto seleccionado</div>
-
-        </div>
-
-    </div>
-
-    <div class="selection-note-quote" id="selectionNoteQuoted"></div>
-
-    <div class="selection-note-divider">✦</div>
-
-    <div class="selection-note-content" id="selectionNoteBody"></div>
-
-    <div class="selection-note-actions">
-
-        <button id="editSelectionNoteBtn" class="btn-edit-note">
-
-            ✏️ Editar nota
-
-        </button>
-
-        <button id="deleteSelectionNoteBtn" class="btn-delete-note">
-
-            🗑️ Quitar nota
-
-        </button>
-
-    </div>
-
-    <div class="selection-note-footer">
-
-        🔒 La nota es privada y solo tú puedes verla
-
-    </div>
-
+    <p class="selection-status">Tu selección está guardada en este dispositivo.</p>
+  </div>
 </div>
 
-    <p class="selection-status">Tu selección está guardada en este dispositivo.</p>
+   <div class="note-view-panel" id="noteViewPanel">
+  <div class="note-view-backdrop"></div>
+
+  <div class="note-view-sheet">
+    <div class="selection-sheet-handle"></div>
+
+    <button class="note-view-close" id="closeNoteViewPanel" aria-label="Cerrar nota">✕</button>
+
+    <div class="note-view-header">
+      <div class="note-view-icon">📝</div>
+
+      <div>
+        <div class="note-view-title">Nota guardada</div>
+        <div class="note-view-subtitle">Reflexión sobre el texto seleccionado</div>
+      </div>
+    </div>
+
+    <div class="note-view-quote" id="selectionNoteQuoted"></div>
+
+    <div class="note-view-divider">✦</div>
+
+    <div class="note-view-content" id="selectionNoteBody"></div>
+
+    <div class="note-view-actions">
+      <button id="editSelectionNoteBtn" class="note-view-edit-btn">
+        ✏️ Editar nota
+      </button>
+
+      <button id="deleteSelectionNoteBtn" class="note-view-delete-btn">
+        🗑️ Quitar nota
+      </button>
+    </div>
+
+    <div class="note-view-footer">
+      🔒 La nota es privada y solo tú puedes verla
+    </div>
   </div>
 </div>
    
