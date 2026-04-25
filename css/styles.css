@@ -2071,8 +2071,7 @@ body.light-mode .community-badge {
     box-shadow: none !important;
 }
 
-.verse-item.highlight-green .verse-text-content,
-.verse-item.highlight-green .verse-number {
+.verse-item.highlight-green .verse-text-content {
     background: rgba(34, 197, 94, 0.22);
     border-radius: 4px;
     padding: 0 0.12em;
@@ -2080,8 +2079,7 @@ body.light-mode .community-badge {
     -webkit-box-decoration-break: clone;
 }
 
-.verse-item.highlight-rose .verse-text-content,
-.verse-item.highlight-rose .verse-number {
+.verse-item.highlight-rose .verse-text-content {
     background: rgba(244, 63, 94, 0.22);
     border-radius: 4px;
     padding: 0 0.12em;
@@ -2089,13 +2087,11 @@ body.light-mode .community-badge {
     -webkit-box-decoration-break: clone;
 }
 
-body.dark-mode .verse-item.highlight-green .verse-text-content,
-body.dark-mode .verse-item.highlight-green .verse-number {
+body.dark-mode .verse-item.highlight-green .verse-text-content {
     background: rgba(34, 197, 94, 0.24);
 }
 
-body.dark-mode .verse-item.highlight-rose .verse-text-content,
-body.dark-mode .verse-item.highlight-rose .verse-number {
+body.dark-mode .verse-item.highlight-rose .verse-text-content {
     background: rgba(244, 63, 94, 0.24);
 }
 
