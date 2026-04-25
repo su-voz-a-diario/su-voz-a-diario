@@ -3996,3 +3996,78 @@ body.keyboard-open {
 body.keyboard-open .app-header {
     transform: none !important;
 }
+
+/* ========================================
+   HOME ACTION CARDS - MODO CLARO PROFESIONAL
+   ======================================== */
+
+body.light-mode .reading-action-card {
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    border: 1px solid rgba(15, 23, 42, 0.06);
+
+    box-shadow:
+        0 6px 18px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+/* ICONO */
+body.light-mode .reading-action-icon {
+    background: #f1f5f9;
+    border: 1px solid rgba(15, 23, 42, 0.06);
+    box-shadow: none;
+}
+
+/* TITULO */
+body.light-mode .reading-action-title {
+    color: #0f172a;
+}
+
+/* SUBTITULO */
+body.light-mode .reading-action-subtitle {
+    color: #64748b;
+}
+
+/* CHEVRON */
+body.light-mode .reading-action-chevron {
+    border-color: rgba(15, 23, 42, 0.35);
+}
+
+/* BOTÓN PRINCIPAL (azul) */
+body.light-mode .reading-action-primary {
+    background: linear-gradient(180deg, #3b82f6, #2563eb);
+    border: none;
+
+    box-shadow:
+        0 10px 24px rgba(59, 130, 246, 0.25);
+}
+
+body.light-mode .reading-action-primary .reading-action-title,
+body.light-mode .reading-action-primary .reading-action-subtitle {
+    color: white;
+}
+
+/* LEÍDO */
+body.light-mode .reading-action-read {
+    background: linear-gradient(180deg, #e0f2fe, #bae6fd);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+
+    box-shadow:
+        0 6px 16px rgba(59, 130, 246, 0.15);
+}
+
+body.light-mode .reading-action-read .reading-action-title {
+    color: #1e40af;
+}
+
+body.light-mode .reading-action-read .reading-action-subtitle {
+    color: #1e3a8a;
+}
+
+/* COMPARTIR */
+body.light-mode .reading-action-share {
+    background: linear-gradient(180deg, #ffffff, #f1f5f9);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+
+    box-shadow:
+        0 6px 18px rgba(15, 23, 42, 0.08);
+}
