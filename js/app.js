@@ -2027,6 +2027,7 @@ hideSelectionPanel: function(clearStoredSelection = true) {
     if (this.$selectionPanel) {
         this.$selectionPanel.classList.remove('visible');
         this.$selectionPanel.classList.remove('note-mode');
+        this.$selectionPanel.classList.remove('note-view-mode');
     }
     
     if (this.$selectionSheet) {
@@ -2052,6 +2053,93 @@ hideSelectionPanel: function(clearStoredSelection = true) {
         this.activeSelectionSurface = null;
         this.currentSelectionColorDraft = null;
     }
+},
+
+openSelectionNoteViewer: function(verseItem) {
+    if (!verseItem || !this.$selectionPanel) return;
+
+    const textEl = verseItem.querySelector('.verse-text-content');
+
+    const selectedText = (
+        verseItem.getAttribute('data-verse-full') ||
+        verseItem.getAttribute('data-verse-text') ||
+        textEl?.textContent ||
+        verseItem.textContent ||
+        ''
+    )
+        .replace('📝', '')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const dateStr =
+        this.homeViewingDate ||
+        this.currentSelectionDate ||
+        this.getTodayDateStr();
+
+    const noteEntry = this.getSelectionNoteByText(dateStr, selectedText);
+
+    if (!noteEntry) {
+        this.showToast('No se encontró la nota');
+        return;
+    }
+
+    this.clearVerseSelection();
+    verseItem.classList.add('verse-selected');
+
+    this.currentSelectedVerse = verseItem;
+    this.currentSelectedText = selectedText;
+    this.currentSelectionDate = dateStr;
+    this.selectionPanelLocked = true;
+    this._savedScrollY = window.scrollY;
+
+    this.renderSelectionNoteViewer(noteEntry);
+
+    this.$selectionPanel.classList.add('visible', 'note-view-mode');
+    this.$selectionPanel.classList.remove('note-mode');
+
+    document.body.classList.add('selection-panel-open');
+
+    this.positionSelectionSheet();
+
+    if ('vibrate' in navigator) {
+        navigator.vibrate(8);
+    }
+},
+
+renderSelectionNoteViewer: function(noteEntry) {
+    const quoted = document.getElementById('selectionNoteQuoted');
+    const body = document.getElementById('selectionNoteBody');
+
+    if (quoted) quoted.textContent = noteEntry.text || '';
+    if (body) body.textContent = noteEntry.note || '';
+
+    if (this.$selectionNote) {
+        this.$selectionNote.value = noteEntry.note || '';
+    }
+},
+
+deleteSelectionNoteFromViewer: function() {
+    const dateStr = this.currentSelectionDate;
+    const selectedText = this.currentSelectedText;
+
+    if (!dateStr || !selectedText) {
+        this.showToast('No hay nota activa');
+        return;
+    }
+
+    const deleted = this.deleteSelectionNoteEntry(dateStr, selectedText);
+
+    if (!deleted) {
+        this.showToast('No se pudo quitar la nota');
+        return;
+    }
+
+    this.showToast('Nota eliminada');
+
+    this.hideSelectionPanel();
+    window.getSelection()?.removeAllRanges();
+
+    this.rerenderCurrentReadingView(dateStr, true);
 },
 
 saveSelectionNoteFromPanel: function() {
@@ -2226,6 +2314,44 @@ if (this.$selectionColorButtons.length) {
 if (this.$selectionPanel) {
     this.$selectionPanel.addEventListener('pointerdown', () => {
         this.selectionPanelLocked = true;
+    });
+}
+
+document.addEventListener('click', (e) => {
+    const noteIcon = e.target.closest('.verse-note-icon');
+    if (!noteIcon) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const verseItem = noteIcon.closest('.verse-item');
+
+    this.openSelectionNoteViewer(verseItem);
+}, true);
+
+const editSelectionNoteBtn = document.getElementById('editSelectionNoteBtn');
+if (editSelectionNoteBtn) {
+    editSelectionNoteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.$selectionPanel.classList.remove('note-view-mode');
+        this.selectionPanelLocked = true;
+        this.expandSelectionPanelForNote(true);
+
+        setTimeout(() => {
+            this.$selectionNote?.focus();
+        }, 140);
+    });
+}
+
+const deleteSelectionNoteBtn = document.getElementById('deleteSelectionNoteBtn');
+if (deleteSelectionNoteBtn) {
+    deleteSelectionNoteBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.deleteSelectionNoteFromViewer();
     });
 }
     
