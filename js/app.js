@@ -2094,13 +2094,18 @@ openSelectionNoteViewer: function(verseItem) {
 
     this.renderSelectionNoteViewer(noteEntry);
 
-    this.$selectionPanel.classList.add('visible', 'note-view-mode');
-    this.$selectionPanel.classList.remove('note-mode');
+    // Cierra el panel de selección SI está abierto
+this.hideSelectionPanel(false);
 
-    document.body.classList.add('selection-panel-open');
+// Abre el panel NUEVO de nota
+const notePanel = document.getElementById('noteViewPanel');
+if (notePanel) {
+    notePanel.classList.add('visible');
+}
 
-    this.positionSelectionSheet();
-
+// Bloquea scroll como panel nativo
+document.body.classList.add('selection-panel-open');
+    
     if ('vibrate' in navigator) {
         navigator.vibrate(8);
     }
@@ -2332,28 +2337,73 @@ document.addEventListener('click', (e) => {
 const editSelectionNoteBtn = document.getElementById('editSelectionNoteBtn');
 if (editSelectionNoteBtn) {
     editSelectionNoteBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
 
-        this.$selectionPanel.classList.remove('note-view-mode');
-        this.selectionPanelLocked = true;
-        this.expandSelectionPanelForNote(true);
+    const notePanel = document.getElementById('noteViewPanel');
 
-        setTimeout(() => {
-            this.$selectionNote?.focus();
-        }, 140);
-    });
+    // Cierra panel de vista
+    notePanel?.classList.remove('visible');
+
+    // Abre panel original en modo edición
+    this.expandSelectionPanelForNote(true);
+
+    this.selectionPanelLocked = true;
+
+    setTimeout(() => {
+        this.$selectionNote?.focus();
+    }, 140);
+});
 }
 
 const deleteSelectionNoteBtn = document.getElementById('deleteSelectionNoteBtn');
 if (deleteSelectionNoteBtn) {
     deleteSelectionNoteBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+    e.preventDefault();
+    e.stopPropagation();
 
-        this.deleteSelectionNoteFromViewer();
-    });
+    const notePanel = document.getElementById('noteViewPanel');
+
+    this.deleteSelectionNoteFromViewer();
+
+    // Cierra panel visual
+    notePanel?.classList.remove('visible');
+
+    document.body.classList.remove('selection-panel-open');
+});
 }
+
+// ========================================
+// CIERRE PANEL DE NOTA (NUEVO)
+// ========================================
+
+const noteViewPanel = document.getElementById('noteViewPanel');
+const closeNoteViewPanel = document.getElementById('closeNoteViewPanel');
+const noteBackdrop = noteViewPanel?.querySelector('.note-view-backdrop');
+
+const closeNoteViewer = () => {
+    if (noteViewPanel) {
+        noteViewPanel.classList.remove('visible');
+    }
+
+    document.body.classList.remove('selection-panel-open');
+
+    this.clearVerseSelection();
+};
+
+// Botón X
+closeNoteViewPanel?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeNoteViewer();
+});
+
+// Tap fuera (fondo oscuro)
+noteBackdrop?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    closeNoteViewer();
+});
     
     this._selectionPanelEventsBound = true;
 },
