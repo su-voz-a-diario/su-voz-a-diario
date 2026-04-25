@@ -1945,48 +1945,64 @@ body.dark-mode .nav-btn.active {
 
 .nav-btn-community {
     position: relative;
+    overflow: visible;
+}
+
+.community-badge[data-count] {
+    font-size: 10px;
+}
+
+.community-badge[data-count="10"],
+.community-badge[data-count="11"],
+.community-badge[data-count="12"],
+.community-badge[data-count="13"],
+.community-badge[data-count="14"],
+.community-badge[data-count="15"],
+.community-badge[data-count="16"],
+.community-badge[data-count="17"],
+.community-badge[data-count="18"],
+.community-badge[data-count="19"],
+.community-badge[data-count="20"] {
+    min-width: 20px;
+    padding: 0 6px;
 }
 
 .community-badge {
     position: absolute;
-    top: 2px;
-    right: 2px;
-    z-index: 5;
 
-    /* Tamaño fijo para que sea un círculo perfecto */
-    min-width: 20px;
-    width: auto;
-    height: 20px;
+    /* 📍 POSICIÓN tipo iOS */
+    top: -4px;
+    right: 8px;
+
+    z-index: 10;
+
+    /* 📐 TAMAÑO BURBUJA */
+    min-width: 18px;
+    height: 18px;
     padding: 0 5px;
 
     display: flex;
     align-items: center;
     justify-content: center;
 
-    /* Círculo perfecto */
     border-radius: 999px;
 
-    /* Fondo glass */
-    background: rgba(239, 68, 68, 0.95);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    /* Texto */
+    /* 🎨 COLOR */
+    background: #ef4444;
     color: #ffffff;
-    font-size: 11px;
+
+    font-size: 10px;
     font-weight: 700;
     line-height: 1;
-    letter-spacing: -0.01em;
-    text-align: center;
-    white-space: nowrap;
 
-    /* Borde sutil */
-    border: 1.5px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    /* ✨ ESTÉTICA */
+    border: 2px solid var(--surface-color);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 
-    /* Animación suave */
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    pointer-events: none;
+
     transform: scale(1);
+    transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
 /* Efecto de pulso cuando hay notificaciones nuevas */
@@ -2011,6 +2027,24 @@ body.dark-mode .nav-btn.active {
 /* Badge oculto */
 .community-badge[hidden] {
     display: none !important;
+}
+
+.community-badge:not([hidden]) {
+    animation: badge-pop 0.25s ease;
+}
+
+@keyframes badge-pop {
+    0% {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.15);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Modo oscuro */
