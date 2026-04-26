@@ -2497,6 +2497,16 @@ expandSelectionPanelForNote: function(expand = true) {
         this.$selectionPanel.classList.remove('note-mode');
     }
 },
+
+renderViewHeader: function(title, subtitle = '') {
+    return `
+        <section class="view-hero">
+            <div class="view-hero-kicker">Su Voz a Diario</div>
+            <h2>${this.escapeHtml(title)}</h2>
+            ${subtitle ? `<p>${this.escapeHtml(subtitle)}</p>` : ''}
+        </section>
+    `;
+},
     
     // ========================================
     // NAVEGACIÓN Y RENDERIZADO
@@ -3208,8 +3218,14 @@ const introVideoHtml = showIntroVideo ? `
             ? (isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día')
             : '📖 Su voz este día';
         
-           this.$content.innerHTML = `
-                <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+        this.$content.innerHTML = `
+
+    ${isHome ? this.renderViewHeader(
+        'Lectura bíblica del día',
+        'Un momento diario para escuchar, meditar y responder a la Palabra.'
+    ) : ''}
+
+    <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
 
                 <div class="badge-progress badge-${currentBadge.key}">
                     <span class="badge-progress-icon">${currentBadge.icon}</span>
@@ -4060,10 +4076,10 @@ renderBible: function() {
         this.$content.innerHTML = `
             <div class="bible-view">
                 <!-- Header principal SIN botón volver -->
-                <div class="bible-header-card">
-    <div class="bible-title">📖 Biblia</div>
-    <div class="bible-subtitle">Versión Biblia Libre (VBL)</div>
-</div>
+${this.renderViewHeader(
+    'Biblia',
+    'Busca, lee y explora las Escrituras por libro y capítulo.'
+)}
 
 <!-- Botón de búsqueda -->
 <div style="margin-bottom: 16px;">
@@ -4281,7 +4297,13 @@ if (this.targetVerse) {
 
     const todayStr = this.getTodayDateStr();
 
-    let html = '<div class="calendar-grid">';
+    let html = `
+    ${this.renderViewHeader(
+        'Calendario de lecturas',
+        'Avanza día a día en el plan y vuelve a tus lecturas guardadas.'
+    )}
+    <div class="calendar-grid">
+`;
 
     this.data.forEach(item => {
         const dateStr = this.formatDateEs(item.date);
@@ -4341,12 +4363,10 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     // Renderizar el contenido
     this.$content.innerHTML = `
         <div class="community-container">
-            <div class="community-header">
-                <div class="community-title">Compartamos Su Voz</div>
-                <div class="community-subtitle">
-                   Un espacio para compartir lo que Dios te ha hablado a través de su Palabra.
-                </div>
-            </div>
+            ${this.renderViewHeader(
+                'Comunidad',
+                'Comparte reflexiones edificantes basadas en la lectura del día.'
+            )}
 
             <div class="community-intro-card">
                 <div class="community-intro-title">Antes de compartir</div>
@@ -4470,44 +4490,49 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     }
 },
 
+renderStats: function() {
+    const stats = this.getStats();
     
-    renderStats: function() {
-        const stats = this.getStats();
+    this.$content.innerHTML = `
         
-        this.$content.innerHTML = `
-            <div class="stats-container">
-                <div class="stat-card">
-                    <div class="stat-number">${stats.totalRead}</div>
-                    <div class="stat-label">Lecturas completadas</div>
-                    <div class="stat-progress">
-                        <div class="progress-bar" style="width: ${stats.percentage}%"></div>
-                        <div class="progress-text">${stats.percentage}% del plan</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">🔥 ${stats.currentStreak}</div>
-                    <div class="stat-label">Días consecutivos</div>
-                    <div class="stat-note">🏆 Récord: ${stats.longestStreak} días</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">📝 ${stats.totalNotes}</div>
-                    <div class="stat-label">Reflexiones escritas</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">✨ ${stats.totalHighlights}</div>
-                    <div class="stat-label">Versículos resaltados</div>
-                </div>
-                
-                <div class="stat-card">
-                    <div class="stat-number">📖 ${stats.totalAvailable}</div>
-                    <div class="stat-label">Lecturas disponibles</div>
+        ${this.renderViewHeader(
+            'Estadísticas',
+            'Observa tu constancia, lecturas, notas y progreso espiritual.'
+        )}
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-number">${stats.totalRead}</div>
+                <div class="stat-label">Lecturas completadas</div>
+                <div class="stat-progress">
+                    <div class="progress-bar" style="width: ${stats.percentage}%"></div>
+                    <div class="progress-text">${stats.percentage}% del plan</div>
                 </div>
             </div>
-        `;
-    },
+            
+            <div class="stat-card">
+                <div class="stat-number">🔥 ${stats.currentStreak}</div>
+                <div class="stat-label">Días consecutivos</div>
+                <div class="stat-note">🏆 Récord: ${stats.longestStreak} días</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">📝 ${stats.totalNotes}</div>
+                <div class="stat-label">Reflexiones escritas</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">✨ ${stats.totalHighlights}</div>
+                <div class="stat-label">Versículos resaltados</div>
+            </div>
+            
+            <div class="stat-card">
+                <div class="stat-number">📖 ${stats.totalAvailable}</div>
+                <div class="stat-label">Lecturas disponibles</div>
+            </div>
+        </div>
+    `;
+},
     
     renderSettings: function() {
         this.$content.innerHTML = `
