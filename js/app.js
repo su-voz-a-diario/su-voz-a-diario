@@ -3223,20 +3223,13 @@ const introVideoHtml = showIntroVideo ? `
 
     ${isHome ? this.renderViewHeader(
         'Lectura bíblica del día',
-        'Un momento diario para escuchar, meditar y responder a la Palabra.'
-    ) : ''}
+        'Un momento diario para escuchar, meditar y responder a la Palabra.',
+        dateFormatted.toUpperCase()
+    ) : `
+        <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+    `}
 
-    this.$content.innerHTML = `
-
-                ${isHome ? this.renderViewHeader(
-                    'Lectura bíblica del día',
-                    'Un momento diario para escuchar, meditar y responder a la Palabra.',
-                    dateFormatted.toUpperCase()
-                ) : `
-                    <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
-                `}
-
-                ${introVideoHtml}
+    ${introVideoHtml}
     
                 <div class="reading-card">
                     <div class="section-title">${readingLabel}</div>
