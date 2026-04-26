@@ -4524,3 +4524,95 @@ body.dark-mode .view-hero-kicker {
         line-height: 1.5;
     }
 }
+
+/* ========================================
+   HERO HOME - MÁS ELEGANTE Y DEVOCIONAL
+   ======================================== */
+
+.view-hero {
+    padding: 24px 24px 22px;
+    border-radius: 28px;
+
+    background:
+        radial-gradient(circle at 92% 0%, rgba(49, 130, 206, 0.13), transparent 30%),
+        linear-gradient(135deg, rgba(255,255,255,0.96), rgba(248,250,252,0.86)),
+        var(--surface-color);
+
+    border: 1px solid rgba(49, 130, 206, 0.14);
+
+    box-shadow:
+        0 18px 42px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255,255,255,0.85);
+}
+
+.view-hero-meta {
+    margin-bottom: 8px;
+
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+
+    color: var(--text-muted);
+}
+
+.view-hero-kicker {
+    margin-bottom: 10px;
+    padding: 5px 11px;
+
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+
+    background: rgba(49, 130, 206, 0.09);
+    color: var(--accent);
+}
+
+.view-hero h2 {
+    max-width: 520px;
+
+    font-family: var(--font-reading);
+    font-size: clamp(2rem, 6vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1.08;
+    letter-spacing: -0.045em;
+
+    color: var(--primary);
+}
+
+.view-hero p {
+    max-width: 500px;
+    margin-top: 12px;
+
+    font-size: 0.98rem;
+    line-height: 1.65;
+    font-weight: 500;
+
+    color: var(--text-muted);
+}
+
+body.dark-mode .view-hero {
+    background:
+        radial-gradient(circle at 92% 0%, rgba(96, 165, 250, 0.15), transparent 30%),
+        linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.78)),
+        var(--surface-color);
+
+    border-color: rgba(96, 165, 250, 0.16);
+}
+
+@media (max-width: 480px) {
+    .view-hero {
+        padding: 22px 20px 20px;
+        border-radius: 26px;
+    }
+
+    .view-hero h2 {
+        font-size: 2rem;
+        line-height: 1.08;
+    }
+
+    .view-hero p {
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+}
