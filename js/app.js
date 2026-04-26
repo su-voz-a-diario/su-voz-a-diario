@@ -2498,9 +2498,10 @@ expandSelectionPanelForNote: function(expand = true) {
     }
 },
 
-renderViewHeader: function(title, subtitle = '') {
+renderViewHeader: function(title, subtitle = '', meta = '') {
     return `
         <section class="view-hero">
+            ${meta ? `<div class="view-hero-meta">${this.escapeHtml(meta)}</div>` : ''}
             <div class="view-hero-kicker">Su Voz a Diario</div>
             <h2>${this.escapeHtml(title)}</h2>
             ${subtitle ? `<p>${this.escapeHtml(subtitle)}</p>` : ''}
@@ -3225,12 +3226,15 @@ const introVideoHtml = showIntroVideo ? `
         'Un momento diario para escuchar, meditar y responder a la Palabra.'
     ) : ''}
 
-    <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+    this.$content.innerHTML = `
 
-                <div class="badge-progress badge-${currentBadge.key}">
-                    <span class="badge-progress-icon">${currentBadge.icon}</span>
-                    <span class="badge-progress-text">Insignia actual: ${currentBadge.label}</span>
-                </div>
+                ${isHome ? this.renderViewHeader(
+                    'Lectura bíblica del día',
+                    'Un momento diario para escuchar, meditar y responder a la Palabra.',
+                    dateFormatted.toUpperCase()
+                ) : `
+                    <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
+                `}
 
                 ${introVideoHtml}
     
