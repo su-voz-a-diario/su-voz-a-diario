@@ -4373,3 +4373,154 @@ body.light-mode .close-btn {
 body.light-mode .selection-sheet-handle {
     background: rgba(15, 23, 42, 0.18);
 }
+
+/* ========================================
+   VIEW HERO / ENCABEZADO DE CADA SECCIÓN
+   Diseño premium por vista
+   ======================================== */
+
+.view-hero {
+    position: relative;
+    overflow: hidden;
+
+    margin: 6px 0 18px;
+    padding: 22px 20px 20px;
+
+    border-radius: 26px;
+    border: 1px solid rgba(49, 130, 206, 0.16);
+
+    background:
+        radial-gradient(circle at top left, rgba(49, 130, 206, 0.16), transparent 34%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.58)),
+        var(--surface-color);
+
+    box-shadow:
+        0 14px 34px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.view-hero::after {
+    content: "";
+    position: absolute;
+    width: 120px;
+    height: 120px;
+    right: -48px;
+    top: -48px;
+
+    border-radius: 999px;
+    background: rgba(49, 130, 206, 0.12);
+    pointer-events: none;
+}
+
+.view-hero-kicker {
+    position: relative;
+    z-index: 1;
+
+    width: fit-content;
+    margin-bottom: 10px;
+    padding: 5px 10px;
+
+    border-radius: 999px;
+    background: rgba(49, 130, 206, 0.10);
+    color: var(--accent);
+
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.view-hero h2 {
+    position: relative;
+    z-index: 1;
+
+    margin: 0;
+
+    font-size: clamp(1.7rem, 7vw, 2.45rem);
+    line-height: 1.02;
+    font-weight: 850;
+    letter-spacing: -0.055em;
+
+    color: var(--text-main);
+}
+
+.view-hero p {
+    position: relative;
+    z-index: 1;
+
+    max-width: 34rem;
+    margin: 10px 0 0;
+
+    font-size: 0.94rem;
+    line-height: 1.55;
+    font-weight: 500;
+
+    color: var(--text-muted);
+}
+
+/* Header global más limpio: solo marca */
+.app-header-main h1 {
+    margin: 0;
+}
+
+.app-header-main p {
+    display: none !important;
+}
+
+/* Ajuste de separación después del hero */
+.view-hero + .reading-date-header {
+    margin-top: 4px;
+}
+
+.view-hero + .stats-container,
+.view-hero + .calendar-grid,
+.view-hero + .bible-view,
+.view-hero + .community-container {
+    margin-top: 14px;
+}
+
+/* Modo oscuro */
+body.dark-mode .view-hero {
+    border-color: rgba(96, 165, 250, 0.18);
+
+    background:
+        radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 36%),
+        linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.66)),
+        var(--surface-color);
+
+    box-shadow:
+        0 16px 38px rgba(0, 0, 0, 0.30),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body.dark-mode .view-hero::after {
+    background: rgba(96, 165, 250, 0.12);
+}
+
+body.dark-mode .view-hero-kicker {
+    background: rgba(96, 165, 250, 0.13);
+    color: var(--accent);
+}
+
+/* Móvil */
+@media (max-width: 480px) {
+    .view-hero {
+        margin: 4px 0 16px;
+        padding: 20px 18px 18px;
+        border-radius: 24px;
+    }
+
+    .view-hero-kicker {
+        font-size: 0.62rem;
+        margin-bottom: 9px;
+    }
+
+    .view-hero h2 {
+        font-size: 1.72rem;
+    }
+
+    .view-hero p {
+        font-size: 0.88rem;
+        line-height: 1.5;
+    }
+}
