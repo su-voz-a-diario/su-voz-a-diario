@@ -1876,7 +1876,7 @@ body.dark-mode .toast-message {
     padding: 0 2px;
 }
 
-.nav-btn span {
+.nav-btn > span {
     display: block;
     width: 100%;
 
@@ -1969,40 +1969,58 @@ body.dark-mode .nav-btn.active {
 
 .community-badge {
     position: absolute;
+    top: 2px;
+    right: 28px;
+    z-index: 20;
 
-    /* 📍 POSICIÓN tipo iOS */
-    top: -4px;
-    right: 8px;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    max-width: 20px;
+    padding: 0;
 
-    z-index: 10;
-
-    /* 📐 TAMAÑO BURBUJA */
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-
-    display: flex;
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
 
     border-radius: 999px;
-
-    /* 🎨 COLOR */
     background: #ef4444;
     color: #ffffff;
 
-    font-size: 10px;
-    font-weight: 700;
+    font-size: 11px;
+    font-weight: 800;
     line-height: 1;
 
-    /* ✨ ESTÉTICA */
-    border: 2px solid var(--surface-color);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+    border: 2px solid rgba(10, 18, 32, 0.95);
+    box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.18),
+        0 4px 10px rgba(239, 68, 68, 0.45);
 
     pointer-events: none;
+    white-space: nowrap;
+    overflow: visible !important;
+}
 
-    transform: scale(1);
-    transition: transform 0.2s ease, opacity 0.2s ease;
+.community-badge[hidden] {
+    display: none !important;
+}
+
+.community-badge:not([hidden]) {
+    animation: badge-pop 0.22s ease-out;
+}
+
+@keyframes badge-pop {
+    0% {
+        transform: scale(0.65);
+        opacity: 0;
+    }
+    70% {
+        transform: scale(1.12);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Efecto de pulso cuando hay notificaciones nuevas */
