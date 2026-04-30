@@ -114,6 +114,35 @@ body {
     box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
 }
 
+/* Contenido expandido (visible por defecto) */
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    transition: opacity 0.22s ease;
+}
+
+/* Contenido compacto (visible cuando se encoje) */
+.header-compact-content {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+    padding-top: env(safe-area-inset-top);
+}
+
+.header-compact-content span {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--primary);
+    letter-spacing: -0.02em;
+}
+
 /* ESTADO 3: OCULTO (scroll profundo) */
 .app-header.header-hidden {
     transform: translateY(-100%);
@@ -3929,10 +3958,11 @@ body.dark-mode .header-left-btn:hover {
 }
 
 .dropdown-section {
-  flex-direction: column;  /* ya lo pusiste en la respuesta anterior */
-  align-items: stretch;    /* para que todo ocupe el ancho completo */
-  gap: 6px;                /* espacio entre elementos */
-  margin-bottom: 8px;      /* un poco menos de separación entre secciones */
+  display: flex;           /* ← AGREGAR ESTO */
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  margin-bottom: 8px;
 }
 
 .dropdown-section:last-child {
