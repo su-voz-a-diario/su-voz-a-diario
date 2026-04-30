@@ -1823,11 +1823,10 @@ body.dark-mode .toast-message {
 .bottom-nav {
     position: fixed;
     left: 50%;
-    bottom: calc(14px + env(safe-area-inset-bottom));
+    bottom: calc(8px + env(safe-area-inset-bottom));  /* ← CAMBIA 14px por 8px */
     transform: translateX(-50%);
     width: min(88vw, 380px);
     height: 60px;
-
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -2536,7 +2535,7 @@ body.dark-mode .community-reaction-btn {
 .home-reading-bar {
     position: fixed;
     left: 50%;
-    bottom: calc(92px + env(safe-area-inset-bottom));
+    bottom: calc(78px + env(safe-area-inset-bottom));  /* ← CAMBIA 92px por 78px */
     transform: translateX(-50%);
     width: min(88vw, 380px);
     height: 44px;
