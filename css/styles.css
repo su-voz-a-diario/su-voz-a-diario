@@ -2304,10 +2304,6 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
     padding: 10px 12px 6px;
 }
 
-body.reading-scroll-compact .compact-header h1 {
-    font-size: 0.96rem;
-}
-
 .compact-header h1 {
     font-size: 1.22rem;
 }
@@ -3873,10 +3869,6 @@ body.selection-panel-open {
 /* ========================================
    HEADER CON MENÚ HAMBURGUESA (NUEVO)
    ======================================== */
-.app-header {
-  position: relative; /* Para que el dropdown se posicione respecto al header */
-}
-
 .header-left-btn {
   position: absolute;
   top: 50%;
@@ -3921,7 +3913,7 @@ body.dark-mode .header-left-btn:hover {
   border-radius: 16px;
   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
   padding: 12px;
-  min-width: 150px
+  min-width: 150px;
   z-index: 9999;
   animation: fadeInDown 0.2s ease;
   display: none; /* se muestra con .show */
