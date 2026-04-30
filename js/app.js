@@ -773,15 +773,17 @@ verificarHitoDelDia: function() {
 
 // Banner para hitos dentro del libro
 mostrarBannerHito: function(hito, nombreLibro) {
+    const libroActual = this.getLibroActual();
+    const totalCapitulos = libroActual ? libroActual.capitulosTotales : 34;
+    
     const banner = document.createElement('div');
     banner.className = 'hito-banner';
     banner.innerHTML = `
         <div class="hito-banner-content">
             <div class="hito-banner-icono">${hito.icono}</div>
             <div class="hito-banner-titulo">${hito.titulo}</div>
-            <div class="hito-banner-libro">${nombreLibro} · Capítulo ${hito.capitulo} de ${this.hitosPorLibro['deu'].totalCapitulos}</div>
-            <div class="hito-banner-descripcion">${hito.descripcion}</div>
-            <button class="btn-primary hito-banner-btn" onclick="this.closest('.hito-banner').remove()">Continuar Peregrinaje →</button>
+            <div class="hito-banner-libro">${nombreLibro} · Capítulo ${hito.capitulo} de ${totalCapitulos}</div>
+            ...
         </div>
     `;
     document.body.appendChild(banner);
@@ -860,7 +862,7 @@ getProgresoLibroVisual: function() {
     html += '</div>';
     
     return html;
-}
+},
     
     // ========================================
     // CONFIGURACIÓN (MEJORADA CON SW)
