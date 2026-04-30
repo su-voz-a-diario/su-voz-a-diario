@@ -641,6 +641,226 @@ showAprilMessageIfNeeded: function() {
             }
         }
     },
+
+    // ========================================
+// SISTEMA DE RACHAS MEJORADO: PERGAMINO DEL PEREGRINO
+// ========================================
+
+// Datos de hitos por libro (empieza con Deuteronomio)
+hitosPorLibro: {
+    'deu': {
+        nombreCompleto: 'Deuteronomio',
+        totalCapitulos: 34,
+        tema: 'El llamado a la obediencia y al amor',
+        hitos: [
+            { capitulo: 1,  icono: '🏕️', titulo: 'Campamento base', descripcion: 'El pueblo está listo para entrar. Moisés comienza a recordar.' },
+            { capitulo: 5,  icono: '🗻', titulo: 'Los Diez Mandamientos', descripcion: 'La Ley santa de Dios resuena de nuevo.' },
+            { capitulo: 6,  icono: '📜', titulo: 'El Gran Shemá', descripcion: '“Oye, Israel: Jehová nuestro Dios, Jehová uno es.”' },
+            { capitulo: 8,  icono: '🍞', titulo: 'No solo de pan', descripcion: 'Él te sustentó con maná en el desierto.' },
+            { capitulo: 11, icono: '⛰️', titulo: 'Entre Gerizim y Ebal', descripcion: 'La bendición y la maldición ante tus ojos.' },
+            { capitulo: 17, icono: '🏛️', titulo: 'Mitad del camino', descripcion: 'Instrucciones para reyes y jueces justos.' },
+            { capitulo: 18, icono: '🔮', titulo: 'Profeta como Moisés', descripcion: 'Dios levantará un profeta de entre tus hermanos.' },
+            { capitulo: 28, icono: '⚡', titulo: 'Bendiciones y maldiciones', descripcion: 'La vida y la muerte, la bendición y la maldición.' },
+            { capitulo: 30, icono: '❤️', titulo: 'Escoge la vida', descripcion: 'Ama a Jehová tu Dios, obedece Su voz.' },
+            { capitulo: 31, icono: '💪', titulo: 'Esfuérzate y sé valiente', descripcion: 'Moisés pasa el liderazgo a Josué.' },
+            { capitulo: 32, icono: '🎵', titulo: 'Cántico de Moisés', descripcion: 'La Roca, cuya obra es perfecta.' },
+            { capitulo: 34, icono: '👑', titulo: 'Fin del Peregrinaje', descripcion: 'Moisés contempla la tierra prometida. ¡Libro completado!' }
+        ],
+        colores: {
+            inicio: '#8B4513',
+            medio: '#DAA520',
+            final: '#FFD700',
+            completado: '#FFD700'
+        }
+    }
+    // Aquí se añadirán más libros cuando corresponda: 'jos', 'jdg', etc.
+},
+
+// Obtener libro actual basado en la lectura de hoy
+getLibroActual: function() {
+    const hoy = this.getTodayDateStr();
+    const lecturaHoy = this.data.find(r => r.date === hoy);
+    
+    if (!lecturaHoy) return null;
+    
+    const referencia = lecturaHoy.reference.toLowerCase();
+    
+    for (const libro of this.bibleBooks) {
+        if (referencia.includes(libro.name.toLowerCase())) {
+            return {
+                id: libro.id,
+                nombre: libro.name,
+                capitulosTotales: libro.chapters
+            };
+        }
+    }
+    
+    return null;
+},
+
+// Obtener capítulo actual
+getCapituloActual: function() {
+    const hoy = this.getTodayDateStr();
+    const lecturaHoy = this.data.find(r => r.date === hoy);
+    
+    if (!lecturaHoy) return 0;
+    
+    const match = lecturaHoy.reference.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 0;
+},
+
+// Calcular progreso en el libro actual
+getProgresoLibro: function(libroId) {
+    const libro = this.bibleBooks.find(b => b.id === libroId);
+    if (!libro) return { leidos: [], total: 0, porcentaje: 0 };
+    
+    const readDates = this.getReadDates();
+    const capitulosLeidos = new Set();
+    
+    // Identificar qué capítulos del libro se han leído
+    this.data.forEach(lectura => {
+        if (readDates.includes(lectura.date) && lectura.reference.toLowerCase().includes(libro.name.toLowerCase())) {
+            const match = lectura.reference.match(/(\d+)/);
+            if (match) capitulosLeidos.add(parseInt(match[1]));
+        }
+    });
+    
+    const leidos = Array.from(capitulosLeidos).sort((a, b) => a - b);
+    const porcentaje = Math.round((leidos.length / libro.chapters) * 100);
+    
+    return {
+        leidos,
+        total: libro.chapters,
+        porcentaje,
+        libroNombre: libro.name
+    };
+},
+
+// Verificar si alcanzó un hito hoy
+verificarHitoDelDia: function() {
+    const libroActual = this.getLibroActual();
+    if (!libroActual) return;
+    
+    const capitulo = this.getCapituloActual();
+    if (!capitulo) return;
+    
+    // Obtener hitos para este libro (si existen en el mapa, si no, mostrar progreso simple)
+    const hitosLibro = this.hitosPorLibro[libroActual.id]?.hitos;
+    
+    if (!hitosLibro) return;
+    
+    const hitoDelDia = hitosLibro.find(h => h.capitulo === capitulo);
+    
+    if (hitoDelDia) {
+        // Mostrar solo una vez por hito
+        const keyHito = `hito_${libroActual.id}_${capitulo}`;
+        if (!localStorage.getItem(keyHito)) {
+            this.mostrarBannerHito(hitoDelDia, libroActual.nombre);
+            localStorage.setItem(keyHito, 'visto');
+        }
+    }
+    
+    // Verificar si completó el libro
+    const progreso = this.getProgresoLibro(libroActual.id);
+    if (progreso.porcentaje === 100) {
+        const keyLibroCompleto = `libro_completo_${libroActual.id}`;
+        if (!localStorage.getItem(keyLibroCompleto)) {
+            this.mostrarBannerLibroCompleto(libroActual, progreso);
+            localStorage.setItem(keyLibroCompleto, 'visto');
+        }
+    }
+},
+
+// Banner para hitos dentro del libro
+mostrarBannerHito: function(hito, nombreLibro) {
+    const banner = document.createElement('div');
+    banner.className = 'hito-banner';
+    banner.innerHTML = `
+        <div class="hito-banner-content">
+            <div class="hito-banner-icono">${hito.icono}</div>
+            <div class="hito-banner-titulo">${hito.titulo}</div>
+            <div class="hito-banner-libro">${nombreLibro} · Capítulo ${hito.capitulo} de ${this.hitosPorLibro['deu'].totalCapitulos}</div>
+            <div class="hito-banner-descripcion">${hito.descripcion}</div>
+            <button class="btn-primary hito-banner-btn" onclick="this.closest('.hito-banner').remove()">Continuar Peregrinaje →</button>
+        </div>
+    `;
+    document.body.appendChild(banner);
+    
+    setTimeout(() => { if (banner) banner.remove(); }, 8000);
+},
+
+// Banner épico al completar un libro
+mostrarBannerLibroCompleto: function(libro, progreso) {
+    const banner = document.createElement('div');
+    banner.className = 'libro-completo-banner';
+    banner.innerHTML = `
+        <div class="libro-completo-content">
+            <div class="libro-completo-icono">👑</div>
+            <div class="libro-completo-titulo">¡${libro.nombre} Completado!</div>
+            <div class="libro-completo-subtitulo">Has meditado en los ${progreso.total} capítulos</div>
+            <div class="libro-completo-versiculo">"Esfuérzate y sé valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas."</div>
+            <div class="libro-completo-ref">— Josué 1:9</div>
+            ${this.obtenerMensajeLibro(libro.id)}
+            <button class="btn-primary libro-completo-btn" onclick="this.closest('.libro-completo-banner').remove()">
+                🎉 Amén, Gloria a Dios
+            </button>
+        </div>
+    `;
+    document.body.appendChild(banner);
+    
+    if ('vibrate' in navigator) navigator.vibrate([50, 100, 50, 100, 50]);
+    
+    setTimeout(() => { if (banner) banner.remove(); }, 10000);
+},
+
+obtenerMensajeLibro: function(libroId) {
+    const mensajes = {
+        'deu': '<p style="margin:10px 0;color:#e2c28b;">Has escuchado el eco del Shemá. La obediencia a Su voz es tu tesoro.</p>'
+    };
+    return mensajes[libroId] || '';
+},
+
+// Método helper para saber cuántos capítulos se han meditado
+getProgresoLibroVisual: function() {
+    const libroActual = this.getLibroActual();
+    if (!libroActual) return '';
+    
+    const progreso = this.getProgresoLibro(libroActual.id);
+    const total = progreso.total;
+    const leidos = progreso.leidos.length;
+    const ultimoLeido = leidos > 0 ? Math.max(...progreso.leidos) : 0;
+    
+    // Crear visualización de los capítulos como un scroll horizontal
+    let html = '<div class="pergamino-libro">';
+    html += `<div class="pergamino-titulo">📖 ${progreso.libroNombre}</div>`;
+    html += `<div class="pergamino-subtitulo">Capítulo ${ultimoLeido} de ${total}</div>`;
+    html += '<div class="pergamino-capitulos">';
+    
+    for (let i = 1; i <= total; i++) {
+        const leido = progreso.leidos.includes(i);
+        const clase = leido ? 'capitulo-leido' : 'capitulo-pendiente';
+        const titulo = leido ? `Capítulo ${i} - Meditado ✓` : `Capítulo ${i} - Pendiente`;
+        
+        html += `<span class="pergamino-capitulo ${clase}" title="${titulo}">${i}</span>`;
+    }
+    
+    html += '</div>';
+    
+    // Barra de progreso
+    const porcentaje = progreso.porcentaje;
+    html += `
+        <div class="pergamino-progreso">
+            <div class="pergamino-barra-fondo">
+                <div class="pergamino-barra-lleno" style="width:${porcentaje}%"></div>
+            </div>
+            <div class="pergamino-porcentaje">${porcentaje}% completado</div>
+        </div>
+    `;
+    
+    html += '</div>';
+    
+    return html;
+}
     
     // ========================================
     // CONFIGURACIÓN (MEJORADA CON SW)
@@ -850,15 +1070,21 @@ for (let i = 0; i < localStorage.length; i++) {
     this.setReadDates(readDates);
     this.updateStreak(dateStr);
 
+    // ======= NUEVO SISTEMA DE PERGAMINO =======
+    // Verificar si la lectura de hoy alcanzó un hito del libro
+    setTimeout(() => this.verificarHitoDelDia(), 500);
+    // =========================================
+
     if ('vibrate' in navigator) {
         navigator.vibrate(50);
     }
 
-    if (readDates.length === 1) {
-        this.showToast('🎉 ¡Primera lectura! ¡Felicidades!');
-    }
-
     this.sendToSW({ type: 'READING_COMPLETED', date: dateStr });
+    
+    // Actualizar UI si estamos en home
+    if (this.currentView === 'home') {
+        this.renderHome();
+    }
 },
 
     getReadDates: function() {
@@ -3137,7 +3363,139 @@ restoreCalendarPosition: function() {
    renderHome: function() {
     const viewingDate = this.getHomeViewingDate();
     const reading = this.data.find(r => r.date === viewingDate);
-    this.renderViewContent(reading, true);
+    
+    // Verificar si está viendo el día de hoy
+    const isToday = viewingDate === this.getTodayDateStr();
+    
+    // Si es hoy Y hay lectura, mostrar el pergamino de progreso
+    if (isToday && reading) {
+        const pergaminoHtml = this.getProgresoLibroVisual();
+        
+        // Construir la vista con el pergamino incluido
+        const dateFormatted = this.formatDateEs(reading.date);
+        const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
+        const currentBadge = this.getCurrentBadge();
+
+        // Video intro (si aplica)
+        const introStartDate = '2026-04-07';
+        const introEndDate = '2026-04-11';
+        const showIntroVideo = reading.date >= introStartDate && reading.date <= introEndDate;
+        
+        const introVideoHtml = showIntroVideo ? `
+            <div class="intro-video-card">
+                <div class="intro-video-head">
+                    <div class="intro-video-label">🎬 Video introductorio</div>
+                    <div class="intro-video-title">Introducción a Deuteronomio</div>
+                </div>
+                <div class="intro-video-frame">
+                    <iframe src="https://www.youtube.com/embed/LfGZnrbmWaM" title="Introducción a Deuteronomio" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+                </div>
+                <div class="intro-video-note">Antes de comenzar la lectura, puedes ver esta introducción.</div>
+            </div>
+        ` : '';
+
+        const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
+        const hasPrev = currentIndex > 0;
+        const hasNext = currentIndex >= 0 && currentIndex < this.data.length - 1;
+        const isRealToday = reading && reading.date === this.getTodayDateStr();
+        const readingLabel = isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día';
+
+        this.$content.innerHTML = `
+
+            ${this.renderViewHeader(
+                'Lectura bíblica del día',
+                'Un momento diario para escuchar, meditar y responder a la Palabra.',
+                dateFormatted.toUpperCase()
+            )}
+
+            <!-- 📜 PERGAMINO DE PROGRESO (SOLO HOY) -->
+            ${pergaminoHtml}
+
+            ${introVideoHtml}
+
+            <div class="reading-card">
+                <div class="section-title">${readingLabel}</div>
+                <h2 class="reading-reference">${reading.reference}</h2>
+                <div class="reading-text-shell" data-reading-date="${reading.date}">
+                    <div class="reading-text selection-surface verse-container" data-selection-surface="true">
+                        ${this.renderVerseText(readingText, reading.date)}
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-action">
+                <button class="reading-action-card reading-action-primary ${this.hasNote(reading.date) ? 'has-note' : ''}" data-action="toggle-note" data-date="${reading.date}">
+                    <span class="reading-action-icon">🔎</span>
+                    <span class="reading-action-content">
+                        <span class="reading-action-title">
+                            ${this.openNoteDate === reading.date ? 'Ocultar sección' : 'Profundiza en Su voz'}
+                            ${this.hasNote(reading.date) ? '<span class="reading-action-check">✓</span>' : ''}
+                            ${this.hasNote(reading.date) ? '<span class="reading-action-dot"></span>' : ''}
+                        </span>
+                        <span class="reading-action-subtitle">Explora más sobre este pasaje</span>
+                    </span>
+                    <span class="reading-action-chevron"></span>
+                </button>
+            </div>
+
+            ${this.openNoteDate === reading.date ? `
+                <div class="note-box">
+                    <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
+                    <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
+                        <div class="note-title">👑 Lo que veo de Dios</div>
+                        <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
+                    </div>
+                    <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
+                        <div class="note-title">📖 Lo que aprendo del pasaje</div>
+                        <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
+                    </div>
+                    <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
+                        <div class="note-title">🙏 Mi respuesta hoy</div>
+                        <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
+                    </div>
+                    <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
+                        <div class="note-title">🙏 Mi oración</div>
+                        <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
+                    </div>
+                    <div class="note-actions">
+                        <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
+                        <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
+                    </div>
+                </div>
+            ` : ''}
+
+            <div class="action-group">
+                <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
+                    <span class="reading-action-icon reading-action-icon-check">✓</span>
+                    <span class="reading-action-content">
+                        <span class="reading-action-title">${this.isRead(reading.date) ? 'Leído hoy' : 'Marcar como leído'}</span>
+                        <span class="reading-action-subtitle">${this.isRead(reading.date) ? '¡Buen trabajo! Sigue así' : 'Guarda tu avance de hoy'}</span>
+                    </span>
+                </button>
+                <button class="reading-action-card reading-action-share" data-action="share-reading" data-date="${reading.date}">
+                    <span class="reading-action-icon">📤</span>
+                    <span class="reading-action-content">
+                        <span class="reading-action-title">Compartir lectura</span>
+                        <span class="reading-action-subtitle">Comparte inspiración con otros</span>
+                    </span>
+                    <span class="reading-action-chevron"></span>
+                </button>
+            </div>
+
+            <div class="home-reading-bar">
+                <button class="home-reading-bar-btn" data-action="home-prev-day" ${hasPrev ? '' : 'disabled'} aria-label="Ver día anterior" title="Ver día anterior">←</button>
+                <div class="home-reading-bar-title" title="${reading.reference}">${reading.reference}</div>
+                <button class="home-reading-bar-btn" data-action="home-next-day" ${hasNext ? '' : 'disabled'} aria-label="Ver día siguiente" title="Ver día siguiente">→</button>
+            </div>
+        `;
+        
+        this.restoreHighlightsInDOMForVerses(reading.date);
+        this.restoreSelectionNotesInDOM(reading.date);
+        
+    } else {
+        // Si NO es hoy, usar la vista normal
+        this.renderViewContent(reading, true);
+    }
 },
     
     renderReading: function(dateStr) {
