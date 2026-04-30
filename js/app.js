@@ -314,11 +314,8 @@ currentSelectionColorDraft: null,
 _savedScrollY: null, 
 pushListenersReady: false,
 themeListenerReady: false,
-lastScrollY: 0,
-scrollDirection: 'up',
 scrollCompactEnabled: false,
 scrollCompactActive: false,
-scrollIdleTimer: null,
 _selectionPanelEventsBound: false,
     
     // ========================================
