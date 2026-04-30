@@ -83,6 +83,10 @@ const App = {
     // ========================================
     // DATOS Y ESTADO
     // ========================================
+    headerState: 'expanded', // 'expanded' | 'compact' | 'hidden'
+    lastScrollY: 0,
+    scrollDirection: 'up',
+    scrollIdleTimer: null,
     data: [],
     currentView: 'home',
     currentVersion: 'rvr60',
@@ -343,6 +347,7 @@ this.setupSWCommunication();
 this.bindEvents();
 this.bindHeaderControlsToggle();
 this.bindScrollChrome();
+this.initHeaderAfterDOM();
 this.bindKeyboardViewportFix();
 await this.initAuth();
 await this.loadData();
@@ -389,6 +394,9 @@ cacheDOM: function() {
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
     this._baseViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    this.$appHeader = document.querySelector('.app-header');
+    this.$headerContent = document.querySelector('.header-content');
+    this.$headerCompact = document.querySelector('.header-compact-content');
 },
 
 bindKeyboardViewportFix: function() {
@@ -937,13 +945,157 @@ resetScrollChrome: function() {
     }
 },
 
-handleScrollChrome: function() {
-    return;
+initHeaderAfterDOM: function() {
+    // Esperar a que el DOM esté listo
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            this.setupHeaderObserver();
+        });
+    } else {
+        this.setupHeaderObserver();
+    }
+},
+
+setupHeaderObserver: function() {
+    // Observar cambios en el contenido para reinicializar el header
+    const observer = new MutationObserver(() => {
+        // Re-obtener referencias cuando cambia el contenido
+        this.$appHeader = document.querySelector('.app-header');
+        this.$headerContent = document.querySelector('.header-content');
+        this.$headerCompact = document.querySelector('.header-compact-content');
+    });
+    
+    if (this.$content) {
+        observer.observe(this.$content, {
+            childList: true,
+            subtree: false
+        });
+    }
+},
+
+// ========================================
+// SISTEMA DE HEADER ELITE - 3 ESTADOS
+// ========================================
+
+isReadingLikeView: function(view = this.currentView) {
+    return ['home', 'reading', 'bible-reading'].includes(view);
 },
 
 bindScrollChrome: function() {
-    document.body.classList.remove('reading-scroll-compact');
-    this.scrollCompactEnabled = false;
+    let ticking = false;
+    
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            requestAnimationFrame(() => {
+                this.updateHeaderState();
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+},
+
+updateHeaderState: function() {
+    const header = this.$appHeader;
+    if (!header) return;
+    
+    // Solo activar en vistas de lectura
+    if (!this.isReadingLikeView()) {
+        this.resetHeaderState();
+        return;
+    }
+    
+    const currentScrollY = window.scrollY || window.pageYOffset || 0;
+    const delta = currentScrollY - this.lastScrollY;
+    const direction = delta > 0 ? 'down' : 'up';
+    
+    // ⭐⭐⭐ LÓGICA DE 3 ESTADOS ⭐⭐⭐
+    
+    if (currentScrollY <= 10) {
+        // En la cima: SIEMPRE expandido
+        this.setHeaderState('expanded');
+    }
+    else if (direction === 'down') {
+        // Scroll hacia ABAJO
+        if (currentScrollY > 60) {
+            this.setHeaderState('compact');
+        }
+        if (currentScrollY > 250) {
+            this.setHeaderState('hidden');
+        }
+    }
+    else if (direction === 'up') {
+        // Scroll hacia ARRIBA: mostrar expandido
+        this.setHeaderState('expanded');
+        
+        // Efecto de "snap" al detenerse
+        clearTimeout(this.scrollIdleTimer);
+        this.scrollIdleTimer = setTimeout(() => {
+            this.snapHeaderToNearestState();
+        }, 150);
+    }
+    
+    this.lastScrollY = currentScrollY;
+    this.scrollDirection = direction;
+},
+
+setHeaderState: function(newState) {
+    if (this.headerState === newState) return;
+    
+    const header = this.$appHeader;
+    if (!header) return;
+    
+    // Remover todas las clases de estado
+    header.classList.remove('header-expanded', 'header-compact', 'header-hidden');
+    
+    // Aplicar nuevo estado
+    switch(newState) {
+        case 'expanded':
+            header.classList.add('header-expanded');
+            // Mostrar contenido expandido, ocultar compacto
+            if (this.$headerContent) this.$headerContent.style.opacity = '1';
+            if (this.$headerCompact) this.$headerCompact.style.opacity = '0';
+            break;
+            
+        case 'compact':
+            header.classList.add('header-compact');
+            // Mostrar contenido compacto, ocultar expandido
+            if (this.$headerContent) this.$headerContent.style.opacity = '0';
+            if (this.$headerCompact) this.$headerCompact.style.opacity = '1';
+            break;
+            
+        case 'hidden':
+            header.classList.add('header-hidden');
+            break;
+    }
+    
+    this.headerState = newState;
+    
+    console.log('[Header] Estado:', newState);
+},
+
+snapHeaderToNearestState: function() {
+    const currentScrollY = window.scrollY || window.pageYOffset || 0;
+    
+    // Si está cerca de la cima, expandir
+    if (currentScrollY < 40) {
+        this.setHeaderState('expanded');
+    } 
+    // Si está en zona media, compactar
+    else if (currentScrollY < 150) {
+        this.setHeaderState('compact');
+    }
+    // Si está muy abajo, mantener oculto
+},
+
+resetHeaderState: function() {
+    this.setHeaderState('expanded');
+    this.lastScrollY = 0;
+},
+
+handleScrollChrome: function() {
+    // Este método queda como respaldo, pero ya no es necesario
+    return;
 },
 
 bindHeaderControlsToggle: function() {
@@ -2792,6 +2944,7 @@ if (view !== 'settings' && oldView !== 'settings') {
 this.currentView = view;
 this.updateNavUI();
 this.resetScrollChrome();
+this.resetHeaderState();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
         btn.classList.toggle(
