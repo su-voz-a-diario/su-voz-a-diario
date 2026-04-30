@@ -61,6 +61,7 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     line-height: 1.5;
+    padding-top: calc(72px + env(safe-area-inset-top)); /* ⭐ NUEVO */
     padding-bottom: calc(88px + env(safe-area-inset-bottom));
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
@@ -69,21 +70,61 @@ body {
 /* ========================================
    HEADER Y NAVEGACIÓN
    ======================================== */
+/* ⭐⭐⭐ HEADER ELITE - 3 ESTADOS ⭐⭐⭐ */
 .app-header {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 1100;
+    
     background-color: var(--surface-color);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     padding-top: env(safe-area-inset-top);
     min-height: calc(72px + env(safe-area-inset-top));
+    
+    /* Transición suave para todos los estados */
     transition:
-        background-color 0.22s ease,
-        transform 0.22s ease,
-        min-height 0.22s ease,
-        box-shadow 0.22s ease,
-        opacity 0.22s ease,
-        padding-top 0.22s ease;
+        transform 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        min-height 0.32s cubic-bezier(0.4, 0, 0.2, 1),
+        background-color 0.28s ease,
+        box-shadow 0.28s ease,
+        opacity 0.28s ease;
+    
+    will-change: transform;
+}
+
+/* ESTADO 1: EXPANDIDO (default) */
+.app-header.header-expanded {
+    transform: translateY(0);
+    background-color: var(--surface-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* ESTADO 2: COMPACTO - Efecto glass */
+.app-header.header-compact {
+    transform: translateY(0);
+    min-height: calc(48px + env(safe-area-inset-top));
+    
+    background-color: rgba(255, 255, 255, 0.82);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* ESTADO 3: OCULTO (scroll profundo) */
+.app-header.header-hidden {
+    transform: translateY(-100%);
+    opacity: 0;
+}
+
+/* Modo oscuro */
+body.dark-mode .app-header.header-compact {
+    background-color: rgba(15, 17, 21, 0.88);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 
 .app-header::before {
@@ -213,7 +254,7 @@ body.dark-mode .header-settings-btn:hover {
    CONTENIDO PRINCIPAL
    ======================================== */
 .container {
-    padding: 6px 12px calc(24px + var(--nav-height) + 86px);
+    padding: 0 12px calc(24px + var(--nav-height) + 86px); /* ⭐ padding-top a 0 */
     max-width: 600px;
     margin: 0 auto;
 }
@@ -999,6 +1040,52 @@ body.dark-mode .badge-corona {
 .dark-mode .bible-chapter-btn:hover {
     background: var(--accent, #60a5fa);
     color: white;
+}
+
+/* ⭐⭐⭐ SISTEMA DE HEADER: Transiciones hijas ⭐⭐⭐ */
+
+/* El streak indicator se oculta en header oculto */
+#streak-indicator {
+    transition: 
+        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.22s ease;
+}
+
+.app-header.header-hidden #streak-indicator {
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+}
+
+/* Ajuste del header cuando está compacto */
+.app-header.header-compact .compact-header {
+    min-height: 42px;
+    padding: 6px 14px 4px;
+}
+
+.app-header.header-compact .compact-header h1 {
+    font-size: 1rem;
+}
+
+.app-header.header-compact .compact-header p {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    transform: translateY(-4px);
+}
+
+/* Los botones flotantes se esconden en header compacto/oculto */
+.app-header.header-compact .floating-controls,
+.app-header.header-hidden .floating-controls {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+}
+
+.floating-controls {
+    transition: 
+        opacity 0.25s ease,
+        transform 0.25s ease;
 }
 
 /* Responsive */
@@ -2217,15 +2304,6 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
     padding: 10px 12px 6px;
 }
 
-body.reading-scroll-compact .app-header {
-    min-height: calc(46px + env(safe-area-inset-top));
-}
-
-body.reading-scroll-compact .compact-header {
-    min-height: 48px;
-    padding: 6px 12px 5px;
-}
-
 body.reading-scroll-compact .compact-header h1 {
     font-size: 0.96rem;
 }
@@ -3347,69 +3425,6 @@ body.dark-mode .skeleton-card {
     background-size: 200% 100%;
 }
 
-/* ========================================
-   HEADER COMPACTO AL HACER SCROLL EN LECTURA
-   ======================================== */
-body.reading-scroll-compact .app-header {
-    opacity: 1;
-    transform: none;
-    pointer-events: auto;
-    box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
-    min-height: calc(50px + env(safe-area-inset-top));
-    padding-top: env(safe-area-inset-top);
-}
-
-body.reading-scroll-compact .compact-header {
-    min-height: 50px;
-    padding: 6px 14px 5px;
-}
-
-body.reading-scroll-compact .app-header-main {
-    gap: 0;
-    transform: translateY(-1px);
-}
-
-body.reading-scroll-compact .compact-header h1 {
-    font-size: 1.02rem;
-    line-height: 1.02;
-    transform: scale(0.98);
-    transform-origin: center center;
-}
-
-body.reading-scroll-compact .compact-header p {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    margin: 0;
-    font-size: 0;
-    line-height: 0;
-    transform: translateY(-4px);
-    pointer-events: none;
-}
-
-body.reading-scroll-compact .header-settings-btn {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateY(-50%) scale(0.88);
-}
-
-body.reading-scroll-compact .floating-controls {
-    opacity: 0;
-    pointer-events: none;
-    transform: translateX(-12px);
-}
-
-body.reading-scroll-compact .bottom-nav {
-    transform: translateY(calc(100% + env(safe-area-inset-bottom)));
-    opacity: 0;
-    pointer-events: none;
-}
-
-body.reading-scroll-compact .home-reading-bar {
-    transform: translate(-50%, calc(100% + 18px));
-    opacity: 0;
-    pointer-events: none;
-}
 
 /* ========================================
    ESTABILIDAD DE SCROLL (CORRECCIÓN)
@@ -3971,13 +3986,6 @@ body.dark-mode .header-left-btn:hover {
   right: 12px;
   transform: translateY(-50%);
   /* El resto de sus estilos se conservan */
-}
-
-/* Modo compacto al hacer scroll (esconder también el nuevo botón) */
-body.reading-scroll-compact .header-left-btn {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-50%) scale(0.88);
 }
 
 /* Ajuste responsive para móviles */
