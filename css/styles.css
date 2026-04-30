@@ -4392,6 +4392,336 @@ body.light-mode .selection-sheet-handle {
     background: rgba(15, 23, 42, 0.18);
 }
 
+/* ======================================== */
+/* PERGAMINO DE PROGRESO DEL LIBRO ACTUAL    */
+/* ======================================== */
+
+.pergamino-libro {
+    background: linear-gradient(135deg, #f5e6c8, #faecd5);
+    border: 2px solid #8B4513;
+    border-radius: 16px;
+    padding: 24px 20px;
+    margin: 0 0 20px 0;
+    box-shadow: 0 8px 24px rgba(139, 69, 19, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Borde envejecido */
+.pergamino-libro::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 14px;
+    border: 3px solid #D2B48C;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.pergamino-titulo {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #4A3000;
+    text-align: center;
+    margin-bottom: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.pergamino-subtitulo {
+    font-size: 0.95rem;
+    color: #6B4423;
+    text-align: center;
+    margin-bottom: 16px;
+    font-weight: 600;
+    position: relative;
+    z-index: 1;
+}
+
+/* Capítulos en línea */
+.pergamino-capitulos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: flex-start;
+    margin-bottom: 16px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 4px;
+    position: relative;
+    z-index: 1;
+}
+
+.pergamino-capitulo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    transition: all 0.3s ease;
+    cursor: default;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.capitulo-leido {
+    background: #4CAF50;
+    color: white;
+    box-shadow: 0 2px 6px rgba(76, 175, 80, 0.3);
+    animation: capituloAlcanzado 0.5s ease;
+}
+
+.capitulo-leido:hover {
+    transform: scale(1.15);
+}
+
+.capitulo-pendiente {
+    background: rgba(139, 69, 19, 0.1);
+    color: #8B4513;
+    border: 1px dashed #D2B48C;
+}
+
+@keyframes capituloAlcanzado {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Barra de progreso */
+.pergamino-progreso {
+    margin-top: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.pergamino-barra-fondo {
+    height: 10px;
+    background: rgba(139, 69, 19, 0.15);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.pergamino-barra-lleno {
+    height: 100%;
+    background: linear-gradient(90deg, #8B4513, #DAA520, #FFD700);
+    border-radius: 10px;
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+}
+
+/* Efecto de brillo en la barra */
+.pergamino-barra-lleno::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(255,255,255,0.3) 50%, 
+        transparent 100%);
+    animation: brilloBarra 2s infinite;
+}
+
+@keyframes brilloBarra {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.pergamino-porcentaje {
+    font-size: 0.85rem;
+    color: #6B4423;
+    text-align: right;
+    font-weight: 600;
+}
+
+/* ======================================== */
+/* TEMA OSCURO - Pergamino                   */
+/* ======================================== */
+
+.dark-mode .pergamino-libro {
+    background: linear-gradient(135deg, #2a1f0e, #3a2a14);
+    border-color: #DAA520;
+}
+
+.dark-mode .pergamino-titulo {
+    color: #FFD700;
+}
+
+.dark-mode .pergamino-subtitulo {
+    color: #DAA520;
+}
+
+.dark-mode .capitulo-pendiente {
+    background: rgba(255, 215, 0, 0.1);
+    color: #DAA520;
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.dark-mode .pergamino-porcentaje {
+    color: #DAA520;
+}
+
+/* ======================================== */
+/* BANNER DE HITO                             */
+/* ======================================== */
+
+.hito-banner {
+    position: fixed;
+    bottom: 100px;
+    left: 15px;
+    right: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+    background: linear-gradient(145deg, #1a1a2e, #0f3460);
+    border: 2px solid #DAA520;
+    border-radius: 20px;
+    padding: 24px;
+    z-index: 1000;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+    animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.hito-banner-content {
+    text-align: center;
+    color: white;
+}
+
+.hito-banner-icono {
+    font-size: 3rem;
+    margin-bottom: 10px;
+}
+
+.hito-banner-titulo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    color: #FFD700;
+}
+
+.hito-banner-libro {
+    font-size: 0.9rem;
+    color: #DAA520;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.hito-banner-descripcion {
+    font-size: 0.95rem;
+    margin-bottom: 16px;
+    opacity: 0.9;
+    line-height: 1.5;
+}
+
+.hito-banner-btn {
+    background: #DAA520;
+    color: #1a1a2e;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 25px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.hito-banner-btn:active {
+    transform: scale(0.95);
+    background: #FFD700;
+}
+
+/* ======================================== */
+/* BANNER DE LIBRO COMPLETADO               */
+/* ======================================== */
+
+.libro-completo-banner {
+    position: fixed;
+    bottom: 80px;
+    left: 15px;
+    right: 15px;
+    max-width: 420px;
+    margin: 0 auto;
+    background: linear-gradient(145deg, #0f0c29, #302b63, #24243e);
+    border: 3px solid #FFD700;
+    border-radius: 24px;
+    padding: 28px;
+    z-index: 1000;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.6), 0 0 30px rgba(255, 215, 0, 0.2);
+    animation: slideUp 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.libro-completo-content {
+    text-align: center;
+    color: white;
+}
+
+.libro-completo-icono {
+    font-size: 4rem;
+    margin-bottom: 12px;
+    animation: flotar 2s ease-in-out infinite;
+}
+
+@keyframes flotar {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+.libro-completo-titulo {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #FFD700;
+    margin-bottom: 4px;
+}
+
+.libro-completo-subtitulo {
+    font-size: 1rem;
+    color: #e2c28b;
+    margin-bottom: 16px;
+}
+
+.libro-completo-versiculo {
+    font-style: italic;
+    font-size: 0.9rem;
+    opacity: 0.85;
+    line-height: 1.5;
+    margin-bottom: 4px;
+}
+
+.libro-completo-ref {
+    font-size: 0.8rem;
+    color: #DAA520;
+    margin-bottom: 16px;
+}
+
+.libro-completo-btn {
+    background: linear-gradient(135deg, #FFD700, #DAA520);
+    color: #1a1a2e;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 25px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.libro-completo-btn:active {
+    transform: scale(0.95);
+}
+
 /* ========================================
    VIEW HERO / ENCABEZADO DE CADA SECCIÓN
    Diseño premium por vista
