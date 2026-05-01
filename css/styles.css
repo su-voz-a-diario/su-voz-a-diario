@@ -4873,3 +4873,14 @@ body.dark-mode .view-hero {
     opacity: 1 !important;
     pointer-events: auto !important;
 }
+
+/* El botón ☰ SIEMPRE debe estar por encima */
+.app-header .header-left-btn {
+    z-index: 10 !important;
+    position: relative;
+}
+
+/* El header-compact-content NO debe tapar al botón */
+.header-compact-content {
+    z-index: 1;
+}
