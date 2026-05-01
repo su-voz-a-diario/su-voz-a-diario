@@ -167,7 +167,7 @@ body.dark-mode .app-header.header-compact {
     align-items: center;
     justify-content: center;
     height: 100%;  /* ← Se adapta al header */
-    padding: 0 16px;
+    padding: 0 56px;
     text-align: center;
 }
 
@@ -3974,15 +3974,52 @@ body.dark-mode .header-left-btn:hover {
     transform: translateY(-50%) translateY(2px);
 }
 
+.header-left-btn {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%) translateY(2px);
+
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 0;
+
+    font-size: 20px;
+    line-height: 1;
+}
+
 /* Ajuste responsive para móviles */
 @media (max-width: 480px) {
-  .header-left-btn {
+ .header-left-btn {
+    position: absolute;
+    top: 50%;
+    left: 18px;
+    transform: translateY(-50%) translateY(2px);
+
     width: 32px;
     height: 32px;
     min-width: 32px;
     min-height: 32px;
-    left: 10px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
     font-size: 18px;
+    line-height: 1;
 }
   
   .header-dropdown {
