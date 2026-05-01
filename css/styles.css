@@ -273,6 +273,17 @@ body.dark-mode .header-settings-btn:hover {
     outline-offset: 2px;
 }
 
+.app-header.header-compact .compact-header h1 {
+    font-size: 1.05rem;
+}
+
+.app-header.header-compact .compact-header p {
+    opacity: 0;
+    max-height: 0;
+    margin: 0;
+    overflow: hidden;
+}
+
 /* ========================================
    CONTENIDO PRINCIPAL
    ======================================== */
@@ -2276,9 +2287,14 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
         font-size: 1.45rem;
     }
 
-    .compact-header {
-    min-height: 66px;
-    padding: 10px 12px 6px;
+   .compact-header {
+    height: 100%;
+    min-height: 0;
+    padding: 0 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 }
 
 .compact-header h1 {
@@ -2292,7 +2308,9 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
 }
 
 .header-settings-btn {
-    right: 10px;
+    top: 50%;
+    right: 18px;
+    transform: translateY(-50%);
     width: 32px;
     height: 32px;
     min-width: 32px;
