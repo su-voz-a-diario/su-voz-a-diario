@@ -83,7 +83,7 @@ const App = {
     // ========================================
     // DATOS Y ESTADO
     // ========================================
-    headerState: 'expanded', // 'expanded' | 'compact'
+    headerState: null, // 'expanded' | 'compact'
     _snapTimer: null,
     lastScrollY: 0,
     scrollDirection: 'up',
@@ -344,9 +344,10 @@ this.initNotifications();
 this.setupSWCommunication();
 this.bindEvents();
 this.bindHeaderControlsToggle();
-this.bindScrollChrome();
 this.initHeaderAfterDOM();
+this.bindScrollChrome();
 this.bindKeyboardViewportFix();
+this.setHeaderState('expanded');
 await this.initAuth();
 await this.loadData();
 await this.refreshCommunityBadge();
@@ -1017,23 +1018,27 @@ updateHeaderState: function() {
 },
 
 setHeaderState: function(newState) {
-    if (this.headerState === newState) return;
-    
-    const header = this.$appHeader;
+    const header = this.$appHeader || document.querySelector('.app-header');
     if (!header) return;
-    
+
+    this.$appHeader = header;
+    this.$headerContent = document.querySelector('.header-content');
+    this.$headerCompact = document.querySelector('.header-compact-content');
+
     header.classList.remove('header-expanded', 'header-compact', 'header-hidden');
-    
+
     if (newState === 'expanded') {
         header.classList.add('header-expanded');
         if (this.$headerContent) this.$headerContent.style.opacity = '1';
         if (this.$headerCompact) this.$headerCompact.style.opacity = '0';
-    } else if (newState === 'compact') {
+    }
+
+    if (newState === 'compact') {
         header.classList.add('header-compact');
         if (this.$headerContent) this.$headerContent.style.opacity = '0';
         if (this.$headerCompact) this.$headerCompact.style.opacity = '1';
     }
-    
+
     this.headerState = newState;
 },
 
