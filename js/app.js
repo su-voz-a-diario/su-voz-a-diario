@@ -345,7 +345,6 @@ this.setupSWCommunication();
 this.bindEvents();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
-this.setHeaderState('expanded');
 await this.initAuth();
 await this.loadData();
 await this.refreshCommunityBadge();
@@ -391,9 +390,6 @@ cacheDOM: function() {
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
     this._baseViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-    this.$appHeader = document.querySelector('.app-header');
-    this.$headerContent = document.querySelector('.header-content');
-    this.$headerCompact = document.querySelector('.header-compact-content');
 },
 
 bindKeyboardViewportFix: function() {
@@ -928,18 +924,6 @@ isReadingLikeView: function(view = this.currentView) {
 setScrollCompactState: function(isCompact) {
     this.scrollCompactActive = false;
     document.body.classList.remove('reading-scroll-compact');
-},
-
-resetScrollChrome: function() {
-    this.lastScrollY = window.scrollY || window.pageYOffset || 0;
-    this.scrollCompactEnabled = false;
-    this.scrollCompactActive = false;
-    document.body.classList.remove('reading-scroll-compact');
-
-    if (this.scrollIdleTimer) {
-        clearTimeout(this.scrollIdleTimer);
-        this.scrollIdleTimer = null;
-    }
 },
 
 bindHeaderControlsToggle: function() {
@@ -2787,7 +2771,6 @@ if (view !== 'settings' && oldView !== 'settings') {
 
 this.currentView = view;
 this.updateNavUI();
-this.resetHeaderState();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
         btn.classList.toggle(
