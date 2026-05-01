@@ -4867,3 +4867,9 @@ body.dark-mode .view-hero {
         line-height: 1.55;
     }
 }
+
+/* Botón izquierdo SIEMPRE funcional */
+.app-header.header-compact .header-left-btn {
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
