@@ -4884,3 +4884,7 @@ body.dark-mode .view-hero {
 .header-compact-content {
     z-index: 1;
 }
+
+.app-header.header-compact .header-dropdown {
+    top: calc(50px + env(safe-area-inset-top) + 8px);
+}
