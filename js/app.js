@@ -344,8 +344,6 @@ this.initNotifications();
 this.setupSWCommunication();
 this.bindEvents();
 this.bindHeaderControlsToggle();
-this.initHeaderAfterDOM();
-this.bindScrollChrome();
 this.bindKeyboardViewportFix();
 this.setHeaderState('expanded');
 await this.initAuth();
@@ -942,114 +940,6 @@ resetScrollChrome: function() {
         clearTimeout(this.scrollIdleTimer);
         this.scrollIdleTimer = null;
     }
-},
-
-initHeaderAfterDOM: function() {
-    // Esperar a que el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            this.setupHeaderObserver();
-        });
-    } else {
-        this.setupHeaderObserver();
-    }
-},
-
-setupHeaderObserver: function() {
-    // Observar cambios en el contenido para reinicializar el header
-    const observer = new MutationObserver(() => {
-        // Re-obtener referencias cuando cambia el contenido
-        this.$appHeader = document.querySelector('.app-header');
-        this.$headerContent = document.querySelector('.header-content');
-        this.$headerCompact = document.querySelector('.header-compact-content');
-    });
-    
-    if (this.$content) {
-        observer.observe(this.$content, {
-            childList: true,
-            subtree: false
-        });
-    }
-},
-
-// ========================================
-// SISTEMA DE HEADER ELITE - 2 ESTADOS
-// ========================================
-bindScrollChrome: function() {
-    let ticking = false;
-    
-    window.addEventListener('scroll', () => {
-        if (!ticking) {
-            requestAnimationFrame(() => {
-                this.updateHeaderState();
-                ticking = false;
-            });
-            ticking = true;
-        }
-    }, { passive: true });
-},
-
-updateHeaderState: function() {
-    const header = this.$appHeader;
-    if (!header) return;
-    
-    if (!this.isReadingLikeView()) {
-        this.resetHeaderState();
-        return;
-    }
-    
-    const currentScrollY = window.scrollY || window.pageYOffset || 0;
-    
-    if (currentScrollY <= 10) {
-        this.setHeaderState('expanded');
-    } else {
-        this.setHeaderState('compact');
-    }
-    
-    this.lastScrollY = currentScrollY;
-     // ⭐ Efecto snap: vuelve a expandir al detenerse cerca de arriba
-    clearTimeout(this._snapTimer);
-    this._snapTimer = setTimeout(() => {
-        const scrollY = window.scrollY || window.pageYOffset || 0;
-        if (scrollY <= 30) {
-            this.setHeaderState('expanded');
-        }
-    }, 200);
-},
-
-setHeaderState: function(newState) {
-    const header = this.$appHeader || document.querySelector('.app-header');
-    if (!header) return;
-
-    this.$appHeader = header;
-    this.$headerContent = document.querySelector('.header-content');
-    this.$headerCompact = document.querySelector('.header-compact-content');
-
-    header.classList.remove('header-expanded', 'header-compact', 'header-hidden');
-
-    if (newState === 'expanded') {
-        header.classList.add('header-expanded');
-        if (this.$headerContent) this.$headerContent.style.opacity = '1';
-        if (this.$headerCompact) this.$headerCompact.style.opacity = '0';
-    }
-
-    if (newState === 'compact') {
-        header.classList.add('header-compact');
-        if (this.$headerContent) this.$headerContent.style.opacity = '0';
-        if (this.$headerCompact) this.$headerCompact.style.opacity = '1';
-    }
-
-    this.headerState = newState;
-},
-
-resetHeaderState: function() {
-    this.setHeaderState('expanded');
-    this.lastScrollY = 0;
-    clearTimeout(this._snapTimer);
-},
-
-handleScrollChrome: function() {
-    return;
 },
 
 bindHeaderControlsToggle: function() {
@@ -2897,7 +2787,6 @@ if (view !== 'settings' && oldView !== 'settings') {
 
 this.currentView = view;
 this.updateNavUI();
-this.resetScrollChrome();
 this.resetHeaderState();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
