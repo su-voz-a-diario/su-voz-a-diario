@@ -84,6 +84,7 @@ const App = {
     // DATOS Y ESTADO
     // ========================================
     headerState: 'expanded', // 'expanded' | 'compact'
+    _snapTimer: null,
     lastScrollY: 0,
     scrollDirection: 'up',
     scrollIdleTimer: null,
@@ -1005,6 +1006,14 @@ updateHeaderState: function() {
     }
     
     this.lastScrollY = currentScrollY;
+     // ⭐ Efecto snap: vuelve a expandir al detenerse cerca de arriba
+    clearTimeout(this._snapTimer);
+    this._snapTimer = setTimeout(() => {
+        const scrollY = window.scrollY || window.pageYOffset || 0;
+        if (scrollY <= 30) {
+            this.setHeaderState('expanded');
+        }
+    }, 200);
 },
 
 setHeaderState: function(newState) {
@@ -1031,6 +1040,7 @@ setHeaderState: function(newState) {
 resetHeaderState: function() {
     this.setHeaderState('expanded');
     this.lastScrollY = 0;
+    clearTimeout(this._snapTimer);
 },
 
 handleScrollChrome: function() {
