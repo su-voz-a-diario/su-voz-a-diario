@@ -152,6 +152,114 @@ body.dark-mode .header-left-btn:hover {
     left: 16px;
 }
 
+.header-settings-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    border-radius: 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.header-settings-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.dark-mode .header-settings-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.header-settings-btn:active {
+    transform: scale(0.95);
+}
+
+.header-settings-btn svg {
+    width: 20px;
+    height: 20px;
+}
+
+.header-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 16px;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+    padding: 12px;
+    min-width: 150px;
+    z-index: 9999;
+    display: none;
+    animation: fadeInDown 0.2s ease;
+}
+
+.header-dropdown.show {
+    display: block;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-section {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.dropdown-section:last-child {
+    margin-bottom: 0;
+}
+
+.dropdown-btn {
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--text-main);
+    transition: background 0.2s, color 0.2s, border-color 0.2s;
+    width: 100%;
+    justify-content: center;
+}
+
+.dropdown-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.dropdown-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+
+.dropdown-streak {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    gap: 6px;
+}
+
 /* ========================================
    CONTENIDO PRINCIPAL
    ======================================== */
@@ -2153,30 +2261,6 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
 
     .reading-reference {
         font-size: 1.45rem;
-    }
-
-    .compact-header {
-        height: 100%;
-        min-height: 0;
-        padding: 0 54px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .compact-header h1 {
-        font-size: 1.22rem;
-    }
-
-    .compact-header p {
-        font-size: 0.64rem;
-        margin-top: 0;
-        letter-spacing: 0.12em;
-    }
-
-    .header-settings-btn svg {
-        width: 17px;
-        height: 17px;
     }
 
     .reading-date-header {
