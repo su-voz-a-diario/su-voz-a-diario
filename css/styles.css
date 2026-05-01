@@ -213,6 +213,28 @@ body.dark-mode .app-header.header-compact {
         font-size 0.18s ease;
 }
 
+.header-left-btn {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    min-height: 34px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    cursor: pointer;
+    padding: 0;
+    font-size: 20px;
+    line-height: 1;
+}
+
 .header-settings-btn {
     position: absolute;
     top: 50%;
@@ -2315,6 +2337,17 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
         min-width: 32px;
         min-height: 32px;
     }
+
+.header-left-btn {
+    top: 50%;
+    left: 18px;
+    transform: translateY(-50%) translateY(2px);
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    font-size: 18px;
+}
 
     .header-settings-btn svg {
         width: 17px;
