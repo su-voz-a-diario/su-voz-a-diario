@@ -996,44 +996,20 @@ updateHeaderState: function() {
     const header = this.$appHeader;
     if (!header) return;
     
-    // Solo activar en vistas de lectura
     if (!this.isReadingLikeView()) {
         this.resetHeaderState();
         return;
     }
     
     const currentScrollY = window.scrollY || window.pageYOffset || 0;
-    const delta = currentScrollY - this.lastScrollY;
-    const direction = delta > 0 ? 'down' : 'up';
-    
-    // ⭐⭐⭐ LÓGICA DE 3 ESTADOS ⭐⭐⭐
     
     if (currentScrollY <= 10) {
-        // En la cima: SIEMPRE expandido
         this.setHeaderState('expanded');
-    }
-    else if (direction === 'down') {
-        // Scroll hacia ABAJO
-        if (currentScrollY > 60) {
-            this.setHeaderState('compact');
-        }
-        if (currentScrollY > 250) {
-            this.setHeaderState('hidden');
-        }
-    }
-    else if (direction === 'up') {
-        // Scroll hacia ARRIBA: mostrar expandido
-        this.setHeaderState('expanded');
-        
-        // Efecto de "snap" al detenerse
-        clearTimeout(this.scrollIdleTimer);
-        this.scrollIdleTimer = setTimeout(() => {
-            this.snapHeaderToNearestState();
-        }, 150);
+    } else {
+        this.setHeaderState('compact');
     }
     
     this.lastScrollY = currentScrollY;
-    this.scrollDirection = direction;
 },
 
 setHeaderState: function(newState) {
@@ -1042,47 +1018,19 @@ setHeaderState: function(newState) {
     const header = this.$appHeader;
     if (!header) return;
     
-    // Remover todas las clases de estado
     header.classList.remove('header-expanded', 'header-compact', 'header-hidden');
     
-    // Aplicar nuevo estado
-    switch(newState) {
-        case 'expanded':
-            header.classList.add('header-expanded');
-            // Mostrar contenido expandido, ocultar compacto
-            if (this.$headerContent) this.$headerContent.style.opacity = '1';
-            if (this.$headerCompact) this.$headerCompact.style.opacity = '0';
-            break;
-            
-        case 'compact':
-            header.classList.add('header-compact');
-            // Mostrar contenido compacto, ocultar expandido
-            if (this.$headerContent) this.$headerContent.style.opacity = '0';
-            if (this.$headerCompact) this.$headerCompact.style.opacity = '1';
-            break;
-            
-        case 'hidden':
-            header.classList.add('header-hidden');
-            break;
+    if (newState === 'expanded') {
+        header.classList.add('header-expanded');
+        if (this.$headerContent) this.$headerContent.style.opacity = '1';
+        if (this.$headerCompact) this.$headerCompact.style.opacity = '0';
+    } else if (newState === 'compact') {
+        header.classList.add('header-compact');
+        if (this.$headerContent) this.$headerContent.style.opacity = '0';
+        if (this.$headerCompact) this.$headerCompact.style.opacity = '1';
     }
     
     this.headerState = newState;
-    
-    console.log('[Header] Estado:', newState);
-},
-
-snapHeaderToNearestState: function() {
-    const currentScrollY = window.scrollY || window.pageYOffset || 0;
-    
-    // Si está cerca de la cima, expandir
-    if (currentScrollY < 40) {
-        this.setHeaderState('expanded');
-    } 
-    // Si está en zona media, compactar
-    else if (currentScrollY < 150) {
-        this.setHeaderState('compact');
-    }
-    // Si está muy abajo, mantener oculto
 },
 
 resetHeaderState: function() {
@@ -1091,7 +1039,6 @@ resetHeaderState: function() {
 },
 
 handleScrollChrome: function() {
-    // Este método queda como respaldo, pero ya no es necesario
     return;
 },
 
