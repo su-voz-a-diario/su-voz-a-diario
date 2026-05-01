@@ -145,13 +145,6 @@ body.dark-mode .header-left-btn:hover {
     transform: scale(0.95);
 }
 
-/* El botón settings se mantiene con sus estilos existentes, no lo toques */
-.header-dropdown {
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 16px;
-}
-
 .header-settings-btn {
     display: inline-flex;
     align-items: center;
