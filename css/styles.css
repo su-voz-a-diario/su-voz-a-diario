@@ -88,6 +88,7 @@ body {
         backdrop-filter 0.35s ease;
     
     will-change: transform;
+    overflow: hidden;   /* ← LÍNEA NUEVA */
 }
 
 /* ESTADO 1: EXPANDIDO (default) */
@@ -131,7 +132,6 @@ body {
     justify-content: center;
     opacity: 0;
     pointer-events: none;
-    padding-top: env(safe-area-inset-top);
     transition: opacity 0.22s ease;
 }
 
