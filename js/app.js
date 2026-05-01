@@ -83,7 +83,7 @@ const App = {
     // ========================================
     // DATOS Y ESTADO
     // ========================================
-    headerState: 'expanded', // 'expanded' | 'compact' | 'hidden'
+    headerState: 'expanded', // 'expanded' | 'compact'
     lastScrollY: 0,
     scrollDirection: 'up',
     scrollIdleTimer: null,
@@ -971,13 +971,8 @@ setupHeaderObserver: function() {
 },
 
 // ========================================
-// SISTEMA DE HEADER ELITE - 3 ESTADOS
+// SISTEMA DE HEADER ELITE - 2 ESTADOS
 // ========================================
-
-isReadingLikeView: function(view = this.currentView) {
-    return ['home', 'reading', 'bible-reading'].includes(view);
-},
-
 bindScrollChrome: function() {
     let ticking = false;
     
