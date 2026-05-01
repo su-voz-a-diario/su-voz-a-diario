@@ -2268,7 +2268,7 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
     .calendar-grid {
         grid-template-columns: repeat(3, 1fr);
     }
-    
+
     .note-actions {
         grid-template-columns: 1fr 1fr;
     }
@@ -2276,56 +2276,55 @@ body.dark-mode .verse-item.highlight-rose .verse-text-content {
 
 @media (max-width: 480px) {
     .container {
-    padding: 4px 10px calc(20px + var(--nav-height) + 86px);
+        padding: 4px 10px calc(20px + var(--nav-height) + 86px);
     }
-    
+
     .reading-card {
         padding: 18px 14px;
     }
-    
+
     .reading-reference {
         font-size: 1.45rem;
     }
 
-   .compact-header {
-    height: 100%;
-    min-height: 0;
-    padding: 0 54px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-}
+    .compact-header {
+        height: 100%;
+        min-height: 0;
+        padding: 0 54px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-.compact-header h1 {
-    font-size: 1.22rem;
-}
+    .compact-header h1 {
+        font-size: 1.22rem;
+    }
 
-.compact-header p {
-    font-size: 0.64rem;
-    margin-top: 0;
-    letter-spacing: 0.12em;
-}
+    .compact-header p {
+        font-size: 0.64rem;
+        margin-top: 0;
+        letter-spacing: 0.12em;
+    }
 
-.header-settings-btn {
-    top: 50%;
-    right: 18px;
-    transform: translateY(-50%);
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
-}
+    .header-settings-btn {
+        top: 50%;
+        right: 18px;
+        transform: translateY(-50%);
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        min-height: 32px;
+    }
 
-.header-settings-btn svg {
-    width: 17px;
-    height: 17px;
-}
+    .header-settings-btn svg {
+        width: 17px;
+        height: 17px;
+    }
 
     .reading-date-header {
-    font-size: 0.9rem;
-    padding: 7px 16px;
-    margin: 6px auto 14px auto;
+        font-size: 0.9rem;
+        padding: 7px 16px;
+        margin: 6px auto 14px auto;
     }
 }
 
