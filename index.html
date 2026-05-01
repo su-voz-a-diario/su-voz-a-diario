@@ -43,26 +43,17 @@
     </div>
 </div>
 
-<header class="app-header header-expanded">
-    <!-- ⬅️ NUEVO: botón tres rayitas (izquierda) -->
-    <button id="header-controls-btn" class="icon-btn header-left-btn" aria-label="Controles de lectura" title="Ajustes de lectura">
+<header class="app-header">
+    <button id="header-controls-btn" class="header-left-btn" aria-label="Controles de lectura" title="Ajustes de lectura">
         ☰
     </button>
 
-  <div class="header-content">
-    <div class="compact-header">
+    <div class="header-content">
         <div class="app-header-main">
             <h1>Su voz a diario</h1>
         </div>
     </div>
-</div>
 
-     <!-- Contenido compacto (visible cuando el header se encoje) -->
-    <div class="header-compact-content">
-        <span>Su voz a diario</span>
-    </div>
-
-    <!-- ➡️ Botón de ajustes original (sin cambios) -->
     <button id="header-settings-btn" class="header-settings-btn" title="Abrir ajustes" aria-label="Abrir ajustes">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -71,28 +62,18 @@
         </svg>
     </button>
 
-    <!-- 📂 MENÚ DESPLEGABLE (oculto por defecto) -->
     <div id="header-controls-dropdown" class="header-dropdown">
-        <!-- Racha -->
         <div class="dropdown-section">
-            <div id="streak-indicator" class="dropdown-streak">
-                🔥 <span id="streak-count">0</span>
-            </div>
+            <div id="streak-indicator" class="dropdown-streak">🔥 <span id="streak-count">0</span></div>
         </div>
-
-        <!-- Tamaño de letra -->
         <div class="dropdown-section">
             <button class="dropdown-btn" data-action="font-decrease">A−</button>
             <button class="dropdown-btn" data-action="font-increase">A+</button>
         </div>
-
-        <!-- Versiones -->
         <div class="dropdown-section">
             <button class="dropdown-btn version-btn active" data-version="rvr60">RVR60</button>
             <button class="dropdown-btn version-btn" data-version="ntv">NTV</button>
         </div>
-
-        <!-- Tema -->
         <div class="dropdown-section">
             <button id="theme-toggle" class="dropdown-btn" title="Cambiar tema">🌙</button>
         </div>
