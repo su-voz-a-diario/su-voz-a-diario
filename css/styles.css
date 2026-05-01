@@ -3968,11 +3968,10 @@ body.dark-mode .header-left-btn:hover {
 
 /* Ajuste para el botón de settings (ya existente) */
 .header-settings-btn {
-  position: absolute;
-  top: 50%;
-  right: 12px;
-  transform: translateY(-50%);
-  /* El resto de sus estilos se conservan */
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%) translateY(2px);
 }
 
 /* Ajuste responsive para móviles */
