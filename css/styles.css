@@ -61,93 +61,30 @@ body {
     background-color: var(--bg-color);
     color: var(--text-main);
     line-height: 1.5;
-    padding-top: calc(72px + env(safe-area-inset-top)); /* ⭐ NUEVO */
+    padding-top: calc(56px + env(safe-area-inset-top));
     padding-bottom: calc(88px + env(safe-area-inset-bottom));
     min-height: 100vh;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ⭐⭐⭐ HEADER ELITE - 2 ESTADOS (PROFESIONAL) ⭐⭐⭐ */
+/* ========================================
+   HEADER FIJO SIMPLE (SIN EFECTOS DE SCROLL)
+   ======================================== */
 .app-header {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     z-index: 1100;
-    
-    background-color: var(--surface-color);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    height: calc(56px + env(safe-area-inset-top));
     padding-top: env(safe-area-inset-top);
-    height: calc(72px + env(safe-area-inset-top));
-    
-    /* Transición PRO */
-    transition:
-        height 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-        background-color 0.35s ease,
-        box-shadow 0.35s ease,
-        backdrop-filter 0.35s ease;
-    
-    will-change: transform;
-    overflow: hidden;   /* ← LÍNEA NUEVA */
-}
-
-/* ESTADO 1: EXPANDIDO (default) */
-.app-header.header-expanded {
-    height: calc(72px + env(safe-area-inset-top));
     background-color: var(--surface-color);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
-
-/* ESTADO 2: COMPACTO - Efecto glass PRO */
-.app-header.header-compact {
-    height: calc(50px + env(safe-area-inset-top));
-    
-    background-color: rgba(255, 255, 255, 0.80);
-    backdrop-filter: blur(28px) saturate(200%);
-    -webkit-backdrop-filter: blur(28px) saturate(200%);
-    
-    border-bottom: 0.5px solid rgba(0, 0, 0, 0.10);
-    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.06);
-}
-
-/* Contenido expandido (visible por defecto) */
-.header-content {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    opacity: 1;
-    transition: opacity 0.22s ease;
-}
-
-/* Contenido compacto (visible solo en compacto) */
-.header-compact-content {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.22s ease;
-}
-
-.header-compact-content span {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.02em;
-    text-align: center;
-}
-
-/* Modo oscuro */
-body.dark-mode .app-header.header-compact {
-    background-color: rgba(15, 17, 21, 0.85);
-    border-bottom: 0.5px solid rgba(255, 255, 255, 0.08);
-    box-shadow: 0 1px 12px rgba(0, 0, 0, 0.30);
+    justify-content: space-between;
+    padding-left: 16px;
+    padding-right: 16px;
 }
 
 .app-header::before {
@@ -161,149 +98,58 @@ body.dark-mode .app-header.header-compact {
     pointer-events: none;
 }
 
-.compact-header {
-    position: relative;
+.header-content {
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100%;  /* ← Se adapta al header */
-    padding: 0 56px;
-    text-align: center;
+    flex: 1;
 }
 
 .app-header-main {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 2px;
-    min-width: 0;
     text-align: center;
-    transition: gap 0.22s ease, transform 0.22s ease;
 }
 
-.compact-header h1 {
-    margin: 0;
-    font-size: 1.45rem;
+.app-header-main h1 {
+    font-size: 1.25rem;
     font-weight: 800;
-    line-height: 1.08;
     letter-spacing: -0.02em;
     color: var(--primary);
-    text-align: center;
-    transition: font-size 0.22s ease, line-height 0.22s ease, transform 0.22s ease;
-}
-
-.compact-header p {
-    margin-top: 0;
-    font-size: 0.7rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    opacity: 0.85;
-    text-align: center;
-    max-height: 24px;
-    overflow: hidden;
-    transition:
-        opacity 0.18s ease,
-        max-height 0.18s ease,
-        transform 0.18s ease,
-        margin 0.18s ease,
-        font-size 0.18s ease;
+    margin: 0;
+    white-space: nowrap;
 }
 
 .header-left-btn {
-    position: absolute;
-    top: 50%;
-    left: 12px;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-    border: none;
-    background: transparent;
-    color: var(--text-main);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    cursor: pointer;
-    padding: 0;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    color: var(--text-main);
     font-size: 20px;
-    line-height: 1;
-}
-
-.header-settings-btn {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-    min-height: 34px;
-    border: none;
-    background: transparent;
-    color: var(--text-main);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     border-radius: 10px;
     cursor: pointer;
-    padding: 0;
-    transition:
-        background-color 0.18s ease,
-        transform 0.22s ease,
-        opacity 0.18s ease,
-        color 0.18s ease;
+    flex-shrink: 0;
 }
 
-.header-settings-btn.active {
-    background: rgba(49, 130, 206, 0.12);
-    color: var(--accent);
-}
-
-body.dark-mode .header-settings-btn.active {
-    background: rgba(96, 165, 250, 0.14);
-    color: var(--accent);
-}
-
-.header-settings-btn svg {
-    width: 18px;
-    height: 18px;
-    display: block;
-    stroke: currentColor;
-}
-
-.header-settings-btn:hover {
+.header-left-btn:hover {
     background: rgba(0, 0, 0, 0.05);
 }
 
-body.dark-mode .header-settings-btn:hover {
+body.dark-mode .header-left-btn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
-.header-settings-btn:active {
-    transform: translateY(-50%) scale(0.95);
-    opacity: 0.75;
+.header-left-btn:active {
+    transform: scale(0.95);
 }
 
-.header-settings-btn:focus-visible {
-    outline: 2px solid rgba(49, 130, 206, 0.35);
-    outline-offset: 2px;
-}
-
-.app-header.header-compact .compact-header h1 {
-    font-size: 1.05rem;
-}
-
-.app-header.header-compact .compact-header p {
-    opacity: 0;
-    max-height: 0;
-    margin: 0;
-    overflow: hidden;
+/* El botón settings se mantiene con sus estilos existentes, no lo toques */
+.header-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 16px;
 }
 
 /* ========================================
