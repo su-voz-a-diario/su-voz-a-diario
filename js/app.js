@@ -165,7 +165,7 @@ async function getBibleChapter(bookId, chapterNumber) {
                         data-verse-text="${safeText}"
                         data-verse-full="${safeText}"
                     >
-                        <span class="verse-number">${verseNumber}</span>
+                        <span class="verse-number" data-verse-number="${verseNumber}">${verseNumber}</span>
                         <span class="verse-text">${safeText}</span>
                     </p>
                 `;
@@ -4122,19 +4122,27 @@ extractVersesFromBibleHtml: function(htmlContent) {
         }
 
         const classList = Array.from(node.classList || []);
-        const isVerseMarker =
-            classList.includes('v') ||
-            node.hasAttribute('data-verse') ||
-            /^v\d*$/i.test(node.className || '');
+const isVerseMarker =
+    classList.includes('v') ||
+    classList.includes('verse-number') ||
+    node.hasAttribute('data-verse') ||
+    node.hasAttribute('data-verse-number') ||
+    /^v\d*$/i.test(node.className || '');
 
-        if (isVerseMarker) {
-            pushCurrentVerse();
-            currentVerse = {
-                number: node.textContent || '',
-                text: ''
-            };
-            return;
-        }
+if (isVerseMarker) {
+    pushCurrentVerse();
+
+    currentVerse = {
+        number:
+            node.getAttribute('data-verse') ||
+            node.getAttribute('data-verse-number') ||
+            node.textContent ||
+            '',
+        text: ''
+    };
+
+    return;
+}
 
         Array.from(node.childNodes).forEach(child => processNode(child));
     };
