@@ -31,46 +31,154 @@ function isAndroidDevice() {
     return /Android/i.test(navigator.userAgent);
 }
 
-const API_BIBLE_KEY = 'wNtIC6e2aKALJdpFovm2R';
-const API_BIBLE_BASE = 'https://rest.api.bible/v1';
-const API_BIBLE_ID = '482ddd53705278cc-02';
+const LOCAL_BIBLE_PATH = './data/rv1909.json';
 
-async function apiBibleFetch(path) {
-    const response = await fetch(`${API_BIBLE_BASE}${path}`, {
-        method: 'GET',
-        headers: {
-            'api-key': API_BIBLE_KEY
-        }
-    });
+let rv1909BibleCache = null;
 
-    let data = null;
+const RV1909_BOOK_MAP = {
+    gen: 'gn',
+    exo: 'ex',
+    lev: 'lv',
+    num: 'nm',
+    deu: 'dt',
+    jos: 'js',
+    jdg: 'jue',
+    rut: 'rt',
+    '1sa': '1s',
+    '2sa': '2s',
+    '1ki': '1r',
+    '2ki': '2r',
+    '1ch': '1cr',
+    '2ch': '2cr',
+    ezr: 'esd',
+    neh: 'neh',
+    est: 'est',
+    job: 'job',
+    psa: 'sal',
+    pro: 'pr',
+    ecc: 'ec',
+    sng: 'cnt',
+    isa: 'is',
+    jer: 'jer',
+    lam: 'lm',
+    ezk: 'ez',
+    dan: 'dn',
+    hos: 'os',
+    jol: 'jl',
+    amo: 'am',
+    oba: 'abd',
+    jon: 'jon',
+    mic: 'miq',
+    nam: 'nah',
+    hab: 'hab',
+    zep: 'sof',
+    hag: 'hag',
+    zec: 'zac',
+    mal: 'mal',
+    mat: 'mt',
+    mrk: 'mr',
+    luk: 'lc',
+    jhn: 'jn',
+    act: 'hch',
+    rom: 'ro',
+    '1co': '1co',
+    '2co': '2co',
+    gal: 'gl',
+    eph: 'ef',
+    php: 'fil',
+    col: 'col',
+    '1th': '1ts',
+    '2th': '2ts',
+    '1ti': '1ti',
+    '2ti': '2ti',
+    tit: 'tit',
+    phm: 'flm',
+    heb: 'he',
+    jas: 'stg',
+    '1pe': '1p',
+    '2pe': '2p',
+    '1jn': '1jn',
+    '2jn': '2jn',
+    '3jn': '3jn',
+    jud: 'jud',
+    rev: 'ap'
+};
 
-    try {
-        data = await response.json();
-    } catch (error) {
-        data = null;
-    }
+async function loadRV1909Bible() {
+    if (rv1909BibleCache) return rv1909BibleCache;
+
+    const response = await fetch(LOCAL_BIBLE_PATH);
 
     if (!response.ok) {
-        console.error('API.Bible error:', data);
-        throw new Error(data?.message || 'Error al consultar API.Bible');
+        throw new Error('No se pudo cargar la Biblia RV1909 local.');
     }
 
-    if (!data) {
-        throw new Error('Respuesta inválida de API.Bible');
+    const data = await response.json();
+
+    if (!Array.isArray(data)) {
+        throw new Error('El archivo RV1909 no tiene el formato esperado.');
     }
 
-    return data;
+    rv1909BibleCache = data;
+    return rv1909BibleCache;
+}
+
+function escapeBibleHtml(value) {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
 }
 
 async function getBibleChapter(bookId, chapterNumber) {
-    const chapterId = `${bookId.toUpperCase()}.${chapterNumber}`;
+    const bible = await loadRV1909Bible();
+    const localAbbrev = RV1909_BOOK_MAP[bookId];
 
-    const result = await apiBibleFetch(
-    `/bibles/${API_BIBLE_ID}/chapters/${chapterId}?content-type=html&include-notes=false&include-titles=true&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=true`
-);
+    if (!localAbbrev) {
+        throw new Error(`No hay equivalencia RV1909 para el libro: ${bookId}`);
+    }
 
-    return result.data;
+    const book = bible.find(item => item.abbrev === localAbbrev);
+
+    if (!book) {
+        throw new Error(`No se encontró el libro en RV1909: ${localAbbrev}`);
+    }
+
+    const chapter = book.chapters[Number(chapterNumber) - 1];
+
+    if (!Array.isArray(chapter)) {
+        throw new Error(`No se encontró el capítulo ${chapterNumber}.`);
+    }
+
+    const content = `
+        <div class="verse-container">
+            ${chapter.map((text, index) => {
+                const verseNumber = index + 1;
+                const safeText = escapeBibleHtml(text);
+
+                return `
+                    <p
+                        class="verse-item"
+                        data-verse-number="${verseNumber}"
+                        data-verse-text="${safeText}"
+                        data-verse-full="${safeText}"
+                    >
+                        <span class="verse-number">${verseNumber}</span>
+                        <span class="verse-text">${safeText}</span>
+                    </p>
+                `;
+            }).join('')}
+        </div>
+    `;
+
+    return {
+        id: `${bookId}.${chapterNumber}`,
+        bookId,
+        chapterNumber: Number(chapterNumber),
+        content
+    };
 }
 
 /**
@@ -4514,7 +4622,7 @@ renderBibleReading: async function() {
                 ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
             </h2>
             
-            <div class="bible-reading-version">Versión Biblia Libre (VBL)</div>
+            <div class="bible-reading-version">Reina-Valera 1909</div>
 
             <div class="loading">
                 <div class="spinner"></div>
@@ -4551,7 +4659,7 @@ renderBibleReading: async function() {
     ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
 </h2>
                 
-                <div class="bible-reading-version">Versión Biblia Libre (VBL)</div>
+                <div class="bible-reading-version">Reina-Valera 1909</div>
 
                 <div style="display: flex; gap: 12px; justify-content: center; margin: 16px 0;">
                     <button
