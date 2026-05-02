@@ -4555,85 +4555,119 @@ scrollToTargetVerse: function() {
 },
 
 renderBible: function() {
-    if (!this.selectedBibleBook) {
-        this.$content.innerHTML = `
-            <div class="bible-view">
-                <!-- Header principal SIN botón volver -->
-${this.renderViewHeader(
-    'Biblia',
-    'Busca, lee y explora las Escrituras por libro y capítulo.'
-)}
+    const oldTestamentIds = new Set([
+        'gen','exo','lev','num','deu','jos','jdg','rut','1sa','2sa','1ki','2ki','1ch','2ch','ezr','neh','est',
+        'job','psa','pro','ecc','sng','isa','jer','lam','ezk','dan','hos','jol','amo','oba','jon','mic','nam',
+        'hab','zep','hag','zec','mal'
+    ]);
 
-<!-- Botón de búsqueda -->
-<div style="margin-bottom: 16px;">
-    <button class="btn-secondary" data-action="open-bible-search" style="justify-content: center;">
-        🔍 Buscar en la Biblia
-    </button>
-</div>
+    const book = this.selectedBibleBook
+        ? this.bibleBooks.find(item => item.id === this.selectedBibleBook)
+        : null;
 
-<!-- Grid de libros -->
-                <div class="bible-books-grid">
-                    ${this.bibleBooks.map(book => `
-                        <button
-                            class="bible-book-card"
-                            type="button"
-                            data-action="open-bible-book"
-                            data-book-id="${book.id}"
-                        >
-                            <span class="bible-book-name">${this.escapeHtml(book.name)}</span>
-                            <span class="bible-book-meta">${book.chapters} cap.</span>
-                        </button>
-                    `).join('')}
+    const oldBooks = this.bibleBooks.filter(item => oldTestamentIds.has(item.id));
+    const newBooks = this.bibleBooks.filter(item => !oldTestamentIds.has(item.id));
+
+    const renderBookCard = (item) => `
+        <button
+            class="bible-library-book ${book?.id === item.id ? 'is-selected' : ''}"
+            type="button"
+            data-action="open-bible-book"
+            data-book-id="${item.id}"
+        >
+            <span class="bible-library-book-name">${this.escapeHtml(item.name)}</span>
+            <span class="bible-library-book-meta">${item.chapters} cap.</span>
+        </button>
+    `;
+
+    const renderBookSection = (title, subtitle, books) => `
+        <section class="bible-library-section">
+            <div class="bible-library-section-header">
+                <div>
+                    <h3>${title}</h3>
+                    <p>${subtitle}</p>
                 </div>
+                <span>${books.length}</span>
             </div>
-        `;
-        return;
-    }
 
-    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+            <div class="bible-library-grid">
+                ${books.map(renderBookCard).join('')}
+            </div>
+        </section>
+    `;
 
-    if (!book) {
-        this.selectedBibleBook = null;
-        this.selectedBibleChapter = null;
-        this.renderBible();
-        return;
-    }
-
-    const chapters = Array.from({ length: book.chapters }, (_, i) => i + 1);
+    const chapters = book
+        ? Array.from({ length: book.chapters }, (_, i) => i + 1)
+        : [];
 
     this.$content.innerHTML = `
-        <div class="bible-view">
-            <!-- ⭐⭐ BARRA DE NAVEGACIÓN SUPERIOR CON BOTÓN VOLVER ⭐⭐ -->
-            <div class="bible-nav-top">
-                <button
-                    class="bible-back-btn"
-                    type="button"
-                    data-action="back-to-bible-books"
-                >
-                    ← Volver a libros
-                </button>
-            </div>
+        <div class="bible-library-view">
+            <div class="bible-library-hero">
+                <div class="bible-library-kicker">Reina-Valera 1909</div>
+                <h2>Biblia</h2>
+                <p>Lee, busca y navega por las Escrituras de forma sencilla.</p>
 
-            <!-- Header con el nombre del libro -->
-            <div class="bible-header-card">
-                <div class="bible-title">${this.escapeHtml(book.name)}</div>
-                <div class="bible-subtitle">Selecciona un capítulo</div>
-            </div>
-
-            <!-- Grid de capítulos -->
-            <div class="bible-chapters-grid">
-                ${chapters.map(chapter => `
+                <div class="bible-library-actions">
                     <button
-                        class="bible-chapter-btn"
+                        class="bible-library-action-btn primary"
                         type="button"
-                        data-action="open-bible-chapter"
-                        data-book-id="${book.id}"
-                        data-chapter="${chapter}"
+                        data-action="open-bible-search"
                     >
-                        ${chapter}
+                        🔍 Buscar
                     </button>
-                `).join('')}
+
+                    ${book ? `
+                        <button
+                            class="bible-library-action-btn"
+                            type="button"
+                            data-action="clear-bible-book"
+                        >
+                            Cambiar libro
+                        </button>
+                    ` : ''}
+                </div>
             </div>
+
+            ${book ? `
+                <section class="bible-chapter-panel">
+                    <div class="bible-chapter-panel-header">
+                        <div>
+                            <span>Libro seleccionado</span>
+                            <h3>${this.escapeHtml(book.name)}</h3>
+                        </div>
+
+                        <button
+                            class="bible-chapter-panel-close"
+                            type="button"
+                            data-action="clear-bible-book"
+                            aria-label="Volver a todos los libros"
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <div class="bible-chapter-panel-meta">
+                        Selecciona un capítulo
+                    </div>
+
+                    <div class="bible-chapter-picker">
+                        ${chapters.map(chapter => `
+                            <button
+                                class="bible-chapter-pill"
+                                type="button"
+                                data-action="open-bible-chapter"
+                                data-book-id="${book.id}"
+                                data-chapter="${chapter}"
+                            >
+                                ${chapter}
+                            </button>
+                        `).join('')}
+                    </div>
+                </section>
+            ` : `
+                ${renderBookSection('Antiguo Testamento', 'Ley, historia, poesía y profetas', oldBooks)}
+                ${renderBookSection('Nuevo Testamento', 'Evangelios, cartas y Apocalipsis', newBooks)}
+            `}
         </div>
     `;
 },
@@ -5642,6 +5676,14 @@ if (navigateToVerseBtn) {
 
 const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
 if (backToBibleBooksBtn) {
+    this.selectedBibleBook = null;
+    this.selectedBibleChapter = null;
+    this.navigate('bible');
+    return;
+}
+
+const clearBibleBookBtn = e.target.closest('[data-action="clear-bible-book"]');
+if (clearBibleBookBtn) {
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
     this.navigate('bible');
