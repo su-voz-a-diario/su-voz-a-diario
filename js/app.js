@@ -3932,11 +3932,19 @@ renderBibleSearch: function() {
     }
 
     return `
-        <div class="bible-search-view">
-            <div class="bible-search-header">
-                <button class="back-btn" data-action="back-to-bible-books">← Volver</button>
-                <h2>Buscar en la Biblia</h2>
-            </div>
+       <div class="bible-search-header">
+    <div class="bible-nav-top">
+        <button
+            class="bible-back-btn"
+            type="button"
+            data-action="back-to-bible-books"
+        >
+            ← Volver a Biblia
+        </button>
+    </div>
+
+    <h2>Buscar en la Biblia</h2>
+</div>
 
             <div class="bible-search-filters">
                 <button class="bible-filter-btn ${this.bibleSearchFilter === 'all' ? 'active' : ''}" data-action="set-bible-filter" data-filter="all">
