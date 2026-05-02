@@ -4389,12 +4389,14 @@ performBibleSearch: async function(query, resetPage = true) {
     }
 
     if (!normalizedQuery || normalizedQuery.length < 2) {
-        this.resetBibleSearchState();
-        this.bibleSearchFilter = 'all';
-        this.updateFilterButtonsUI();
-        this.updateBibleSearchResults();
-        return;
-    }
+    this.bibleSearchResults = [];
+    this.bibleSearchLoading = false;
+    this.bibleSearchTotal = 0;
+    this.bibleSearchTotalPages = 0;
+    this.bibleSearchPage = 1;
+    this.updateBibleSearchResults();
+    return;
+}
 
     this.bibleSearchLoading = true;
     this.updateBibleSearchResults();
