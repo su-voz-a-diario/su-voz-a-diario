@@ -2395,8 +2395,17 @@ hideSelectionPanel: function(clearStoredSelection = true) {
 openSelectionNoteViewer: function(verseItem) {
     if (!verseItem || !this.$selectionPanel) return;
 
-    const textEl = verseItem.querySelector('.verse-text-content');
+    // Obtener la fecha correcta desde el shell más cercano
+    const surface = verseItem.closest('.selection-surface');
+    const shell = surface ? surface.closest('.reading-text-shell') : null;
+    const dateStr = shell ? shell.getAttribute('data-reading-date') : null;
 
+    if (!dateStr) {
+        this.showToast('No se pudo determinar la fecha de la lectura');
+        return;
+    }
+
+    const textEl = verseItem.querySelector('.verse-text-content');
     const selectedText = (
         verseItem.getAttribute('data-verse-full') ||
         verseItem.getAttribute('data-verse-text') ||
@@ -2407,11 +2416,6 @@ openSelectionNoteViewer: function(verseItem) {
         .replace('📝', '')
         .replace(/\s+/g, ' ')
         .trim();
-
-    const dateStr =
-        this.homeViewingDate ||
-        this.currentSelectionDate ||
-        this.getTodayDateStr();
 
     const noteEntry = this.getSelectionNoteByText(dateStr, selectedText);
 
@@ -2431,18 +2435,13 @@ openSelectionNoteViewer: function(verseItem) {
 
     this.renderSelectionNoteViewer(noteEntry);
 
-    // Cierra el panel de selección SI está abierto
-this.hideSelectionPanel(false);
+    const notePanel = document.getElementById('noteViewPanel');
+    if (notePanel) {
+        notePanel.classList.add('visible');
+    }
 
-// Abre el panel NUEVO de nota
-const notePanel = document.getElementById('noteViewPanel');
-if (notePanel) {
-    notePanel.classList.add('visible');
-}
+    document.body.classList.add('selection-panel-open');
 
-// Bloquea scroll como panel nativo
-document.body.classList.add('selection-panel-open');
-    
     if ('vibrate' in navigator) {
         navigator.vibrate(8);
     }
@@ -4774,7 +4773,6 @@ renderBibleReading: async function() {
         `);
 
         this.restoreHighlightsInDOMForVerses(`bible-${requestedBookId}-${requestedChapter}`);
-        this.restoreSelectionNotesInDOM(`bible-${requestedBookId}-${requestedChapter}`);
 
         if (this.targetVerse) {
             this.scrollToTargetVerse();
