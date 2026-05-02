@@ -3445,13 +3445,19 @@ body.selection-panel-open {
     box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
 }
 
-/* Resaltados en versículos - ESTILO MARCADOR SUTIL */
 /* Resaltados en versículos - ESTILO PROFESIONAL (SOLO TEXTO) */
-.verse-item.highlight-yellow {
+
+/* Quitar fondo/borde del contenedor del versículo */
+.verse-item.highlight-yellow,
+.verse-item.highlight-blue,
+.verse-item.highlight-green,
+.verse-item.highlight-rose {
     background-color: transparent !important;
     border-left: none !important;
 }
 
+/* Color amarillo */
+.verse-item.highlight-yellow .verse-text,
 .verse-item.highlight-yellow .verse-text-content {
     background-color: rgba(250, 204, 21, 0.4);
     border-radius: 4px;
@@ -3462,11 +3468,8 @@ body.selection-panel-open {
     box-decoration-break: clone;
 }
 
-.verse-item.highlight-blue {
-    background-color: transparent !important;
-    border-left: none !important;
-}
-
+/* Color azul */
+.verse-item.highlight-blue .verse-text,
 .verse-item.highlight-blue .verse-text-content {
     background-color: rgba(59, 130, 246, 0.35);
     border-radius: 4px;
@@ -3478,10 +3481,11 @@ body.selection-panel-open {
 }
 
 /* Modo oscuro */
+.dark-mode .verse-item.highlight-yellow .verse-text,
 .dark-mode .verse-item.highlight-yellow .verse-text-content {
     background-color: rgba(250, 204, 21, 0.35);
 }
-
+.dark-mode .verse-item.highlight-blue .verse-text,
 .dark-mode .verse-item.highlight-blue .verse-text-content {
     background-color: rgba(96, 165, 250, 0.3);
 }
