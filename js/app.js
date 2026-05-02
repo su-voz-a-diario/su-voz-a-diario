@@ -160,7 +160,7 @@ async function getBibleChapter(bookId, chapterNumber) {
 
                 return `
                     <p
-                        class="verse-item"
+                        class="verse-item verse-selectable"
                         data-verse-number="${verseNumber}"
                         data-verse-text="${safeText}"
                         data-verse-full="${safeText}"
@@ -2122,6 +2122,27 @@ restoreHighlightsInDOMForVerses: function(dateStr) {
             }
         }
     });
+
+// ✅ APLICAR COLORES DE RESALTADO GUARDADOS
+const highlights = this.getHighlights(dateStr);
+const normalizeText = str => (str || '').replace(/\s+/g, ' ').trim().toLowerCase();
+
+highlights.forEach(hl => {
+    const hlTextNormalized = normalizeText(hl.text);
+    
+    for (const verseItem of verseItems) {
+        const verseFull = normalizeText(
+            verseItem.getAttribute('data-verse-full') ||
+            verseItem.getAttribute('data-verse-text') ||
+            verseItem.textContent || ''
+        );
+        
+        if (verseFull === hlTextNormalized) {
+            verseItem.classList.add(`highlight-${hl.color}`);
+            break; // un versículo solo puede tener un color activo
+        }
+    }
+});
 },
 
 restoreSelectionNotesInDOM: function(dateStr) {
@@ -4745,7 +4766,7 @@ renderBibleReading: async function() {
         this.$content.innerHTML = renderReaderShell(`
             <div class="bible-reader-content">
                 <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
-                    <div class="reading-text bible-api-content">
+                    <div class="reading-text bible-api-content selection-surface">
                         ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
                     </div>
                 </div>
