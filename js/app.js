@@ -4471,106 +4471,27 @@ updateFilterButtonsUI: function() {
 },
 
 updateBibleSearchResults: function() {
+    if (this.currentView !== 'bible-search' || !this.$content) return;
+
     const activeElement = document.activeElement;
     const isSearchInput = activeElement && activeElement.id === 'bible-search-input';
-    const cursorPosition = isSearchInput ? activeElement.selectionStart : 0;
+    const cursorPosition = isSearchInput ? activeElement.selectionStart : null;
 
-    const hasResults = this.bibleSearchResults.length > 0;
-    const isLoading = this.bibleSearchLoading;
-
-    const resultsContainer = document.getElementById('bible-search-results-container');
-    const statsContainer = document.getElementById('bible-search-stats');
-    const clearButton = document.querySelector('.bible-search-clear');
-    const searchInput = document.getElementById('bible-search-input');
-
-    if (searchInput && searchInput.value !== this.bibleSearchQuery) {
-        searchInput.value = this.bibleSearchQuery;
-    }
-
-    if (clearButton) {
-        clearButton.style.display = this.bibleSearchQuery ? 'flex' : 'none';
-    }
-
-    if (statsContainer) {
-        if (!isLoading && hasResults) {
-            const start = ((this.bibleSearchPage - 1) * this.bibleSearchPageSize) + 1;
-            const end = Math.min(this.bibleSearchPage * this.bibleSearchPageSize, this.bibleSearchTotal);
-
-            statsContainer.innerHTML = `
-                Mostrando ${start}-${end} de ${this.bibleSearchTotal} resultado${this.bibleSearchTotal !== 1 ? 's' : ''}
-            `;
-            statsContainer.style.display = 'block';
-        } else {
-            statsContainer.style.display = 'none';
-        }
-    }
-
-    if (resultsContainer) {
-        if (isLoading && !hasResults) {
-            resultsContainer.innerHTML = `
-                <div class="loading" style="padding: 40px 20px;">
-                    <div class="spinner"></div>
-                    Buscando en la Biblia...
-                </div>
-            `;
-        } else if (hasResults) {
-            const resultsHtml = this.bibleSearchResults.map(result => {
-                const book = this.getBibleBookById(result.bookId);
-                const bookName = book ? book.name : result.bookName || result.bookId;
-                const chapter = Number(result.chapter || 0);
-                const verse = Number(result.verse || 0);
-
-                return `
-                    <div class="bible-search-result-item"
-                         data-action="navigate-to-verse"
-                         data-book-id="${result.bookId}"
-                         data-chapter="${chapter}"
-                         data-verse="${verse}">
-                        <div class="bible-search-result-reference">
-                            ${bookName} ${chapter}:${verse}
-                        </div>
-                        <div class="bible-search-result-text">
-                            ${this.highlightSearchTerm(result.text, this.bibleSearchQuery)}
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            resultsContainer.innerHTML = `
-                ${resultsHtml}
-                ${this.renderBiblePagination()}
-            `;
-        } else if (this.bibleSearchQuery.trim().length >= 2) {
-            resultsContainer.innerHTML = `
-                <div class="empty-state" style="padding: 40px 20px; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 12px;">🔎</div>
-                    <div style="font-weight: 600; margin-bottom: 8px;">No se encontraron resultados</div>
-                    <div style="color: var(--text-muted);">
-                        Intenta con otra palabra exacta o cambia el filtro de testamento.
-                    </div>
-                </div>
-            `;
-        } else {
-            resultsContainer.innerHTML = `
-                <div class="empty-state" style="padding: 40px 20px; text-align: center;">
-                    <div style="font-size: 2rem; margin-bottom: 12px;">📖</div>
-                    <div style="font-weight: 600; margin-bottom: 8px;">Busca una palabra en la Biblia</div>
-                    <div style="color: var(--text-muted);">
-                        Ejemplos: Dios, amor, fe, gracia.
-                    </div>
-                </div>
-            `;
-        }
-    }
+    this.$content.innerHTML = this.renderBibleSearch();
 
     if (isSearchInput) {
-        requestAnimationFrame(() => {
-            const input = document.getElementById('bible-search-input');
-            if (input) {
-                input.focus();
-                input.setSelectionRange(cursorPosition, cursorPosition);
-            }
-        });
+        const searchInput = document.getElementById('bible-search-input');
+
+        if (searchInput) {
+            searchInput.focus();
+
+            const safePosition = Math.min(
+                cursorPosition ?? this.bibleSearchQuery.length,
+                searchInput.value.length
+            );
+
+            searchInput.setSelectionRange(safePosition, safePosition);
+        }
     }
 },
 
