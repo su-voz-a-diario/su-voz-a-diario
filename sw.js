@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-voz-v10';
+const CACHE_NAME = 'su-voz-v11';
 const DYNAMIC_CACHE = 'su-voz-dynamic-v6';
 
 const STATIC_ASSETS = [
@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
   './js/app.js',
   './manifest.json',
   './data/readings.json',
+  './data/rv1909.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
 ];
@@ -266,4 +267,4 @@ async function openAppAndNavigate(url) {
   }
 }
 
-console.log('[SW NUEVO] sw.js v10 cargado correctamente');
+console.log('[SW NUEVO] sw.js v11 cargado correctamente');
