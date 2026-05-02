@@ -3456,7 +3456,7 @@ body.selection-panel-open {
     border-left: none !important;
 }
 
-/* Color amarillo */
+/* ----- Amarillo ----- */
 .verse-item.highlight-yellow .verse-text,
 .verse-item.highlight-yellow .verse-text-content {
     background-color: rgba(250, 204, 21, 0.4);
@@ -3467,8 +3467,12 @@ body.selection-panel-open {
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
 }
+.dark-mode .verse-item.highlight-yellow .verse-text,
+.dark-mode .verse-item.highlight-yellow .verse-text-content {
+    background-color: rgba(250, 204, 21, 0.35);
+}
 
-/* Color azul */
+/* ----- Azul ----- */
 .verse-item.highlight-blue .verse-text,
 .verse-item.highlight-blue .verse-text-content {
     background-color: rgba(59, 130, 246, 0.35);
@@ -3479,15 +3483,41 @@ body.selection-panel-open {
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
 }
-
-/* Modo oscuro */
-.dark-mode .verse-item.highlight-yellow .verse-text,
-.dark-mode .verse-item.highlight-yellow .verse-text-content {
-    background-color: rgba(250, 204, 21, 0.35);
-}
 .dark-mode .verse-item.highlight-blue .verse-text,
 .dark-mode .verse-item.highlight-blue .verse-text-content {
     background-color: rgba(96, 165, 250, 0.3);
+}
+
+/* ----- Verde (NUEVO) ----- */
+.verse-item.highlight-green .verse-text,
+.verse-item.highlight-green .verse-text-content {
+    background-color: rgba(34, 197, 94, 0.35);
+    border-radius: 4px;
+    padding: 0 2px;
+    margin: 0 -2px;
+    display: inline;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+.dark-mode .verse-item.highlight-green .verse-text,
+.dark-mode .verse-item.highlight-green .verse-text-content {
+    background-color: rgba(74, 222, 128, 0.35);
+}
+
+/* ----- Rosa (NUEVO) ----- */
+.verse-item.highlight-rose .verse-text,
+.verse-item.highlight-rose .verse-text-content {
+    background-color: rgba(244, 114, 182, 0.35);
+    border-radius: 4px;
+    padding: 0 2px;
+    margin: 0 -2px;
+    display: inline;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+}
+.dark-mode .verse-item.highlight-rose .verse-text,
+.dark-mode .verse-item.highlight-rose .verse-text-content {
+    background-color: rgba(251, 146, 208, 0.35);
 }
 
 /* ======================================== */
