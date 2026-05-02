@@ -2923,7 +2923,7 @@ this.updateNavUI();
 updateNavUI: function() {
     const navBtns = [
         { btn: this.$navHome, views: ['home', 'reading'] },
-        { btn: this.$navBible, views: ['bible', 'bible-reading'] },
+        { btn: this.$navBible, views: ['bible', 'bible-reading', 'bible-search'] },
         { btn: this.$navCalendar, views: ['calendar'] },
         { btn: this.$navCommunity, views: ['community'] },
         { btn: this.$navStats, views: ['stats'] }
@@ -4640,7 +4640,7 @@ ${this.renderViewHeader(
 
 renderBibleReading: async function() {
     const requestedBookId = this.selectedBibleBook;
-    const requestedChapter = this.selectedBibleChapter;
+    const requestedChapter = Number(this.selectedBibleChapter);
     const requestedBook = this.bibleBooks.find(b => b.id === requestedBookId);
 
     if (!requestedBook || !requestedChapter) {
@@ -4648,127 +4648,125 @@ renderBibleReading: async function() {
         return;
     }
 
-    // ✅ CORREGIDO: Mostrar loading sin usar chapterData
-    this.$content.innerHTML = `
-        <div class="bible-reading-view">
-            <div class="bible-nav-top">
-                <button class="bible-back-btn" data-action="back-to-bible-books">
-                    ← Volver a libros
+    const previousDisabled = requestedChapter <= 1;
+    const nextDisabled = requestedChapter >= requestedBook.chapters;
+
+    const renderReaderShell = (bodyHtml) => `
+        <div class="bible-reader-view">
+            <div class="bible-reader-topbar">
+                <button
+                    class="bible-reader-icon-btn"
+                    type="button"
+                    data-action="back-to-bible-books"
+                    aria-label="Abrir libros"
+                    title="Libros"
+                >
+                    ☰
+                </button>
+
+                <button
+                    class="bible-reader-title-btn"
+                    type="button"
+                    data-action="back-to-bible-books"
+                    aria-label="Cambiar libro o capítulo"
+                >
+                    <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
+                    <span class="bible-reader-chapter">Capítulo ${requestedChapter}</span>
+                </button>
+
+                <button
+                    class="bible-reader-icon-btn"
+                    type="button"
+                    data-action="open-bible-search"
+                    aria-label="Buscar en la Biblia"
+                    title="Buscar"
+                >
+                    🔍
                 </button>
             </div>
 
-            <h2 style="text-align: center; margin: 1rem 0 0.25rem 0; color: var(--text-primary);">
-                ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
-            </h2>
-            
-            <div class="bible-reading-version">Reina-Valera 1909</div>
+            <div class="bible-reader-subbar">
+                <button
+                    class="bible-reader-nav-btn"
+                    type="button"
+                    data-action="bible-prev-chapter"
+                    ${previousDisabled ? 'disabled' : ''}
+                >
+                    ← Anterior
+                </button>
 
-            <div class="loading">
-                <div class="spinner"></div>
-                Cargando capítulo...
+                <div class="bible-reader-version">Reina-Valera 1909</div>
+
+                <button
+                    class="bible-reader-nav-btn"
+                    type="button"
+                    data-action="bible-next-chapter"
+                    ${nextDisabled ? 'disabled' : ''}
+                >
+                    Siguiente →
+                </button>
             </div>
+
+            ${bodyHtml}
         </div>
     `;
 
+    this.$content.innerHTML = renderReaderShell(`
+        <div class="loading">
+            <div class="spinner"></div>
+            Cargando capítulo...
+        </div>
+    `);
+
     try {
-        // Obtener datos de la API
         const chapterData = await getBibleChapter(requestedBookId, requestedChapter);
 
-        // Verificar que seguimos en la misma vista
         if (
             this.currentView !== 'bible-reading' ||
             this.selectedBibleBook !== requestedBookId ||
-            this.selectedBibleChapter !== requestedChapter
+            Number(this.selectedBibleChapter) !== requestedChapter
         ) {
             return;
         }
 
         this.currentBibleChapterData = chapterData;
 
-        // ✅ CORREGIDO: UN SOLO RENDERIZADO con la estructura correcta
-        this.$content.innerHTML = `
-            <div class="bible-reading-view">
-                <div class="bible-nav-top">
-                    <button class="bible-back-btn" data-action="back-to-bible-books">
-                        ← Volver a libros
-                    </button>
-                </div>
-
-                <h2 style="text-align: center; margin: 1rem 0 0.25rem 0; color: var(--text-primary);">
-    ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
-</h2>
-                
-                <div class="bible-reading-version">Reina-Valera 1909</div>
-
-                <div style="display: flex; gap: 12px; justify-content: center; margin: 16px 0;">
-                    <button
-                        class="btn-secondary"
-                        data-action="bible-prev-chapter"
-                        ${requestedChapter > 1 ? '' : 'disabled'}
-                        style="flex: 0 1 auto; min-width: 120px;"
-                    >
-                        ← Anterior
-                    </button>
-
-                    <button
-                        class="btn-secondary"
-                        data-action="bible-next-chapter"
-                        ${requestedChapter < requestedBook.chapters ? '' : 'disabled'}
-                        style="flex: 0 1 auto; min-width: 120px;"
-                    >
-                        Siguiente →
-                    </button>
-                </div>
-
+        this.$content.innerHTML = renderReaderShell(`
+            <div class="bible-reader-content">
                 <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
-    <div class="reading-text bible-api-content">
-        ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
-    </div>
-</div>
+                    <div class="reading-text bible-api-content">
+                        ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
+                    </div>
+                </div>
             </div>
-        `;
+        `);
 
-        // Restaurar resaltados y notas
         this.restoreHighlightsInDOMForVerses(`bible-${requestedBookId}-${requestedChapter}`);
         this.restoreSelectionNotesInDOM(`bible-${requestedBookId}-${requestedChapter}`);
-        
-        // ✅ NUEVO: Hacer scroll al versículo objetivo si existe
-if (this.targetVerse) {
-    this.scrollToTargetVerse();
-}
-        
+
+        if (this.targetVerse) {
+            this.scrollToTargetVerse();
+        }
     } catch (error) {
         console.error('Error cargando capítulo bíblico:', error);
 
         if (
             this.currentView !== 'bible-reading' ||
             this.selectedBibleBook !== requestedBookId ||
-            this.selectedBibleChapter !== requestedChapter
+            Number(this.selectedBibleChapter) !== requestedChapter
         ) {
             return;
         }
 
-        this.$content.innerHTML = `
-            <div class="bible-reading-view">
-                <div class="bible-nav-top">
-                    <button class="bible-back-btn" data-action="back-to-bible-books">
-                        ← Volver a libros
-                    </button>
-                </div>
-
-                <h2 style="text-align: center; margin: 1rem 0;">
-                    ${this.escapeHtml(requestedBook.name)} ${requestedChapter}
-                </h2>
-
-                <div class="empty-state">
-                    <h3>⚠️ No se pudo cargar el capítulo</h3>
-                    <p>${this.escapeHtml(error?.message || 'Intenta nuevamente más tarde.')}</p>
-                    <button class="btn-primary" data-action="back-to-bible-books" style="margin-top: 20px;">
-                        Volver a libros
-                    </button>
-                </div>
+        this.$content.innerHTML = renderReaderShell(`
+            <div class="empty-state">
+                <h3>⚠️ No se pudo cargar el capítulo</h3>
+                <p>${this.escapeHtml(error?.message || 'Intenta nuevamente más tarde.')}</p>
+                <button class="btn-primary" type="button" data-action="back-to-bible-books" style="margin-top: 20px;">
+                    Elegir otro libro
+                </button>
             </div>
-        `;
+        `);
     }
 },
     
@@ -5644,14 +5642,9 @@ if (navigateToVerseBtn) {
 
 const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
 if (backToBibleBooksBtn) {
-    if (this.selectedBibleChapter) {
-        this.selectedBibleChapter = null;
-        this.navigate('bible');
-    } else {
-        this.selectedBibleBook = null;
-        this.selectedBibleChapter = null;
-        this.navigate('bible');
-    }
+    this.selectedBibleBook = null;
+    this.selectedBibleChapter = null;
+    this.navigate('bible');
     return;
 }
          
