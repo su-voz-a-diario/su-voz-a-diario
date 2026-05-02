@@ -4085,6 +4085,31 @@ extractVersesFromBibleHtml: function(htmlContent) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlContent || '';
 
+    const verseItems = Array.from(tempDiv.querySelectorAll('.verse-item'));
+
+    if (verseItems.length) {
+        return verseItems
+            .map(item => {
+                const number =
+                    item.getAttribute('data-verse-number') ||
+                    item.querySelector('.verse-number')?.textContent ||
+                    '';
+
+                const text =
+                    item.getAttribute('data-verse-full') ||
+                    item.getAttribute('data-verse-text') ||
+                    item.querySelector('.verse-text')?.textContent ||
+                    item.textContent ||
+                    '';
+
+                return {
+                    number: this.normalizeBibleText(number),
+                    text: this.normalizeBibleText(text)
+                };
+            })
+            .filter(verse => verse.number && verse.text);
+    }
+
     const verses = [];
     let currentVerse = null;
 
@@ -4122,27 +4147,25 @@ extractVersesFromBibleHtml: function(htmlContent) {
         }
 
         const classList = Array.from(node.classList || []);
-const isVerseMarker =
-    classList.includes('v') ||
-    classList.includes('verse-number') ||
-    node.hasAttribute('data-verse') ||
-    node.hasAttribute('data-verse-number') ||
-    /^v\d*$/i.test(node.className || '');
+        const isVerseMarker =
+            classList.includes('v') ||
+            classList.includes('verse-number') ||
+            node.hasAttribute('data-verse') ||
+            /^v\d*$/i.test(node.className || '');
 
-if (isVerseMarker) {
-    pushCurrentVerse();
+        if (isVerseMarker) {
+            pushCurrentVerse();
 
-    currentVerse = {
-        number:
-            node.getAttribute('data-verse') ||
-            node.getAttribute('data-verse-number') ||
-            node.textContent ||
-            '',
-        text: ''
-    };
+            currentVerse = {
+                number:
+                    node.getAttribute('data-verse') ||
+                    node.textContent ||
+                    '',
+                text: ''
+            };
 
-    return;
-}
+            return;
+        }
 
         Array.from(node.childNodes).forEach(child => processNode(child));
     };
