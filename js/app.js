@@ -3291,11 +3291,21 @@ normalizeBibleText: function(text) {
 },
 
 handleVerseClick: function(e) {
-    if (e.target.closest('[data-action="open-verse-study"]')) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-    }
+   const verseStudyBtn = e.target.closest('[data-action="open-verse-study"]');
+
+if (verseStudyBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    this.openVerseStudy({
+        bookId: verseStudyBtn.dataset.bookId,
+        chapter: verseStudyBtn.dataset.chapter,
+        verse: verseStudyBtn.dataset.verse,
+        verseText: verseStudyBtn.dataset.verseText
+    });
+
+    return;
+}
 
     const verseItem = e.target.closest('.verse-selectable');
     if (!verseItem) return;
