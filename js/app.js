@@ -3291,6 +3291,12 @@ normalizeBibleText: function(text) {
 },
 
 handleVerseClick: function(e) {
+    if (e.target.closest('[data-action="open-verse-study"]')) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+    }
+
     const verseItem = e.target.closest('.verse-selectable');
     if (!verseItem) return;
     
