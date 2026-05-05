@@ -166,7 +166,20 @@ async function getBibleChapter(bookId, chapterNumber) {
                         data-verse-full="${safeText}"
                     >
                         <span class="verse-number" data-verse-number="${verseNumber}">${verseNumber}</span>
-                        <span class="verse-text">${safeText}</span>
+<span class="verse-text">${safeText}</span>
+
+<button
+    class="verse-study-btn"
+    type="button"
+    data-action="open-verse-study"
+    data-book-id="${bookId}"
+    data-chapter="${chapterNumber}"
+    data-verse="${verseNumber}"
+    data-verse-text="${safeText}"
+    aria-label="Estudiar este versículo"
+>
+    Estudiar
+</button>
                     </p>
                 `;
             }).join('')}
@@ -305,6 +318,8 @@ const App = {
     selectedBibleBook: null,
     selectedBibleChapter: null,
     currentBibleChapterData: null,
+    strongHebrew: {},
+    strongHebrewReady: false,
 
     bibleSearchIndexReady: false,
     bibleSearchData: [],
@@ -455,6 +470,7 @@ this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
 await this.initAuth();
 await this.loadData();
+await this.loadStrongHebrew();
 await this.refreshCommunityBadge();
 
 const savedToken = localStorage.getItem('su-voz-fcm-token');
@@ -5504,6 +5520,49 @@ savePushToken: async function(token) {
     this.pushListenersReady = true;
     console.log('[App] ✅ Listeners Push configurados');
 },
+
+openVerseStudy: function({ bookId, chapter, verse, verseText }) {
+    if (!this.strongHebrewReady) {
+        this.showToast('El diccionario Strong todavía no está disponible.');
+        return;
+    }
+
+    const sample = this.strongHebrew.H1;
+
+    if (!sample) {
+        this.showToast('No se encontró la entrada Strong de prueba.');
+        return;
+    }
+
+    alert(
+        `Estudio de ${bookId.toUpperCase()} ${chapter}:${verse}\n\n` +
+        `Texto: ${verseText}\n\n` +
+        `Strong: H1\n` +
+        `Hebreo: ${sample.lemma}\n` +
+        `Transliteración: ${sample.xlit}\n` +
+        `Pronunciación: ${sample.pronunciation}\n\n` +
+        `Definición:\n${sample.definition.slice(0, 3).join('\n')}`
+    );
+},
+
+loadStrongHebrew: async function() {
+    try {
+        const response = await fetch('./data/strong-hebrew-clean.json');
+
+        if (!response.ok) {
+            throw new Error('No se pudo cargar el diccionario Strong hebreo.');
+        }
+
+        this.strongHebrew = await response.json();
+        this.strongHebrewReady = true;
+
+        console.log('[Strong] Diccionario hebreo cargado');
+    } catch (error) {
+        console.error('[Strong] Error cargando diccionario hebreo:', error);
+        this.strongHebrew = {};
+        this.strongHebrewReady = false;
+    }
+},
     
     // ========================================
     // EVENTOS
@@ -5556,29 +5615,49 @@ if (this.$headerSettingsBtn) {
         });
     });
         
-        // Controles de fuente y versión
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('[data-action="font-increase"]')) {
-                this.changeFontSize(0.05);
-            }
-            if (e.target.closest('[data-action="font-decrease"]')) {
-                this.changeFontSize(-0.05);
-            }
-            
-            const versionBtn = e.target.closest('[data-version]');
-            if (versionBtn) {
-                this.currentVersion = versionBtn.getAttribute('data-version');
-                localStorage.setItem('current-version', this.currentVersion);
-                document.querySelectorAll('.version-btn').forEach(btn => {
-                    btn.classList.toggle('active', btn.getAttribute('data-version') === this.currentVersion);
-                });
-                this.handleRoute().catch(error => {
-                console.error('[Route] Error cambiando versión:', error);
-                });
-                
-                this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
-            }
+// Controles de fuente y versión
+document.addEventListener('click', (e) => {
+    const verseStudyBtn = e.target.closest('[data-action="open-verse-study"]');
+
+    if (verseStudyBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        this.openVerseStudy({
+            bookId: verseStudyBtn.dataset.bookId,
+            chapter: verseStudyBtn.dataset.chapter,
+            verse: verseStudyBtn.dataset.verse,
+            verseText: verseStudyBtn.dataset.verseText
         });
+
+        return;
+    }
+
+    if (e.target.closest('[data-action="font-increase"]')) {
+        this.changeFontSize(0.05);
+    }
+
+    if (e.target.closest('[data-action="font-decrease"]')) {
+        this.changeFontSize(-0.05);
+    }
+
+    const versionBtn = e.target.closest('[data-version]');
+
+    if (versionBtn) {
+        this.currentVersion = versionBtn.getAttribute('data-version');
+        localStorage.setItem('current-version', this.currentVersion);
+
+        document.querySelectorAll('.version-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-version') === this.currentVersion);
+        });
+
+        this.handleRoute().catch(error => {
+            console.error('[Route] Error cambiando versión:', error);
+        });
+
+        this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
+    }
+});
         
         // Eventos del contenido
      this.$content.addEventListener('click', async (e) => {
