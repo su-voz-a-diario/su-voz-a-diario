@@ -5774,3 +5774,68 @@ body.dark-mode .bible-search-modern .bible-search-placeholder {
         border-radius: 18px;
     }
 }
+
+/* ========================================
+   BOTÓN STRONG / ESTUDIO DE VERSÍCULO
+   ======================================== */
+
+.verse-study-btn {
+    appearance: none;
+    -webkit-appearance: none;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-left: 8px;
+    padding: 3px 9px;
+
+    border: 1px solid rgba(96, 165, 250, 0.28);
+    border-radius: 999px;
+
+    background: rgba(96, 165, 250, 0.10);
+    color: #93c5fd;
+
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+
+    cursor: pointer;
+    vertical-align: middle;
+
+    box-shadow: none;
+}
+
+.verse-study-btn::before {
+    content: "Strong";
+}
+
+.verse-study-btn {
+    font-size: 0;
+}
+
+.verse-study-btn::before {
+    font-size: 0.68rem;
+}
+
+.verse-study-btn:hover {
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.42);
+}
+
+.verse-study-btn:active {
+    transform: scale(0.98);
+}
+
+body.light-mode .verse-study-btn {
+    background: rgba(49, 130, 206, 0.08);
+    border-color: rgba(49, 130, 206, 0.22);
+    color: var(--accent);
+}
+
+body.light-mode .verse-study-btn:hover {
+    background: rgba(49, 130, 206, 0.14);
+    border-color: rgba(49, 130, 206, 0.36);
+}
