@@ -5839,3 +5839,11 @@ body.light-mode .verse-study-btn:hover {
     background: rgba(49, 130, 206, 0.14);
     border-color: rgba(49, 130, 206, 0.36);
 }
+
+.verse-study-btn,
+.verse-study-btn *,
+.no-select {
+    -webkit-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+}
