@@ -169,7 +169,7 @@ async function getBibleChapter(bookId, chapterNumber) {
 <span class="verse-text">${safeText}</span>
 
 <button
-    class="verse-study-btn"
+    class="verse-study-btn no-select"
     type="button"
     data-action="open-verse-study"
     data-book-id="${bookId}"
