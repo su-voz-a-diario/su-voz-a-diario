@@ -1,0 +1,27 @@
+{
+  "gen.1.1": [
+    { "word": "En", "strong": null },
+    { "word": "el", "strong": null },
+    {
+      "word": "principio",
+      "strong": "H7225",
+      "original": "רֵאשִׁית",
+      "transliteration": "re'shiyth",
+      "definition": "comienzo, principio, primero"
+    },
+    {
+      "word": "creó",
+      "strong": "H1254",
+      "original": "בָּרָא",
+      "transliteration": "bara",
+      "definition": "crear, formar, producir"
+    },
+    {
+      "word": "Dios",
+      "strong": "H430",
+      "original": "אֱלֹהִים",
+      "transliteration": "elohim",
+      "definition": "Dios, seres divinos, poderoso"
+    }
+  ]
+}
