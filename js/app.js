@@ -152,20 +152,22 @@ async function getBibleChapter(bookId, chapterNumber) {
         throw new Error(`No se encontró el capítulo ${chapterNumber}.`);
     }
 
-    const content = `
+const content = `
         <div class="verse-container">
             ${chapter.map((text, index) => {
-                const verseNumber = index + 1;
-                const strongTokens = window.App?.getVerseStrongTokens(
-                    bookId,
-                    chapterNumber,
-                      verseNumber
-                );
+const verseNumber = index + 1;
+const safeText = escapeBibleHtml(text);
 
-                const tokenizedText = window.App?.tokenizeVerseText(
-                    text,
-                    strongTokens
-                ) || escapeBibleHtml(text);
+const strongTokens = window.App?.getVerseStrongTokens(
+    bookId,
+    chapterNumber,
+    verseNumber
+);
+
+const tokenizedText = window.App?.tokenizeVerseText(
+    text,
+    strongTokens
+) || safeText;
 
                 return `
                     <p
