@@ -5674,6 +5674,21 @@ getVerseStrongTokens: function(bookId, chapter, verse) {
     // EVENTOS
     // ========================================
     bindEvents: function() {
+        document.addEventListener('click', (e) => {
+    const strongWord = e.target.closest('.strong-word');
+
+    if (!strongWord) return;
+
+    e.stopPropagation();
+
+    console.log('[Strong Word]', {
+        word: strongWord.dataset.word,
+        strong: strongWord.dataset.strong,
+        original: strongWord.dataset.original,
+        transliteration: strongWord.dataset.transliteration,
+        definition: strongWord.dataset.definition
+    });
+});
         // Navegación
         if (this.$navHome) {
     this.$navHome.addEventListener('click', () => {
