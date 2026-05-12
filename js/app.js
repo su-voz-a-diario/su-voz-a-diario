@@ -320,6 +320,8 @@ const App = {
     currentBibleChapterData: null,
     strongHebrew: {},
     strongHebrewReady: false,
+    strongVerseData: {},
+    strongVerseDataReady: false,
 
     bibleSearchIndexReady: false,
     bibleSearchData: [],
@@ -471,6 +473,7 @@ this.bindKeyboardViewportFix();
 await this.initAuth();
 await this.loadData();
 await this.loadStrongHebrew();
+await this.loadStrongVerseData();
 await this.refreshCommunityBadge();
 
 const savedToken = localStorage.getItem('su-voz-fcm-token');
@@ -5578,6 +5581,30 @@ loadStrongHebrew: async function() {
         this.strongHebrew = {};
         this.strongHebrewReady = false;
     }
+},
+
+loadStrongVerseData: async function() {
+    try {
+        const response = await fetch('./data/rv1909_strong_map.json');
+
+        if (!response.ok) {
+            throw new Error('No se pudo cargar el mapa Strong por versículo.');
+        }
+
+        this.strongVerseData = await response.json();
+        this.strongVerseDataReady = true;
+
+        console.log('[Strong] Mapa Strong por versículo cargado');
+    } catch (error) {
+        console.warn('[Strong] No se cargó el mapa Strong por versículo:', error);
+        this.strongVerseData = {};
+        this.strongVerseDataReady = false;
+    }
+},
+
+getVerseStrongTokens: function(bookId, chapter, verse) {
+    const key = `${bookId}.${Number(chapter)}.${Number(verse)}`;
+    return this.strongVerseData?.[key] || null;
 },
     
     // ========================================
