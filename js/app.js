@@ -6494,6 +6494,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+window.App = App;
+
 window.addEventListener('load', () => {
     const splash = document.getElementById('splash-screen');
     if (!splash) return;
