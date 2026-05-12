@@ -156,7 +156,16 @@ async function getBibleChapter(bookId, chapterNumber) {
         <div class="verse-container">
             ${chapter.map((text, index) => {
                 const verseNumber = index + 1;
-                const safeText = escapeBibleHtml(text);
+                const strongTokens = window.App?.getVerseStrongTokens(
+                    bookId,
+                    chapterNumber,
+                      verseNumber
+                );
+
+                const tokenizedText = window.App?.tokenizeVerseText(
+                    text,
+                    strongTokens
+                ) || escapeBibleHtml(text);
 
                 return `
                     <p
@@ -166,7 +175,7 @@ async function getBibleChapter(bookId, chapterNumber) {
                         data-verse-full="${safeText}"
                     >
                         <span class="verse-number" data-verse-number="${verseNumber}">${verseNumber}</span>
-<span class="verse-text">${safeText}</span>
+<span class="verse-text">${tokenizedText}</span>
 
 <button
     class="verse-study-btn no-select"
@@ -314,6 +323,58 @@ const App = {
 
         return oldTestamentIds.has(book.id) ? 'old' : 'new';
     },
+
+    tokenizeVerseText: function(text, tokens = []) {
+
+    if (!tokens || tokens.length === 0) {
+
+        return escapeBibleHtml(text);
+
+    }
+
+    const words = text.split(/\s+/);
+
+    return words.map((word, index) => {
+
+        const token = tokens[index] || {};
+
+        const cleanWord = word.trim();
+
+        const strong = token.strong || '';
+
+        const original = token.original || '';
+
+        const transliteration = token.transliteration || '';
+
+        const definition = token.definition || '';
+
+        return `
+
+            <span
+
+                class="strong-word"
+
+                data-word="${escapeBibleHtml(cleanWord)}"
+
+                data-strong="${escapeBibleHtml(strong)}"
+
+                data-original="${escapeBibleHtml(original)}"
+
+                data-transliteration="${escapeBibleHtml(transliteration)}"
+
+                data-definition="${escapeBibleHtml(definition)}"
+
+            >
+
+                ${escapeBibleHtml(cleanWord)}
+
+            </span>
+
+        `;
+
+    }).join(' ');
+
+},
 
     selectedBibleBook: null,
     selectedBibleChapter: null,
