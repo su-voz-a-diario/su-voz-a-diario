@@ -1118,6 +1118,11 @@ setScrollCompactState: function(isCompact) {
 },
 
 openStrongForWord: function(strongWord) {
+    const word = strongWord.dataset.word || strongWord.textContent.trim();
+    const strong = strongWord.dataset.strong || 'sin Strong';
+
+    this.showToast(`${word} · ${strong}`, 2500);
+
     console.log('[Strong Word]', {
         word: strongWord.dataset.word,
         strong: strongWord.dataset.strong,
