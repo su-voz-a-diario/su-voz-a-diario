@@ -531,6 +531,7 @@ this.initTheme();
 this.initNotifications();
 this.setupSWCommunication();
 this.bindEvents();
+this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
 await this.initAuth();
@@ -1114,6 +1115,66 @@ isReadingLikeView: function(view = this.currentView) {
 setScrollCompactState: function(isCompact) {
     this.scrollCompactActive = false;
     document.body.classList.remove('reading-scroll-compact');
+},
+
+openStrongForWord: function(strongWord) {
+    console.log('[Strong Word]', {
+        word: strongWord.dataset.word,
+        strong: strongWord.dataset.strong,
+        original: strongWord.dataset.original,
+        transliteration: strongWord.dataset.transliteration,
+        definition: strongWord.dataset.definition
+    });
+},
+
+bindStrongNativeLongPress: function() {
+    let strongPressTimer = null;
+    let startX = 0;
+    let startY = 0;
+    let pressedWord = null;
+
+    const LONG_PRESS_MS = 700;
+    const MOVE_LIMIT = 14;
+
+    this.$content.addEventListener('touchstart', (e) => {
+        const strongWord = e.target.closest('.strong-word');
+
+        if (!strongWord) return;
+
+        const touch = e.touches[0];
+
+        startX = touch.clientX;
+        startY = touch.clientY;
+        pressedWord = strongWord;
+
+        strongPressTimer = setTimeout(() => {
+            this.openStrongForWord(pressedWord);
+            strongPressTimer = null;
+        }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    this.$content.addEventListener('touchmove', (e) => {
+        if (!strongPressTimer || !pressedWord) return;
+
+        const touch = e.touches[0];
+        const movedX = Math.abs(touch.clientX - startX);
+        const movedY = Math.abs(touch.clientY - startY);
+
+        if (movedX > MOVE_LIMIT || movedY > MOVE_LIMIT) {
+            clearTimeout(strongPressTimer);
+            strongPressTimer = null;
+            pressedWord = null;
+        }
+    }, { passive: true });
+
+    this.$content.addEventListener('touchend', () => {
+        if (strongPressTimer) {
+            clearTimeout(strongPressTimer);
+            strongPressTimer = null;
+        }
+
+        pressedWord = null;
+    }, { passive: true });
 },
 
 bindHeaderControlsToggle: function() {
