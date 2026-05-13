@@ -1119,17 +1119,30 @@ setScrollCompactState: function(isCompact) {
 
 openStrongForWord: function(strongWord) {
     const word = strongWord.dataset.word || strongWord.textContent.trim();
-    const strong = strongWord.dataset.strong || 'sin Strong';
+    const strong = strongWord.dataset.strong || '—';
+    const original = strongWord.dataset.original || '—';
+    const transliteration = strongWord.dataset.transliteration || '—';
+    const definition = strongWord.dataset.definition || 'Información Strong no disponible para esta palabra.';
 
-    this.showToast(`${word} · ${strong}`, 2500);
+    document.getElementById('strongSheetWord').textContent = word;
+    document.getElementById('strongSheetNumber').textContent = strong;
+    document.getElementById('strongSheetOriginal').textContent = original;
+    document.getElementById('strongSheetTransliteration').textContent = transliteration;
+    document.getElementById('strongSheetDefinition').textContent = definition;
 
-    console.log('[Strong Word]', {
-        word: strongWord.dataset.word,
-        strong: strongWord.dataset.strong,
-        original: strongWord.dataset.original,
-        transliteration: strongWord.dataset.transliteration,
-        definition: strongWord.dataset.definition
-    });
+    const panel = document.getElementById('strongSheetPanel');
+    if (!panel) return;
+
+    panel.classList.add('visible');
+    panel.setAttribute('aria-hidden', 'false');
+},
+
+closeStrongSheet: function() {
+    const panel = document.getElementById('strongSheetPanel');
+    if (!panel) return;
+
+    panel.classList.remove('visible');
+    panel.setAttribute('aria-hidden', 'true');
 },
 
 bindStrongNativeLongPress: function() {
@@ -5739,8 +5752,34 @@ getVerseStrongTokens: function(bookId, chapter, verse) {
     // ========================================
     // EVENTOS
     // ========================================
-    bindEvents: function() {
-        document.addEventListener('click', (e) => {
+bindEvents: function() {
+document.addEventListener('click', (e) => {
+    const closeStrong = e.target.closest('[data-action="close-strong-sheet"]');
+
+    if (closeStrong) {
+        e.preventDefault();
+        this.closeStrongSheet();
+        return;
+    }
+
+    const copyStrong = e.target.closest('[data-action="copy-strong-info"]');
+
+    if (copyStrong) {
+        e.preventDefault();
+
+        const word = document.getElementById('strongSheetWord')?.textContent || '';
+        const strong = document.getElementById('strongSheetNumber')?.textContent || '';
+        const definition = document.getElementById('strongSheetDefinition')?.textContent || '';
+
+        navigator.clipboard?.writeText(`${word} ${strong}: ${definition}`);
+
+        this.showToast('Strong copiado');
+        return;
+    }
+});
+
+
+document.addEventListener('click', (e) => {
     const strongWord = e.target.closest('.strong-word');
 
     if (!strongWord) return;
