@@ -222,6 +222,51 @@
     </div>
   </div>
 </div>
+
+<div class="strong-sheet-panel" id="strongSheetPanel" aria-hidden="true">
+  <div class="strong-sheet-backdrop" data-action="close-strong-sheet"></div>
+
+  <div class="strong-sheet-content">
+    <div class="strong-sheet-handle"></div>
+
+    <button class="strong-sheet-close" type="button" data-action="close-strong-sheet" aria-label="Cerrar Strong">
+      ✕
+    </button>
+
+    <div class="strong-sheet-title">
+      <span class="strong-sheet-kicker">CONCORDANCIA STRONG</span>
+      <h3 id="strongSheetWord">—</h3>
+      <p id="strongSheetNumber">—</p>
+    </div>
+
+    <div class="strong-sheet-card">
+      <div class="strong-sheet-row">
+        <span>Original</span>
+        <strong id="strongSheetOriginal">—</strong>
+      </div>
+
+      <div class="strong-sheet-row">
+        <span>Transliteración</span>
+        <strong id="strongSheetTransliteration">—</strong>
+      </div>
+
+      <div class="strong-sheet-definition">
+        <span>Definición</span>
+        <p id="strongSheetDefinition">—</p>
+      </div>
+    </div>
+
+    <div class="strong-sheet-actions">
+      <button class="strong-sheet-btn" type="button" data-action="copy-strong-info">
+        Copiar
+      </button>
+
+      <button class="strong-sheet-btn primary" type="button" data-action="close-strong-sheet">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
