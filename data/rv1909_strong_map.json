@@ -2,26 +2,56 @@
   "gen.1.1": [
     { "word": "En", "strong": null },
     { "word": "el", "strong": null },
-    {
-      "word": "principio",
-      "strong": "H7225",
-      "original": "רֵאשִׁית",
-      "transliteration": "re'shiyth",
-      "definition": "comienzo, principio, primero"
-    },
-    {
-      "word": "creó",
-      "strong": "H1254",
-      "original": "בָּרָא",
-      "transliteration": "bara",
-      "definition": "crear, formar, producir"
-    },
-    {
-      "word": "Dios",
-      "strong": "H430",
-      "original": "אֱלֹהִים",
-      "transliteration": "elohim",
-      "definition": "Dios, seres divinos, poderoso"
-    }
+    { "word": "principio", "strong": "H7225", "original": "רֵאשִׁית", "transliteration": "re'shiyth", "definition": "principio, comienzo" },
+    { "word": "creó", "strong": "H1254", "original": "בָּרָא", "transliteration": "bara'", "definition": "crear, hacer de la nada" },
+    { "word": "Dios", "strong": "H430", "original": "אֱלֹהִים", "transliteration": "elohim", "definition": "Dios, poderoso" },
+    { "word": "los", "strong": null },
+    { "word": "cielos", "strong": "H8064", "original": "שָׁמַיִם", "transliteration": "shamayim", "definition": "cielos, firmamento" },
+    { "word": "y", "strong": null },
+    { "word": "la", "strong": null },
+    { "word": "tierra.", "strong": "H776", "original": "אֶרֶץ", "transliteration": "erets", "definition": "tierra, suelo, mundo" }
+  ],
+  "gen.1.2": [
+    { "word": "Y", "strong": null },
+    { "word": "la", "strong": null },
+    { "word": "tierra", "strong": "H776", "original": "אֶרֶץ", "transliteration": "erets", "definition": "tierra, suelo, mundo" },
+    { "word": "estaba", "strong": "H1961", "original": "הָיָה", "transliteration": "hayah", "definition": "ser, estar, existir" },
+    { "word": "desordenada", "strong": "H8414", "original": "תֹּהוּ", "transliteration": "tohu", "definition": "vacío, desolación, caos" },
+    { "word": "y", "strong": null },
+    { "word": "vacía,", "strong": "H922", "original": "בֹּהוּ", "transliteration": "bohu", "definition": "vacío, nulidad" },
+    { "word": "y", "strong": null },
+    { "word": "las", "strong": null },
+    { "word": "tinieblas", "strong": "H2822", "original": "חֹשֶׁךְ", "transliteration": "choshek", "definition": "oscuridad, tinieblas" },
+    { "word": "estaban", "strong": null, "uncertain": true },
+    { "word": "sobre", "strong": null },
+    { "word": "la", "strong": null },
+    { "word": "faz", "strong": "H6440", "original": "פָּנִים", "transliteration": "panim", "definition": "rostro, faz, superficie" },
+    { "word": "del", "strong": null },
+    { "word": "abismo,", "strong": "H8415", "original": "תְּהוֹם", "transliteration": "tehom", "definition": "abismo, profundidad" },
+    { "word": "y", "strong": null },
+    { "word": "el", "strong": null },
+    { "word": "Espíritu", "strong": "H7307", "original": "רוּחַ", "transliteration": "ruach", "definition": "espíritu, viento, aliento" },
+    { "word": "de", "strong": null },
+    { "word": "Dios", "strong": "H430", "original": "אֱלֹהִים", "transliteration": "elohim", "definition": "Dios, poderoso" },
+    { "word": "se", "strong": null },
+    { "word": "movía", "strong": "H7363", "original": "רָחַף", "transliteration": "rachaph", "definition": "moverse, aletear, incubar" },
+    { "word": "sobre", "strong": null },
+    { "word": "la", "strong": null },
+    { "word": "faz", "strong": "H6440", "original": "פָּנִים", "transliteration": "panim", "definition": "rostro, faz, superficie" },
+    { "word": "de", "strong": null },
+    { "word": "las", "strong": null },
+    { "word": "aguas.", "strong": "H4325", "original": "מַיִם", "transliteration": "mayim", "definition": "aguas" }
+  ],
+  "gen.1.3": [
+    { "word": "Y", "strong": null },
+    { "word": "dijo", "strong": "H559", "original": "אָמַר", "transliteration": "amar", "definition": "decir, hablar" },
+    { "word": "Dios:", "strong": "H430", "original": "אֱלֹהִים", "transliteration": "elohim", "definition": "Dios, poderoso" },
+    { "word": "Sea", "strong": "H1961", "original": "הָיָה", "transliteration": "hayah", "definition": "ser, estar, existir (jussivo: sea)" },
+    { "word": "la", "strong": null },
+    { "word": "luz:", "strong": "H216", "original": "אוֹר", "transliteration": "or", "definition": "luz" },
+    { "word": "y", "strong": null },
+    { "word": "fué", "strong": "H1961", "original": "הָיָה", "transliteration": "hayah", "definition": "ser, llegar a ser" },
+    { "word": "la", "strong": null },
+    { "word": "luz.", "strong": "H216", "original": "אוֹר", "transliteration": "or", "definition": "luz" }
   ]
 }
