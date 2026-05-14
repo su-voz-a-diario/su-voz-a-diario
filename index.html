@@ -169,11 +169,16 @@
 
     <div class="selection-section-label">ACCIONES</div>
 
-    <div class="selection-actions-row">
-      <button class="action-btn" id="copyBtn" aria-label="Copiar texto">Copiar</button>
-      <button class="action-btn" id="noteBtn" aria-label="Agregar nota">Nota</button>
-      <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">Quitar</button>
-    </div>
+<div class="selection-actions-row selection-actions-row-pro">
+  <button class="action-btn" id="copyBtn" aria-label="Copiar texto">Copiar</button>
+
+  <button class="action-btn action-btn-image" id="shareImageBtn" aria-label="Compartir selección como imagen">
+    Imagen
+  </button>
+
+  <button class="action-btn" id="noteBtn" aria-label="Agregar nota">Nota</button>
+  <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">Quitar</button>
+</div>
 
     <div class="selection-bottom">
       <textarea id="selectionNote" placeholder="Escribe una nota..."></textarea>
