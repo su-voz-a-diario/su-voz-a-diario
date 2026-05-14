@@ -499,6 +499,8 @@ activeSelectionSurface: null,
 currentSelectedVerse: null,       
 currentSelectedText: null,
 currentSelectionDate: null,
+verseImageText: '',
+verseImageReference: '',
 currentSelectionColorDraft: null,
 _savedScrollY: null, 
 pushListenersReady: false,
@@ -2157,9 +2159,8 @@ updateCommunityBadge: function() {
     if (!canvas) return null;
 
     const ctx = canvas.getContext('2d');
-    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
-    const reference = this.getSelectedTextReferenceLabel();
-
+    const selectedText = (this.verseImageText || this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
     const template = this.getVerseImageTemplate(this.verseImageTemplate || 'midnight');
 
     this.drawVerseImageBackgroundPremium(ctx, canvas, template);
@@ -2314,14 +2315,17 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
         return;
     }
 
-    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
 
-    if (!selectedText) {
-        this.showToast('Selecciona un texto primero');
-        return;
-    }
-    
-    this.hideSelectionPanel();
+if (!selectedText) {
+    this.showToast('Selecciona un texto primero');
+    return;
+}
+
+this.verseImageText = selectedText;
+this.verseImageReference = this.getSelectedTextReferenceLabel();
+
+this.hideSelectionPanel();
 
 setTimeout(() => {
     this.verseImageTemplate = this.verseImageTemplate || 'midnight';
