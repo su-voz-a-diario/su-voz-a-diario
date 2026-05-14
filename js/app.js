@@ -2275,14 +2275,14 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
    ctx.fillStyle = template.quote;
 
 /* Tipografía mucho más elegante */
-ctx.font = '500 42px "Cormorant Garamond", serif';
+ctx.font = '500 48px "Cormorant Garamond", serif';
 
 const cleanText = text.length > 430
     ? `${text.slice(0, 430).trim()}…`
     : text;
 
 /* Más aire visual */
-const lines = this.getCanvasTextLines(ctx, cleanText, 700);
+const lines = this.getCanvasTextLines(ctx, cleanText, 620);
 
 const maxLines = 11;
 
@@ -2291,12 +2291,12 @@ const finalLines = lines.length > maxLines
     : lines;
 
 /* Interlineado editorial */
-const lineHeight = 56;
+const lineHeight = 60;
 
 const totalHeight = finalLines.length * lineHeight;
 
 /* Mejor centrado visual */
-const centerY = 625;
+const centerY = 585;
 
 const startY = centerY - totalHeight / 2;
 
@@ -2310,11 +2310,11 @@ finalLines.forEach((line, index) => {
 
     ctx.fillStyle = template.reference;
     ctx.font = '600 34px Inter, Arial, sans-serif';
-    ctx.fillText(reference, canvas.width / 2, 1000);
-
+    ctx.fillText(reference, canvas.width / 2, 930);
+    
     ctx.fillStyle = template.muted;
     ctx.font = '500 24px Inter, Arial, sans-serif';
-    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1084);
+    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1005);
 
     ctx.fillStyle = template.border;
     this.roundRect(ctx, 360, 1132, 360, 2, 2);
@@ -2322,7 +2322,7 @@ finalLines.forEach((line, index) => {
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 20px Inter, Arial, sans-serif';
-    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, 1185);
+    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, 1115);
 },
 
     openVerseImageEditor: function() {
