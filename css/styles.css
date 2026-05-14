@@ -6294,3 +6294,81 @@ body.light-mode .verse-study-btn:hover {
         width: min(74vw, 245px);
     }
 }
+
+@media (max-width: 520px) {
+    .verse-image-sheet {
+        max-height: 82vh;
+        padding: 10px 14px calc(14px + env(safe-area-inset-bottom));
+        border-radius: 24px 24px 0 0;
+    }
+
+    .verse-image-header {
+        padding: 14px 42px 8px 42px;
+        text-align: center;
+    }
+
+    .verse-image-kicker {
+        margin-bottom: 6px;
+        font-size: 10px;
+        letter-spacing: 0.13em;
+    }
+
+    .verse-image-header h3 {
+        font-size: 19px;
+        line-height: 1.15;
+    }
+
+    .verse-image-header p {
+        margin-top: 5px;
+        font-size: 12.5px;
+        line-height: 1.35;
+    }
+
+    .verse-image-close {
+        top: 12px;
+        right: 14px;
+        width: 34px;
+        height: 34px;
+        font-size: 15px;
+    }
+
+    .verse-image-preview-wrap {
+        width: min(64vw, 220px);
+        margin: 6px auto 12px;
+        padding: 8px;
+        border-radius: 22px;
+    }
+
+    #verseImagePreview {
+        border-radius: 17px;
+    }
+
+    .verse-image-control-label {
+        margin-bottom: 7px;
+        font-size: 10px;
+        text-align: center;
+    }
+
+    .verse-template-grid {
+        gap: 7px;
+    }
+
+    .verse-template-btn {
+        min-height: 36px;
+        border-radius: 12px;
+        font-size: 12.5px;
+    }
+
+    .verse-image-actions {
+        gap: 7px;
+        margin-top: 12px;
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+
+    .verse-image-secondary,
+    .verse-image-primary {
+        min-height: 39px;
+        border-radius: 12px;
+        font-size: 12.5px;
+    }
+}
