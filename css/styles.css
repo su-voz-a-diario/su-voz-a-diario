@@ -6287,11 +6287,11 @@ body.light-mode .verse-study-btn:hover {
     }
 
     .verse-image-actions {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
     }
 
     .verse-image-preview-wrap {
-        width: min(74vw, 245px);
+        width: min(62vw, 210px);
     }
 }
 
