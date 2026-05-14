@@ -228,6 +228,60 @@
   </div>
 </div>
 
+<div class="verse-image-panel" id="verseImagePanel" aria-hidden="true">
+  <div class="verse-image-backdrop" data-action="close-verse-image-panel"></div>
+
+  <div class="verse-image-sheet">
+    <div class="selection-sheet-handle"></div>
+
+    <button class="verse-image-close" type="button" data-action="close-verse-image-panel" aria-label="Cerrar editor de imagen">
+      ✕
+    </button>
+
+    <div class="verse-image-header">
+      <span class="verse-image-kicker">IMAGEN PARA COMPARTIR</span>
+      <h3>Crea una imagen del pasaje</h3>
+      <p>Elige un diseño sobrio y listo para redes sociales.</p>
+    </div>
+
+    <div class="verse-image-preview-wrap">
+      <canvas id="verseImagePreview" width="1080" height="1350"></canvas>
+    </div>
+
+    <div class="verse-image-controls">
+      <div class="verse-image-control-label">Diseño</div>
+
+      <div class="verse-template-grid">
+        <button class="verse-template-btn is-active" type="button" data-template="midnight">
+          Noche
+        </button>
+
+        <button class="verse-template-btn" type="button" data-template="warm">
+          Cálido
+        </button>
+
+        <button class="verse-template-btn" type="button" data-template="paper">
+          Papel
+        </button>
+      </div>
+    </div>
+
+    <div class="verse-image-actions">
+      <button class="verse-image-secondary" type="button" data-action="close-verse-image-panel">
+        Cancelar
+      </button>
+
+      <button class="verse-image-primary" type="button" id="downloadVerseImageBtn">
+        Descargar
+      </button>
+
+      <button class="verse-image-primary strong" type="button" id="shareVerseImageFinalBtn">
+        Compartir
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="strong-sheet-panel" id="strongSheetPanel" aria-hidden="true">
   <div class="strong-sheet-backdrop" data-action="close-strong-sheet"></div>
 
