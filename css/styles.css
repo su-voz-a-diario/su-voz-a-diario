@@ -6067,3 +6067,44 @@ body.light-mode .verse-study-btn:hover {
 .strong-sheet-close:active {
     transform: scale(0.97);
 }
+
+.selection-actions-row-pro {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.action-btn-image {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(214, 181, 109, 0.38);
+    background:
+        linear-gradient(135deg, rgba(214, 181, 109, 0.18), rgba(255, 255, 255, 0.06));
+    color: var(--text-primary, #f8f3ea);
+    font-weight: 700;
+}
+
+.action-btn-image::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        120deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.22) 45%,
+        transparent 70%
+    );
+    transform: translateX(-120%);
+    transition: transform 0.55s ease;
+}
+
+.action-btn-image:hover::before,
+.action-btn-image:active::before {
+    transform: translateX(120%);
+}
+
+@media (max-width: 420px) {
+    .selection-actions-row-pro {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
