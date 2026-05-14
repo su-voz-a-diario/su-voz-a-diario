@@ -579,6 +579,14 @@ cacheDOM: function() {
     this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
     this.$selectionNoteBtn = document.getElementById('noteBtn');
     this.$selectionColorButtons = Array.from(document.querySelectorAll('.color-btn'));
+
+    this.$verseImagePanel = document.getElementById('verseImagePanel');
+    this.$verseImageCanvas = document.getElementById('verseImagePreview');
+    this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
+    this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
+    this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
+    this.verseImageTemplate = 'midnight';
+
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
     this._baseViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
