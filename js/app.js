@@ -2320,7 +2320,10 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
         this.showToast('Selecciona un texto primero');
         return;
     }
+    
+    this.hideSelectionPanel();
 
+setTimeout(() => {
     this.verseImageTemplate = this.verseImageTemplate || 'midnight';
 
     this.$verseTemplateButtons.forEach(button => {
@@ -2336,6 +2339,9 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
     this.$verseImagePanel.setAttribute('aria-hidden', 'false');
 
     document.body.classList.add('verse-image-open');
+}, 180);
+
+return;
 },
 
 closeVerseImageEditor: function() {
