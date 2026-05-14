@@ -2272,32 +2272,48 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
     ctx.font = '96px Merriweather, Georgia, serif';
     ctx.fillText('“', canvas.width / 2, 345);
 
-    ctx.fillStyle = template.quote;
-    ctx.font = '52px Merriweather, Georgia, serif';
+   ctx.fillStyle = template.quote;
 
-    const cleanText = text.length > 430 ? `${text.slice(0, 430).trim()}…` : text;
-    const lines = this.getCanvasTextLines(ctx, cleanText, 770);
+/* Tipografía mucho más elegante */
+ctx.font = '500 42px "Cormorant Garamond", serif';
 
-    const maxLines = 10;
-    const finalLines = lines.length > maxLines
-        ? [...lines.slice(0, maxLines - 1), `${lines[maxLines - 1]}…`]
-        : lines;
+const cleanText = text.length > 430
+    ? `${text.slice(0, 430).trim()}…`
+    : text;
 
-    const lineHeight = finalLines.length > 7 ? 62 : 70;
-    const totalHeight = finalLines.length * lineHeight;
-    const centerY = 640;
-    const startY = centerY - totalHeight / 2;
+/* Más aire visual */
+const lines = this.getCanvasTextLines(ctx, cleanText, 700);
 
-    finalLines.forEach((line, index) => {
-        ctx.fillText(line, canvas.width / 2, startY + index * lineHeight);
-    });
+const maxLines = 11;
+
+const finalLines = lines.length > maxLines
+    ? [...lines.slice(0, maxLines - 1), `${lines[maxLines - 1]}…`]
+    : lines;
+
+/* Interlineado editorial */
+const lineHeight = 56;
+
+const totalHeight = finalLines.length * lineHeight;
+
+/* Mejor centrado visual */
+const centerY = 625;
+
+const startY = centerY - totalHeight / 2;
+
+finalLines.forEach((line, index) => {
+    ctx.fillText(
+        line,
+        canvas.width / 2,
+        startY + index * lineHeight
+    );
+});
 
     ctx.fillStyle = template.reference;
-    ctx.font = '700 39px Inter, Arial, sans-serif';
+    ctx.font = '600 34px Inter, Arial, sans-serif';
     ctx.fillText(reference, canvas.width / 2, 1000);
 
     ctx.fillStyle = template.muted;
-    ctx.font = '500 28px Inter, Arial, sans-serif';
+    ctx.font = '500 24px Inter, Arial, sans-serif';
     ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1084);
 
     ctx.fillStyle = template.border;
@@ -2305,7 +2321,7 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
     ctx.fill();
 
     ctx.fillStyle = template.muted;
-    ctx.font = '500 25px Inter, Arial, sans-serif';
+    ctx.font = '500 20px Inter, Arial, sans-serif';
     ctx.fillText('su-voz-a-diario.github.io', canvas.width / 2, 1185);
 },
 
