@@ -2142,6 +2142,177 @@ updateCommunityBadge: function() {
             setTimeout(() => toast.remove(), 300);
         }, duration);
     },
+
+    shareSelectedTextAsImage: async function() {
+    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+
+    if (!selectedText) {
+        this.showToast('Selecciona un texto primero');
+        return;
+    }
+
+    const reference = this.getSelectedTextReferenceLabel();
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1350;
+
+    const ctx = canvas.getContext('2d');
+
+    this.drawVerseImageBackground(ctx, canvas);
+    this.drawVerseImageContent(ctx, canvas, selectedText, reference);
+
+    canvas.toBlob(async (blob) => {
+        if (!blob) {
+            this.showToast('No se pudo crear la imagen');
+            return;
+        }
+
+        const file = new File([blob], 'su-voz-a-diario.png', {
+            type: 'image/png'
+        });
+
+        try {
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: reference,
+                    text: reference,
+                    files: [file]
+                });
+
+                this.hideSelectionPanel();
+                window.getSelection()?.removeAllRanges();
+                return;
+            }
+
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'su-voz-a-diario.png';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
+
+            this.showToast('Imagen descargada');
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+        } catch (error) {
+            console.error('[Share Image] Error:', error);
+            this.showToast('No se pudo compartir la imagen');
+        }
+    }, 'image/png', 0.95);
+},
+
+getSelectedTextReferenceLabel: function() {
+    const dateStr = this.currentSelectionDate || this.homeViewingDate || this.getTodayDateStr();
+    const reading = this.data.find(item => item.date === dateStr);
+
+    if (reading?.reference) {
+        return reading.reference;
+    }
+
+    return 'Su voz a diario';
+},
+
+drawVerseImageBackground: function(ctx, canvas) {
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+
+    gradient.addColorStop(0, '#0f172a');
+    gradient.addColorStop(0.48, '#2b2118');
+    gradient.addColorStop(1, '#111827');
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.055)';
+    ctx.beginPath();
+    ctx.arc(880, 210, 260, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(214,181,109,0.13)';
+    ctx.beginPath();
+    ctx.arc(170, 1120, 340, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    this.roundRect(ctx, 74, 108, 932, 1134, 42);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 2;
+    this.roundRect(ctx, 74, 108, 932, 1134, 42);
+    ctx.stroke();
+},
+
+drawVerseImageContent: function(ctx, canvas, text, reference) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = 'rgba(248,243,234,0.96)';
+    ctx.font = '54px Merriweather, Georgia, serif';
+
+    const lines = this.getCanvasTextLines(ctx, `“${text}”`, 790);
+    const maxLines = 9;
+    const finalLines = lines.length > maxLines
+        ? [...lines.slice(0, maxLines - 1), lines[maxLines - 1] + '…']
+        : lines;
+
+    const lineHeight = 74;
+    const totalHeight = finalLines.length * lineHeight;
+    let startY = 620 - totalHeight / 2;
+
+    finalLines.forEach((line, index) => {
+        ctx.fillText(line, canvas.width / 2, startY + index * lineHeight);
+    });
+
+    ctx.fillStyle = '#d6b56d';
+    ctx.font = '700 38px Inter, Arial, sans-serif';
+    ctx.fillText(reference, canvas.width / 2, 1035);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = '500 30px Inter, Arial, sans-serif';
+    ctx.fillText('Su voz a diario', canvas.width / 2, 1138);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.45)';
+    ctx.font = '24px Inter, Arial, sans-serif';
+    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1182);
+},
+
+getCanvasTextLines: function(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let currentLine = '';
+
+    words.forEach(word => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    });
+
+    if (currentLine) {
+        lines.push(currentLine);
+    }
+
+    return lines;
+},
+
+roundRect: function(ctx, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + width, y, x + width, y + height, r);
+    ctx.arcTo(x + width, y + height, x, y + height, r);
+    ctx.arcTo(x, y + height, x, y, r);
+    ctx.arcTo(x, y, x + width, y, r);
+    ctx.closePath();
+},
     
    exportReflectionPDF: function(dateStr) {
     const reading = this.data.find(r => r.date === dateStr);
@@ -2730,6 +2901,21 @@ bindSelectionPanelEvents: function() {
             window.getSelection()?.removeAllRanges();
         });
     }
+
+    if (this.$selectionShareImageBtn) {
+    this.$selectionShareImageBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!this.currentSelectedText || !this.currentSelectedText.trim()) {
+            this.showToast('Selecciona un texto primero');
+            return;
+        }
+
+        this.showToast('Preparando imagen...');
+        await this.shareSelectedTextAsImage();
+    });
+}
 
     if (this.$selectionNoteBtn) {
     this.$selectionNoteBtn.addEventListener('click', (e) => {
