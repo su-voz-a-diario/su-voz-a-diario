@@ -2295,8 +2295,16 @@ const lineHeight = 60;
 
 const totalHeight = finalLines.length * lineHeight;
 
-/* Mejor centrado visual */
-const centerY = 585;
+/* Ajuste dinámico según cantidad de líneas */
+let centerY = 585;
+
+if (finalLines.length >= 7) {
+    centerY = 625;
+}
+
+if (finalLines.length >= 9) {
+    centerY = 655;
+}
 
 const startY = centerY - totalHeight / 2;
 
