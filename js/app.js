@@ -2306,7 +2306,7 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 25px Inter, Arial, sans-serif';
-    ctx.fillText('Cristo Camino Verdad y Vida', canvas.width / 2, 1185);
+    ctx.fillText('su-voz-a-diario.github.io', canvas.width / 2, 1185);
 },
 
     openVerseImageEditor: function() {
