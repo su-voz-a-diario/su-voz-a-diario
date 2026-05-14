@@ -515,6 +515,7 @@ _selectionPanelEventsBound: false,
     
     this.cacheDOM();
     this.bindSelectionPanelEvents();
+    this.bindVerseImageEditorEvents();
     this.showAprilMessageIfNeeded();
     this.loadSettings();
     this.loadStreak();
@@ -2151,6 +2152,288 @@ updateCommunityBadge: function() {
         }, duration);
     },
 
+    renderVerseImagePreview: function() {
+    const canvas = this.$verseImageCanvas;
+    if (!canvas) return null;
+
+    const ctx = canvas.getContext('2d');
+    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+    const reference = this.getSelectedTextReferenceLabel();
+
+    const template = this.getVerseImageTemplate(this.verseImageTemplate || 'midnight');
+
+    this.drawVerseImageBackgroundPremium(ctx, canvas, template);
+    this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template);
+
+    return canvas;
+},
+
+getVerseImageTemplate: function(templateKey = 'midnight') {
+    const templates = {
+        midnight: {
+            key: 'midnight',
+            background: ['#07111f', '#182235', '#2b2118'],
+            card: 'rgba(255,255,255,0.075)',
+            border: 'rgba(255,255,255,0.16)',
+            quote: '#f8f3ea',
+            reference: '#d6b56d',
+            muted: 'rgba(255,255,255,0.64)',
+            accent: 'rgba(214,181,109,0.22)'
+        },
+
+        warm: {
+            key: 'warm',
+            background: ['#2b1810', '#6b3f24', '#c29a62'],
+            card: 'rgba(255,248,238,0.13)',
+            border: 'rgba(255,239,210,0.22)',
+            quote: '#fff8ec',
+            reference: '#ffe0a1',
+            muted: 'rgba(255,248,236,0.72)',
+            accent: 'rgba(255,224,161,0.22)'
+        },
+
+        paper: {
+            key: 'paper',
+            background: ['#eee3d2', '#f8f1e7', '#d2b48c'],
+            card: 'rgba(255,255,255,0.46)',
+            border: 'rgba(89,64,42,0.16)',
+            quote: '#2f241c',
+            reference: '#8a5a24',
+            muted: 'rgba(47,36,28,0.62)',
+            accent: 'rgba(138,90,36,0.12)'
+        }
+    };
+
+    return templates[templateKey] || templates.midnight;
+},
+
+drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+    gradient.addColorStop(0, template.background[0]);
+    gradient.addColorStop(0.52, template.background[1]);
+    gradient.addColorStop(1, template.background[2]);
+
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+
+    ctx.fillStyle = template.accent;
+    ctx.beginPath();
+    ctx.arc(900, 230, 310, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = 0.55;
+    ctx.beginPath();
+    ctx.arc(155, 1090, 380, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+    ctx.save();
+    ctx.strokeStyle = template.border;
+    ctx.lineWidth = 2;
+
+    for (let i = 0; i < 7; i++) {
+        ctx.globalAlpha = 0.06 + i * 0.018;
+        this.roundRect(ctx, 105 + i * 10, 135 + i * 10, 870 - i * 20, 1080 - i * 20, 46);
+        ctx.stroke();
+    }
+
+    ctx.restore();
+
+    ctx.fillStyle = template.card;
+    this.roundRect(ctx, 88, 118, 904, 1114, 52);
+    ctx.fill();
+
+    ctx.strokeStyle = template.border;
+    ctx.lineWidth = 2.5;
+    this.roundRect(ctx, 88, 118, 904, 1114, 52);
+    ctx.stroke();
+
+    ctx.fillStyle = template.accent;
+    this.roundRect(ctx, 206, 194, 668, 5, 5);
+    ctx.fill();
+},
+
+drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = template.muted;
+    ctx.font = '500 26px Inter, Arial, sans-serif';
+    ctx.fillText('SU VOZ A DIARIO', canvas.width / 2, 250);
+
+    ctx.fillStyle = template.accent;
+    ctx.font = '96px Merriweather, Georgia, serif';
+    ctx.fillText('“', canvas.width / 2, 345);
+
+    ctx.fillStyle = template.quote;
+    ctx.font = '52px Merriweather, Georgia, serif';
+
+    const cleanText = text.length > 430 ? `${text.slice(0, 430).trim()}…` : text;
+    const lines = this.getCanvasTextLines(ctx, cleanText, 770);
+
+    const maxLines = 10;
+    const finalLines = lines.length > maxLines
+        ? [...lines.slice(0, maxLines - 1), `${lines[maxLines - 1]}…`]
+        : lines;
+
+    const lineHeight = finalLines.length > 7 ? 62 : 70;
+    const totalHeight = finalLines.length * lineHeight;
+    const centerY = 640;
+    const startY = centerY - totalHeight / 2;
+
+    finalLines.forEach((line, index) => {
+        ctx.fillText(line, canvas.width / 2, startY + index * lineHeight);
+    });
+
+    ctx.fillStyle = template.reference;
+    ctx.font = '700 39px Inter, Arial, sans-serif';
+    ctx.fillText(reference, canvas.width / 2, 1000);
+
+    ctx.fillStyle = template.muted;
+    ctx.font = '500 28px Inter, Arial, sans-serif';
+    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1084);
+
+    ctx.fillStyle = template.border;
+    this.roundRect(ctx, 360, 1132, 360, 2, 2);
+    ctx.fill();
+
+    ctx.fillStyle = template.muted;
+    ctx.font = '500 25px Inter, Arial, sans-serif';
+    ctx.fillText('Cristo Camino Verdad y Vida', canvas.width / 2, 1185);
+},
+
+    openVerseImageEditor: function() {
+    if (!this.$verseImagePanel || !this.$verseImageCanvas) {
+        this.showToast('El editor de imagen no está disponible');
+        return;
+    }
+
+    const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
+
+    if (!selectedText) {
+        this.showToast('Selecciona un texto primero');
+        return;
+    }
+
+    this.verseImageTemplate = this.verseImageTemplate || 'midnight';
+
+    this.$verseTemplateButtons.forEach(button => {
+        button.classList.toggle(
+            'is-active',
+            button.dataset.template === this.verseImageTemplate
+        );
+    });
+
+    this.renderVerseImagePreview();
+
+    this.$verseImagePanel.classList.add('visible');
+    this.$verseImagePanel.setAttribute('aria-hidden', 'false');
+
+    document.body.classList.add('verse-image-open');
+},
+
+closeVerseImageEditor: function() {
+    if (!this.$verseImagePanel) return;
+
+    this.$verseImagePanel.classList.remove('visible');
+    this.$verseImagePanel.setAttribute('aria-hidden', 'true');
+
+    document.body.classList.remove('verse-image-open');
+},
+
+getVerseImageBlob: function() {
+    return new Promise((resolve) => {
+        const canvas = this.renderVerseImagePreview();
+
+        if (!canvas) {
+            resolve(null);
+            return;
+        }
+
+        canvas.toBlob((blob) => {
+            resolve(blob);
+        }, 'image/png', 0.95);
+    });
+},
+
+downloadVerseImage: async function() {
+    const blob = await this.getVerseImageBlob();
+
+    if (!blob) {
+        this.showToast('No se pudo crear la imagen');
+        return;
+    }
+
+    const reference = this.getSelectedTextReferenceLabel()
+        .replace(/[^\wáéíóúÁÉÍÓÚñÑ-]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '')
+        .toLowerCase();
+
+    const fileName = reference
+        ? `su-voz-${reference}.png`
+        : 'su-voz-a-diario.png';
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(url);
+
+    this.showToast('Imagen descargada');
+},
+
+shareVerseImageFromEditor: async function() {
+    const blob = await this.getVerseImageBlob();
+
+    if (!blob) {
+        this.showToast('No se pudo crear la imagen');
+        return;
+    }
+
+    const reference = this.getSelectedTextReferenceLabel();
+    const file = new File([blob], 'su-voz-a-diario.png', {
+        type: 'image/png'
+    });
+
+    try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                title: reference,
+                text: `${reference} · Su voz a diario`,
+                files: [file]
+            });
+
+            this.closeVerseImageEditor();
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
+
+        await this.downloadVerseImage();
+        this.showToast('Tu navegador no permite compartir archivos; la imagen fue descargada');
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            console.log('[Verse Image] Compartir cancelado por el usuario');
+            return;
+        }
+
+        console.error('[Verse Image] Error compartiendo:', error);
+        this.showToast('No se pudo compartir la imagen');
+    }
+},
+
     shareSelectedTextAsImage: async function() {
     const selectedText = (this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
 
@@ -2872,6 +3155,47 @@ if (this.currentSelectedVerse) {
     this.hideSelectionPanel();
     window.getSelection()?.removeAllRanges();
     this.rerenderCurrentReadingView(dateStr, true);
+},
+
+bindVerseImageEditorEvents: function() {
+    if (this._verseImageEditorEventsBound) return;
+
+    document.addEventListener('click', async (e) => {
+        const closeBtn = e.target.closest('[data-action="close-verse-image-panel"]');
+
+        if (closeBtn) {
+            e.preventDefault();
+            this.closeVerseImageEditor();
+            return;
+        }
+
+        const templateBtn = e.target.closest('.verse-template-btn');
+
+        if (templateBtn) {
+            e.preventDefault();
+
+            this.verseImageTemplate = templateBtn.dataset.template || 'midnight';
+
+            this.$verseTemplateButtons.forEach(button => {
+                button.classList.toggle('is-active', button === templateBtn);
+            });
+
+            this.renderVerseImagePreview();
+            return;
+        }
+    });
+
+    this.$verseImageDownloadBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await this.downloadVerseImage();
+    });
+
+    this.$verseImageShareBtn?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        await this.shareVerseImageFromEditor();
+    });
+
+    this._verseImageEditorEventsBound = true;
 },
 
 bindSelectionPanelEvents: function() {
