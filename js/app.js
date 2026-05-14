@@ -573,6 +573,7 @@ cacheDOM: function() {
     this.$selectionSheet = this.$selectionPanel?.querySelector('.selection-sheet-full') || null;
     this.$selectionNote = document.getElementById('selectionNote');
     this.$selectionCopyBtn = document.getElementById('copyBtn');
+    this.$selectionShareImageBtn = document.getElementById('shareImageBtn');
     this.$selectionClearBtn = document.getElementById('clearBtn');
     this.$selectionCloseBtn = document.getElementById('closePanel');
     this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
