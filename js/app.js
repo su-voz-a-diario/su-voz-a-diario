@@ -2910,8 +2910,8 @@ bindSelectionPanelEvents: function() {
         });
     }
 
-    if (this.$selectionShareImageBtn) {
-    this.$selectionShareImageBtn.addEventListener('click', async (e) => {
+if (this.$selectionShareImageBtn) {
+    this.$selectionShareImageBtn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -2920,8 +2920,7 @@ bindSelectionPanelEvents: function() {
             return;
         }
 
-        this.showToast('Preparando imagen...');
-        await this.shareSelectedTextAsImage();
+        this.openVerseImageEditor();
     });
 }
 
