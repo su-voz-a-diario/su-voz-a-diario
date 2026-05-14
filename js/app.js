@@ -2322,7 +2322,7 @@ finalLines.forEach((line, index) => {
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 20px Inter, Arial, sans-serif';
-    ctx.fillText('su-voz-a-diario.github.io', canvas.width / 2, 1185);
+    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, 1185);
 },
 
     openVerseImageEditor: function() {
@@ -2437,7 +2437,7 @@ shareVerseImageFromEditor: async function() {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
                 title: reference,
-                text: `${reference} · Su voz a diario`,
+                text: `${reference} · https://su-voz-a-diario.github.io/su-voz-a-diario/#home`,
                 files: [file]
             });
 
