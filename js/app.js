@@ -2339,20 +2339,24 @@ getVerseImageLayout: function(canvas) {
             linkY: 1595
         },
 
-        square: {
-            headerY: 205,
-            quoteY: 285,
-            textCenterYShort: 500,
-            textCenterYMedium: 525,
-            textCenterYLong: 550,
-            textMaxWidth: 650,
-            textFontSize: 44,
-            lineHeight: 54,
-            referenceY: 790,
-            subtitleY: 855,
-            dividerY: 895,
-            linkY: 950
-        }
+    square: {
+    headerY: 165,
+    quoteY: 245,
+
+    textCenterYShort: 455,
+    textCenterYMedium: 495,
+    textCenterYLong: 535,
+
+    textMaxWidth: 720,
+
+    textFontSize: 52,
+    lineHeight: 62,
+
+    referenceY: 760,
+    subtitleY: 825,
+    dividerY: 865,
+    linkY: 925
+    }
     };
 
     return layouts[format] || layouts.post;
