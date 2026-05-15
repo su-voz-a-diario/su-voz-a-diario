@@ -4280,19 +4280,19 @@ restoreCalendarPosition: function() {
                 <div class="note-box">
                     <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
                     <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
-                        <div class="note-title">👑 Lo que veo de Dios</div>
+                        <div class="note-title">👑 Cómo se muestra Dios aquí</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
-                        <div class="note-title">📖 Lo que aprendo del pasaje</div>
+                        <div class="note-title">📖 La enseñanza de este pasaje</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
-                        <div class="note-title">🙏 Mi respuesta hoy</div>
+                        <div class="note-title">✅ Lo que pondré en práctica</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
-                        <div class="note-title">🙏 Mi oración</div>
+                        <div class="note-title">🙏 Mi oración delante de Dios</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
                     </div>
                     <div class="note-actions">
@@ -4465,17 +4465,17 @@ const introVideoHtml = showIntroVideo ? `
 
         <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
             <div class="note-title">👑 Lo que veo de Dios</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="Observa sus obras, palabras, carácter y la manera en que se da a conocer en este pasaje.">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
         </div>
 
         <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
             <div class="note-title">📖 Lo que aprendo del pasaje</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="Identifica qué enseña el texto, qué muestra de los personajes y qué verdad debes comprender.">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
         </div>
 
         <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
             <div class="note-title">🙏 Mi respuesta hoy</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
+            <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="Agradece, pide ayuda específica y presenta delante de Dios tu respuesta a esta palabra.">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
         </div>
 
         <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
