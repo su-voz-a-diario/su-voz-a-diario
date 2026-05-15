@@ -6372,3 +6372,185 @@ body.light-mode .verse-study-btn:hover {
         font-size: 12.5px;
     }
 }
+
+/* ========================================
+   PANEL GUÍA - PROFUNDIZA EN SU VOZ
+   ======================================== */
+
+.note-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.note-title-row .note-title {
+    margin-bottom: 0;
+}
+
+.note-guide-btn {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--text-secondary, #64748b);
+    font-size: 16px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    transition:
+        transform 0.18s ease,
+        background 0.18s ease,
+        color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.note-guide-btn:hover,
+.note-guide-btn:focus-visible {
+    background: rgba(255, 255, 255, 0.95);
+    color: var(--primary-color, #8b5a2b);
+    border-color: rgba(139, 90, 43, 0.28);
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.note-guide-btn[aria-expanded="true"] {
+    background: linear-gradient(135deg, rgba(139, 90, 43, 0.14), rgba(218, 165, 32, 0.18));
+    color: var(--primary-color, #8b5a2b);
+    border-color: rgba(139, 90, 43, 0.32);
+}
+
+.note-guide-panel {
+    position: relative;
+    margin: 2px 0 12px;
+    padding: 14px 15px 14px 16px;
+    border: 1px solid rgba(139, 90, 43, 0.14);
+    border-radius: 18px;
+    background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(250, 247, 240, 0.92));
+    color: var(--text-primary, #1f2937);
+    box-shadow:
+        0 18px 40px rgba(15, 23, 42, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.75);
+    animation: noteGuideIn 0.22s ease both;
+}
+
+.note-guide-panel::before {
+    content: "";
+    position: absolute;
+    top: -7px;
+    right: 18px;
+    width: 14px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.96);
+    border-left: 1px solid rgba(139, 90, 43, 0.14);
+    border-top: 1px solid rgba(139, 90, 43, 0.14);
+    transform: rotate(45deg);
+}
+
+.note-guide-panel p {
+    margin: 0 0 8px;
+    font-size: 0.88rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    color: var(--text-primary, #1f2937);
+}
+
+.note-guide-panel ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+.note-guide-panel li {
+    margin: 6px 0;
+    font-size: 0.86rem;
+    line-height: 1.42;
+    color: var(--text-secondary, #64748b);
+}
+
+.note-guide-panel[hidden] {
+    display: none;
+}
+
+@keyframes noteGuideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.985);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Modo oscuro */
+body.dark-mode .note-guide-btn {
+    background: rgba(30, 41, 59, 0.72);
+    color: rgba(226, 232, 240, 0.78);
+    border-color: rgba(148, 163, 184, 0.18);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+}
+
+body.dark-mode .note-guide-btn:hover,
+body.dark-mode .note-guide-btn:focus-visible,
+body.dark-mode .note-guide-btn[aria-expanded="true"] {
+    background: rgba(51, 65, 85, 0.92);
+    color: #f8d98c;
+    border-color: rgba(248, 217, 140, 0.28);
+}
+
+body.dark-mode .note-guide-panel {
+    background:
+        linear-gradient(135deg, rgba(30, 41, 59, 0.97), rgba(15, 23, 42, 0.94));
+    color: rgba(248, 250, 252, 0.94);
+    border-color: rgba(248, 217, 140, 0.15);
+    box-shadow:
+        0 18px 42px rgba(0, 0, 0, 0.32),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+body.dark-mode .note-guide-panel::before {
+    background: rgba(30, 41, 59, 0.97);
+    border-color: rgba(248, 217, 140, 0.15);
+}
+
+body.dark-mode .note-guide-panel p {
+    color: rgba(248, 250, 252, 0.94);
+}
+
+body.dark-mode .note-guide-panel li {
+    color: rgba(203, 213, 225, 0.86);
+}
+
+/* Ajuste móvil */
+@media (max-width: 480px) {
+    .note-guide-btn {
+        width: 32px;
+        height: 32px;
+        flex-basis: 32px;
+        font-size: 15px;
+    }
+
+    .note-guide-panel {
+        padding: 13px 14px;
+        border-radius: 16px;
+    }
+
+    .note-guide-panel p {
+        font-size: 0.86rem;
+    }
+
+    .note-guide-panel li {
+        font-size: 0.84rem;
+    }
+}
