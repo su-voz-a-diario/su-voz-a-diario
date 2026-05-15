@@ -588,7 +588,10 @@ cacheDOM: function() {
     this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
     this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
     this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
+    this.$verseFormatButtons = Array.from(document.querySelectorAll('.verse-format-btn'));
+
     this.verseImageTemplate = 'midnight';
+    this.verseImageFormat = 'post';
 
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
@@ -2154,10 +2157,52 @@ updateCommunityBadge: function() {
         }, duration);
     },
 
+    getVerseImageFormat: function(formatKey = 'post') {
+    const formats = {
+        post: {
+            key: 'post',
+            label: 'Post',
+            width: 1080,
+            height: 1350
+        },
+
+        story: {
+            key: 'story',
+            label: 'Historia',
+            width: 1080,
+            height: 1920
+        },
+
+        square: {
+            key: 'square',
+            label: 'Cuadrado',
+            width: 1080,
+            height: 1080
+        }
+    };
+
+    return formats[formatKey] || formats.post;
+},
+
+applyVerseImageFormat: function() {
+    const canvas = this.$verseImageCanvas;
+
+    if (!canvas) return;
+
+    const format = this.getVerseImageFormat(this.verseImageFormat || 'post');
+
+    canvas.width = format.width;
+    canvas.height = format.height;
+
+    canvas.dataset.format = format.key;
+},
+
     renderVerseImagePreview: function() {
     const canvas = this.$verseImageCanvas;
     if (!canvas) return null;
-
+        
+    this.applyVerseImageFormat();
+        
     const ctx = canvas.getContext('2d');
     const selectedText = (this.verseImageText || this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
     const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
@@ -2260,29 +2305,84 @@ drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
     ctx.fill();
 },
 
+getVerseImageLayout: function(canvas) {
+    const format = canvas.dataset.format || 'post';
+
+    const layouts = {
+        post: {
+            headerY: 250,
+            quoteY: 345,
+            textCenterYShort: 585,
+            textCenterYMedium: 625,
+            textCenterYLong: 655,
+            textMaxWidth: 620,
+            textFontSize: 48,
+            lineHeight: 60,
+            referenceY: 930,
+            subtitleY: 1005,
+            dividerY: 1052,
+            linkY: 1115
+        },
+
+        story: {
+            headerY: 350,
+            quoteY: 470,
+            textCenterYShort: 820,
+            textCenterYMedium: 875,
+            textCenterYLong: 930,
+            textMaxWidth: 680,
+            textFontSize: 54,
+            lineHeight: 68,
+            referenceY: 1370,
+            subtitleY: 1460,
+            dividerY: 1515,
+            linkY: 1595
+        },
+
+        square: {
+            headerY: 205,
+            quoteY: 285,
+            textCenterYShort: 500,
+            textCenterYMedium: 525,
+            textCenterYLong: 550,
+            textMaxWidth: 650,
+            textFontSize: 44,
+            lineHeight: 54,
+            referenceY: 790,
+            subtitleY: 855,
+            dividerY: 895,
+            linkY: 950
+        }
+    };
+
+    return layouts[format] || layouts.post;
+},
+
 drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    
+    const layout = this.getVerseImageLayout(canvas);
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 26px Inter, Arial, sans-serif';
-    ctx.fillText('SU VOZ A DIARIO', canvas.width / 2, 250);
+    ctx.fillText('SU VOZ A DIARIO', canvas.width / 2, layout.headerY);
 
     ctx.fillStyle = template.accent;
     ctx.font = '96px Merriweather, Georgia, serif';
-    ctx.fillText('“', canvas.width / 2, 345);
+    ctx.fillText('“', canvas.width / 2, layout.quoteY);
 
    ctx.fillStyle = template.quote;
 
 /* Tipografía mucho más elegante */
-ctx.font = '500 48px "Cormorant Garamond", serif';
+ctx.font = `500 ${layout.textFontSize}px "Cormorant Garamond", serif`;
 
 const cleanText = text.length > 430
     ? `${text.slice(0, 430).trim()}…`
     : text;
 
 /* Más aire visual */
-const lines = this.getCanvasTextLines(ctx, cleanText, 620);
+const lines = this.getCanvasTextLines(ctx, cleanText, layout.textMaxWidth);
 
 const maxLines = 11;
 
@@ -2291,19 +2391,19 @@ const finalLines = lines.length > maxLines
     : lines;
 
 /* Interlineado editorial */
-const lineHeight = 60;
+const lineHeight = layout.lineHeight;
 
 const totalHeight = finalLines.length * lineHeight;
 
 /* Ajuste dinámico según cantidad de líneas */
-let centerY = 585;
+let centerY = layout.textCenterYShort;
 
 if (finalLines.length >= 7) {
-    centerY = 625;
+    centerY = layout.textCenterYMedium;
 }
 
 if (finalLines.length >= 9) {
-    centerY = 655;
+    centerY = layout.textCenterYLong;
 }
 
 const startY = centerY - totalHeight / 2;
@@ -2318,19 +2418,19 @@ finalLines.forEach((line, index) => {
 
     ctx.fillStyle = template.reference;
     ctx.font = '600 34px Inter, Arial, sans-serif';
-    ctx.fillText(reference, canvas.width / 2, 930);
+    ctx.fillText(reference, canvas.width / 2, layout.referenceY);
     
     ctx.fillStyle = template.muted;
     ctx.font = '500 24px Inter, Arial, sans-serif';
-    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, 1005);
-
+    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, layout.subtitleY);
+    
     ctx.fillStyle = template.border;
-    this.roundRect(ctx, 360, 1132, 360, 2, 2);
+    this.roundRect(ctx, 360, layout.dividerY, 360, 2, 2);
     ctx.fill();
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 20px Inter, Arial, sans-serif';
-    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, 1115);
+    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, layout.linkY);
 },
 
     openVerseImageEditor: function() {
@@ -3217,6 +3317,22 @@ bindVerseImageEditorEvents: function() {
             this.renderVerseImagePreview();
             return;
         }
+
+        const formatBtn = e.target.closest('.verse-format-btn');
+
+if (formatBtn) {
+    e.preventDefault();
+
+    this.verseImageFormat = formatBtn.dataset.format || 'post';
+
+    this.$verseFormatButtons.forEach(button => {
+        button.classList.toggle('is-active', button === formatBtn);
+    });
+
+    this.applyVerseImageFormat();
+    this.renderVerseImagePreview();
+    return;
+    }
     });
 
     this.$verseImageDownloadBtn?.addEventListener('click', async (e) => {
