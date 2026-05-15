@@ -4280,19 +4280,75 @@ restoreCalendarPosition: function() {
                 <div class="note-box">
                     <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
                     <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
-                        <div class="note-title">👑 Cómo se muestra Dios aquí</div>
+                        <div class="note-title-row">
+    <div class="note-title">👑 Cómo se muestra Dios aquí</div>
+    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
+        ☰
+    </button>
+</div>
+
+<div class="note-guide-panel" hidden>
+    <p>Observa al Padre, al Hijo y al Espíritu Santo en el pasaje.</p>
+    <ul>
+        <li>¿Qué obras o acciones de Dios aparecen?</li>
+        <li>¿Qué revela este texto acerca de su carácter?</li>
+        <li>¿Qué declara Dios o qué se dice de Él?</li>
+    </ul>
+</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
-                        <div class="note-title">📖 La enseñanza de este pasaje</div>
+                        <div class="note-title-row">
+    <div class="note-title">📖 La enseñanza de este pasaje</div>
+    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
+        ☰
+    </button>
+</div>
+
+<div class="note-guide-panel" hidden>
+    <p>Busca la enseñanza principal del texto.</p>
+    <ul>
+        <li>¿Qué intenta comunicar el pasaje?</li>
+        <li>¿Qué aprendes de los personajes o circunstancias?</li>
+        <li>¿Es una enseñanza positiva, una advertencia o una corrección?</li>
+    </ul>
+</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
-                        <div class="note-title">✅ Lo que pondré en práctica</div>
+                        <div class="note-title-row">
+    <div class="note-title">✅ Lo que pondré en práctica</div>
+    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
+        ☰
+    </button>
+</div>
+
+<div class="note-guide-panel" hidden>
+    <p>Escribe una respuesta concreta para hoy.</p>
+    <ul>
+        <li>¿Qué debo hacer, cambiar o recordar?</li>
+        <li>¿Con quién? ¿Qué? ¿Cómo? ¿Dónde? ¿Cuándo?</li>
+        <li>Evita respuestas generales; busca algo específico.</li>
+    </ul>
+</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
                     </div>
                     <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
-                        <div class="note-title">🙏 Mi oración delante de Dios</div>
+                        <div class="note-title-row">
+    <div class="note-title">🙏 Mi oración delante de Dios</div>
+    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
+        ☰
+    </button>
+</div>
+
+<div class="note-guide-panel" hidden>
+    <p>Responde a Dios en oración.</p>
+    <ul>
+        <li>Agradece por la palabra recibida.</li>
+        <li>Pide ayuda específica para obedecer.</li>
+        <li>Presenta delante de Dios tu decisión o entrega.</li>
+    </ul>
+</div>
                         <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
                     </div>
                     <div class="note-actions">
@@ -6574,8 +6630,38 @@ if (nextChapterBtn) {
     }
     return;
 }
+
+const noteGuideBtn = e.target.closest('[data-action="toggle-note-guide"]');
+if (noteGuideBtn) {
+    e.stopPropagation();
+
+    const section = noteGuideBtn.closest('.note-section');
+    const panel = section?.querySelector('.note-guide-panel');
+
+    if (!panel) return;
+
+    const isHidden = panel.hasAttribute('hidden');
+
+    this.$content.querySelectorAll('.note-guide-panel').forEach(item => {
+        if (item !== panel) item.setAttribute('hidden', '');
+    });
+
+    this.$content.querySelectorAll('[data-action="toggle-note-guide"]').forEach(btn => {
+        if (btn !== noteGuideBtn) btn.setAttribute('aria-expanded', 'false');
+    });
+
+    if (isHidden) {
+        panel.removeAttribute('hidden');
+        noteGuideBtn.setAttribute('aria-expanded', 'true');
+    } else {
+        panel.setAttribute('hidden', '');
+        noteGuideBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    return;
+}
            
-           const noteSection = e.target.closest('.note-section');
+const noteSection = e.target.closest('.note-section');
     if (noteSection) {
         const textarea = noteSection.querySelector('.note-textarea');
         if (!textarea) return;
