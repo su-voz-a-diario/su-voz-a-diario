@@ -2195,6 +2195,18 @@ applyVerseImageFormat: function() {
     canvas.height = format.height;
 
     canvas.dataset.format = format.key;
+
+    const previewWrap = canvas.closest('.verse-image-preview-wrap');
+
+    if (previewWrap) {
+        previewWrap.classList.remove(
+            'format-post',
+            'format-story',
+            'format-square'
+        );
+
+        previewWrap.classList.add(`format-${format.key}`);
+    }
 },
 
     renderVerseImagePreview: function() {
