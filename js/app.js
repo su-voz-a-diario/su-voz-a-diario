@@ -587,13 +587,15 @@ cacheDOM: function() {
     this.$verseImageCanvas = document.getElementById('verseImagePreview');
     this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
     this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
-   this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
+    this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
     this.$verseFormatButtons = Array.from(document.querySelectorAll('.verse-format-btn'));
     this.$verseTextSizeButtons = Array.from(document.querySelectorAll('.verse-text-size-btn'));
+    this.$verseLinkToggleBtn = document.getElementById('verseLinkToggleBtn');
 
     this.verseImageTemplate = 'midnight';
     this.verseImageFormat = 'post';
     this.verseImageTextSize = 'normal';
+    this.verseImageShowLink = true;
 
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
@@ -2499,13 +2501,19 @@ finalLines.forEach((line, index) => {
     ctx.font = '500 24px Inter, Arial, sans-serif';
     ctx.fillText('Lectura bíblica diaria', canvas.width / 2, layout.subtitleY);
     
+   if (this.verseImageShowLink) {
     ctx.fillStyle = template.border;
     this.roundRect(ctx, 360, layout.dividerY, 360, 2, 2);
     ctx.fill();
 
     ctx.fillStyle = template.muted;
     ctx.font = '500 20px Inter, Arial, sans-serif';
-    ctx.fillText('su-voz-a-diario.github.io/su-voz-a-diario/#home', canvas.width / 2, layout.linkY);
+    ctx.fillText(
+        'su-voz-a-diario.github.io/su-voz-a-diario/#home',
+        canvas.width / 2,
+        layout.linkY
+    );
+}
 },
 
     openVerseImageEditor: function() {
@@ -3423,6 +3431,26 @@ if (textSizeBtn) {
     this.renderVerseImagePreview();
     return;
     }
+
+    const linkToggleBtn = e.target.closest('#verseLinkToggleBtn');
+
+if (linkToggleBtn) {
+    e.preventDefault();
+
+    this.verseImageShowLink = !this.verseImageShowLink;
+
+    linkToggleBtn.classList.toggle('is-active', this.verseImageShowLink);
+    linkToggleBtn.setAttribute('aria-pressed', String(this.verseImageShowLink));
+
+    const textEl = linkToggleBtn.querySelector('.verse-link-toggle-text');
+
+    if (textEl) {
+        textEl.textContent = this.verseImageShowLink ? 'Visible' : 'Oculto';
+    }
+
+    this.renderVerseImagePreview();
+    return;
+}
     });
 
     this.$verseImageDownloadBtn?.addEventListener('click', async (e) => {
