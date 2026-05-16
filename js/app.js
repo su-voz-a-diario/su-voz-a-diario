@@ -2603,16 +2603,18 @@ downloadVerseImage: async function() {
     });
 
     try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                title: reference,
-                text: 'Guardar imagen · Su voz a diario',
-                files: [file]
-            });
+        const isMobileDevice = isIOSDevice() || isAndroidDevice();
 
-            this.showToast('Imagen lista para guardar');
-            return;
-        }
+if (isMobileDevice && navigator.canShare && navigator.canShare({ files: [file] })) {
+    await navigator.share({
+        title: reference,
+        text: 'Guardar imagen · Su voz a diario',
+        files: [file]
+    });
+
+    this.showToast('Imagen lista para guardar');
+    return;
+}
 
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
