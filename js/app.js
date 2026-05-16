@@ -2297,11 +2297,25 @@ drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
     ctx.strokeStyle = template.border;
     ctx.lineWidth = 2;
 
-    for (let i = 0; i < 7; i++) {
-        ctx.globalAlpha = 0.06 + i * 0.018;
-        this.roundRect(ctx, 105 + i * 10, 135 + i * 10, 870 - i * 20, 1080 - i * 20, 46);
-        ctx.stroke();
-    }
+   const frameX = 105;
+const frameY = canvas.height * 0.10;
+const frameW = canvas.width - 210;
+const frameH = canvas.height * 0.78;
+
+for (let i = 0; i < 7; i++) {
+    ctx.globalAlpha = 0.06 + i * 0.018;
+
+    this.roundRect(
+        ctx,
+        frameX + i * 10,
+        frameY + i * 10,
+        frameW - i * 20,
+        frameH - i * 20,
+        46
+    );
+
+    ctx.stroke();
+}
 
     ctx.restore();
 
