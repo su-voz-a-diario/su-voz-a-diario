@@ -2305,18 +2305,31 @@ drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
 
     ctx.restore();
 
-    ctx.fillStyle = template.card;
-    this.roundRect(ctx, 88, 118, 904, 1114, 52);
-    ctx.fill();
+    const cardX = 88;
+const cardY = canvas.height * 0.088;
+const cardW = canvas.width - 176;
+const cardH = canvas.height * 0.825;
+const cardRadius = 52;
 
-    ctx.strokeStyle = template.border;
-    ctx.lineWidth = 2.5;
-    this.roundRect(ctx, 88, 118, 904, 1114, 52);
-    ctx.stroke();
+ctx.fillStyle = template.card;
+this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+ctx.fill();
 
-    ctx.fillStyle = template.accent;
-    this.roundRect(ctx, 206, 194, 668, 5, 5);
-    ctx.fill();
+ctx.strokeStyle = template.border;
+ctx.lineWidth = 2.5;
+this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+ctx.stroke();
+
+ctx.fillStyle = template.accent;
+this.roundRect(
+    ctx,
+    cardX + 118,
+    cardY + 76,
+    cardW - 236,
+    5,
+    5
+);
+ctx.fill();
 },
 
 getVerseImageLayout: function(canvas) {
