@@ -2587,28 +2587,54 @@ downloadVerseImage: async function() {
         return;
     }
 
-    const reference = this.getSelectedTextReferenceLabel()
+    const reference = this.getSelectedTextReferenceLabel();
+    const safeReference = reference
         .replace(/[^\wáéíóúÁÉÍÓÚñÑ-]+/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '')
         .toLowerCase();
 
-    const fileName = reference
-        ? `su-voz-${reference}.png`
+    const fileName = safeReference
+        ? `su-voz-${safeReference}.png`
         : 'su-voz-a-diario.png';
 
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const file = new File([blob], fileName, {
+        type: 'image/png'
+    });
 
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
+    try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+                title: reference,
+                text: 'Guardar imagen · Su voz a diario',
+                files: [file]
+            });
 
-    URL.revokeObjectURL(url);
+            this.showToast('Imagen lista para guardar');
+            return;
+        }
 
-    this.showToast('Imagen descargada');
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        URL.revokeObjectURL(url);
+
+        this.showToast('Imagen descargada');
+    } catch (error) {
+        if (error?.name === 'AbortError') {
+            console.log('[Verse Image] Guardado cancelado por el usuario');
+            return;
+        }
+
+        console.error('[Verse Image] Error guardando:', error);
+        this.showToast('No se pudo guardar la imagen');
+    }
 },
 
 shareVerseImageFromEditor: async function() {
