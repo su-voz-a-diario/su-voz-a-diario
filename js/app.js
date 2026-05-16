@@ -587,11 +587,13 @@ cacheDOM: function() {
     this.$verseImageCanvas = document.getElementById('verseImagePreview');
     this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
     this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
-    this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
+   this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
     this.$verseFormatButtons = Array.from(document.querySelectorAll('.verse-format-btn'));
+    this.$verseTextSizeButtons = Array.from(document.querySelectorAll('.verse-text-size-btn'));
 
     this.verseImageTemplate = 'midnight';
     this.verseImageFormat = 'post';
+    this.verseImageTextSize = 'normal';
 
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
@@ -2371,7 +2373,37 @@ getVerseImageLayout: function(canvas) {
     }
     };
 
-    return layouts[format] || layouts.post;
+   const layout = { ...(layouts[format] || layouts.post) };
+
+const textSize = this.verseImageTextSize || 'normal';
+
+const sizeProfiles = {
+    compact: {
+        fontDelta: -6,
+        lineDelta: -8,
+        widthDelta: 70
+    },
+
+    normal: {
+        fontDelta: 0,
+        lineDelta: 0,
+        widthDelta: 0
+    },
+
+    large: {
+        fontDelta: 6,
+        lineDelta: 7,
+        widthDelta: -55
+    }
+};
+
+const profile = sizeProfiles[textSize] || sizeProfiles.normal;
+
+layout.textFontSize += profile.fontDelta;
+layout.lineHeight += profile.lineDelta;
+layout.textMaxWidth += profile.widthDelta;
+
+return layout;
 },
 
 drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
@@ -3346,6 +3378,21 @@ if (formatBtn) {
     });
 
     this.applyVerseImageFormat();
+    this.renderVerseImagePreview();
+    return;
+    }
+
+    const textSizeBtn = e.target.closest('.verse-text-size-btn');
+
+if (textSizeBtn) {
+    e.preventDefault();
+
+    this.verseImageTextSize = textSizeBtn.dataset.textSize || 'normal';
+
+    this.$verseTextSizeButtons.forEach(button => {
+        button.classList.toggle('is-active', button === textSizeBtn);
+    });
+
     this.renderVerseImagePreview();
     return;
     }
