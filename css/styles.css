@@ -637,18 +637,18 @@ body.dark-mode .badge-corona {
 }
 
 .action-group {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 12px;
-    margin: 16px 0 26px 0;
+    margin: 14px 0 26px 0;
 }
 
 .reading-action-card {
     width: 100%;
-    min-height: 92px;
+    min-height: 88px;
 
     display: grid;
-    grid-template-columns: 72px 1fr 28px;
+    grid-template-columns: 64px 1fr 24px;
     align-items: center;
     gap: 14px;
 
