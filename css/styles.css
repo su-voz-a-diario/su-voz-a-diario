@@ -6604,3 +6604,45 @@ body.dark-mode .note-guide-panel li {
         font-size: 12px;
     }
 }
+
+.verse-image-preview-wrap.format-post {
+    width: min(66vw, 250px);
+    aspect-ratio: 4 / 5;
+}
+
+.verse-image-preview-wrap.format-story {
+    width: min(50vw, 210px);
+    aspect-ratio: 9 / 16;
+}
+
+.verse-image-preview-wrap.format-square {
+    width: min(68vw, 250px);
+    aspect-ratio: 1 / 1;
+}
+
+.verse-image-preview-wrap.format-square #verseImagePreview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.verse-image-preview-wrap.format-post #verseImagePreview,
+.verse-image-preview-wrap.format-story #verseImagePreview {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+@media (max-width: 520px) {
+    .verse-image-preview-wrap.format-post {
+        width: min(62vw, 225px);
+    }
+
+    .verse-image-preview-wrap.format-story {
+        width: min(44vw, 185px);
+    }
+
+    .verse-image-preview-wrap.format-square {
+        width: min(64vw, 230px);
+    }
+}
