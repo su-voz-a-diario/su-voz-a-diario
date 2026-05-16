@@ -774,6 +774,8 @@ body.dark-mode .badge-corona {
         inset 0 1px 0 rgba(255, 255, 255, 0.12);
 
     cursor: default;
+
+    overflow: hidden;
 }
 
 .reading-action-read:disabled {
@@ -797,6 +799,8 @@ body.dark-mode .badge-corona {
     box-shadow:
         0 10px 26px rgba(0, 0, 0, 0.22),
         inset 0 1px 0 rgba(255, 255, 255, 0.05);
+
+    overflow: hidden;
 }
 
 .reading-action-share .reading-action-icon {
@@ -6746,4 +6750,53 @@ body.dark-mode .note-guide-panel li {
         width: 28px;
         height: 28px;
     }
+}
+
+/* ========================================
+   MINI ACTIONS (LEÍDO + COMPARTIR)
+   ======================================== */
+
+.action-group .reading-action-card {
+    min-height: 76px;
+    padding: 14px 14px;
+    border-radius: 22px;
+
+    grid-template-columns: 52px 1fr;
+    gap: 12px;
+
+    align-items: center;
+}
+
+.action-group .reading-action-chevron {
+    display: none;
+}
+
+.action-group .reading-action-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 1.15rem;
+}
+
+.action-group .reading-action-content {
+    gap: 2px;
+}
+
+.action-group .reading-action-title {
+    font-size: 0.95rem;
+    line-height: 1.05;
+    font-weight: 800;
+}
+
+.action-group .reading-action-subtitle {
+    font-size: 0.74rem;
+    line-height: 1.2;
+    opacity: 0.72;
+}
+
+.action-group .reading-action-read .reading-action-icon {
+    font-size: 1.7rem;
+}
+
+.action-group .reading-action-subtitle {
+    display: none;
 }
