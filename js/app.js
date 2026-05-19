@@ -537,25 +537,32 @@ this.bindEvents();
 this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
-await this.initAuth();
 await this.loadData();
 await this.loadStrongHebrew();
 await this.loadStrongVerseData();
-await this.refreshCommunityBadge();
-
-const savedToken = localStorage.getItem('su-voz-fcm-token');
-if (savedToken && this.currentUser) {
-    await this.savePushToken(savedToken);
-
-    if (this.settings.notificationsEnabled) {
-        this.setupPushListeners();
-    }
-}
 
 await this.handleRoute();
 this.updateStreakUI();
-    
-    console.log('[App] Inicialización completada');
+
+this.initAuth().then(async () => {
+    try {
+        await this.refreshCommunityBadge();
+
+        const savedToken = localStorage.getItem('su-voz-fcm-token');
+
+        if (savedToken && this.currentUser) {
+            await this.savePushToken(savedToken);
+
+            if (this.settings.notificationsEnabled) {
+                this.setupPushListeners();
+            }
+        }
+    } catch (error) {
+        console.warn('[App] Servicios secundarios no disponibles al iniciar:', error);
+    }
+});
+
+console.log('[App] Inicialización completada');
 },
     
 cacheDOM: function() {
