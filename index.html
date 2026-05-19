@@ -443,27 +443,35 @@
 <script type="module" src="js/app.js"></script>
 
 <script>
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', async () => {
-        try {
-            const registration = await navigator.serviceWorker.register('./sw.js?v=10', {
-                scope: './'
-            });
+(function () {
+    const ua = navigator.userAgent || '';
 
-            console.log('[Index] ServiceWorker registrado correctamente', registration.scope);
+    const isFacebookInAppBrowser =
+        ua.includes('FBAN') ||
+        ua.includes('FBAV') ||
+        ua.includes('FBIOS') ||
+        ua.includes('FB_IAB') ||
+        ua.includes('Instagram');
 
-            if (!navigator.serviceWorker.controller) {
-                console.log('[Index] Esta carga aún no está controlada por el SW. Recargando una vez...');
-                window.location.reload();
-                return;
+    if (isFacebookInAppBrowser) {
+        console.warn('[Index] Navegador interno de Facebook/Instagram detectado. No se registra Service Worker.');
+        return;
+    }
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                const registration = await navigator.serviceWorker.register('./sw.js?v=11', {
+                    scope: './'
+                });
+
+                console.log('[Index] ServiceWorker registrado correctamente', registration.scope);
+            } catch (error) {
+                console.error('[Index] Error registrando ServiceWorker:', error);
             }
-
-            console.log('[Index] La página ya está controlada por el SW');
-        } catch (error) {
-            console.error('[Index] Error registrando ServiceWorker:', error);
-        }
-    });
-}
+        });
+    }
+})();
 </script>
 </body>
 
