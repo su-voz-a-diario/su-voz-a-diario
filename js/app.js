@@ -2516,7 +2516,7 @@ finalLines.forEach((line, index) => {
     ctx.fillStyle = template.muted;
     ctx.font = '500 20px Inter, Arial, sans-serif';
     ctx.fillText(
-        'su-voz-a-diario.github.io/su-voz-a-diario/#home',
+        'suvoz.app',
         canvas.width / 2,
         layout.linkY
     );
@@ -2663,7 +2663,7 @@ shareVerseImageFromEditor: async function() {
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({
                 title: reference,
-                text: `${reference} · https://su-voz-a-diario.github.io/su-voz-a-diario/#home`,
+                text: `${reference} · https://suvoz.app`,
                 files: [file]
             });
 
@@ -6976,7 +6976,7 @@ const noteSection = e.target.closest('.note-section');
             .replace(/<[^>]+>/g, '')
             .trim();
 
-       const appLink = 'https://su-voz-a-diario.github.io/su-voz-a-diario/';
+       const appLink = 'https://suvoz.app';
 
         const shareText = `📖 SU VOZ A DIARIO
         ━━━━━━━━━━
