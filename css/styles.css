@@ -1693,15 +1693,13 @@ body.dark-mode .devotional-step-tab.active {
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-stepper {
-        display: flex;
-        grid-template-columns: none;
-        gap: 10px;
-        margin: 0 -14px;
-        padding: 2px 14px 10px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        scroll-snap-type: x proximity;
-        -webkit-overflow-scrolling: touch;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        margin: 0;
+        padding: 2px 0 4px;
+        overflow: visible;
+        scroll-snap-type: none;
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-stepper::-webkit-scrollbar {
@@ -1710,16 +1708,16 @@ body.dark-mode .devotional-step-tab.active {
 
     .note-box[data-devotional-flow="v42"] .devotional-step-tab,
     .note-box[data-devotional-flow="v42"] .devotional-chip {
-        flex: 0 0 auto;
-        min-width: 118px;
+        flex: initial;
+        min-width: 0;
         min-height: 48px;
-        padding: 9px 13px;
-        border-radius: 999px;
+        padding: 9px 10px;
+        border-radius: 16px;
         display: inline-flex;
         align-items: center;
-        justify-content: flex-start;
-        gap: 8px;
-        scroll-snap-align: start;
+        justify-content: center;
+        gap: 7px;
+        scroll-snap-align: none;
         background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
         box-shadow:
@@ -1739,17 +1737,20 @@ body.dark-mode .devotional-step-tab.active {
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-step-index {
-        width: 28px;
-        height: 28px;
-        flex: 0 0 28px;
-        font-size: 0.8rem;
+        width: 26px;
+        height: 26px;
+        flex: 0 0 26px;
+        font-size: 0.78rem;
         background: rgba(148, 163, 184, 0.14);
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-step-label {
-        font-size: 0.82rem;
-        line-height: 1;
-        white-space: nowrap;
+        min-width: 0;
+        font-size: 0.8rem;
+        line-height: 1.1;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        text-align: center;
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-step-card,
