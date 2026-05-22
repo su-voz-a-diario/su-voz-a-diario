@@ -1992,6 +1992,140 @@ updateCommunityBadge: function() {
     this.storage.set(this.getNoteKey(dateStr), noteObj);
     this.sendToSW({ type: 'NOTE_SAVED', date: dateStr });
     },
+
+    getDevotionalSteps: function() {
+        return [
+            {
+                id: 'dios',
+                label: 'Dios',
+                title: 'Cómo se muestra Dios aquí',
+                icon: '👑',
+                context: 'Observa al Padre, al Hijo y al Espíritu Santo en el pasaje.',
+                questions: [
+                    '¿Qué obras o acciones de Dios aparecen?',
+                    '¿Qué revela este texto acerca de su carácter?',
+                    '¿Qué declara Dios o qué se dice de Él?'
+                ],
+                placeholder: '¿Qué revela este texto acerca de Dios?'
+            },
+            {
+                id: 'aprendizaje',
+                label: 'Enseñanza',
+                title: 'La enseñanza de este pasaje',
+                icon: '📖',
+                context: 'Busca la enseñanza principal del texto.',
+                questions: [
+                    '¿Qué intenta comunicar el pasaje?',
+                    '¿Qué aprendes de los personajes o circunstancias?',
+                    '¿Es una enseñanza positiva, una advertencia o una corrección?'
+                ],
+                placeholder: '¿Qué ejemplo, advertencia o enseñanza encuentro aquí?'
+            },
+            {
+                id: 'respuesta',
+                label: 'Práctica',
+                title: 'Lo que pondré en práctica',
+                icon: '✅',
+                context: 'Escribe una respuesta concreta para hoy.',
+                questions: [
+                    '¿Qué debo hacer, cambiar o recordar?',
+                    '¿Con quién? ¿Qué? ¿Cómo? ¿Dónde? ¿Cuándo?',
+                    'Evita respuestas generales; busca algo específico.'
+                ],
+                placeholder: '¿Qué debo hacer, cambiar o recordar hoy?'
+            },
+            {
+                id: 'oracion',
+                label: 'Oración',
+                title: 'Mi oración delante de Dios',
+                icon: '🙏',
+                context: 'Responde a Dios en oración.',
+                questions: [
+                    'Agradece por la palabra recibida.',
+                    'Pide ayuda específica para obedecer.',
+                    'Presenta delante de Dios tu decisión o entrega.'
+                ],
+                placeholder: 'Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.'
+            }
+        ];
+    },
+
+    getActiveDevotionalStep: function() {
+        const steps = this.getDevotionalSteps();
+        return steps.findIndex(step => step.id === this.activeNoteField) >= 0
+            ? this.activeNoteField
+            : steps[0].id;
+    },
+
+    setActiveDevotionalStep: function(stepId) {
+        const steps = this.getDevotionalSteps();
+        if (steps.some(step => step.id === stepId)) {
+            this.activeNoteField = stepId;
+        }
+    },
+
+    renderDevotionalGuide: function(reading) {
+        const steps = this.getDevotionalSteps();
+        const activeStepId = this.getActiveDevotionalStep();
+        const activeIndex = Math.max(0, steps.findIndex(step => step.id === activeStepId));
+        const activeStep = steps[activeIndex];
+        const note = this.getNote(reading.date);
+        const progress = ((activeIndex + 1) / steps.length) * 100;
+
+        return `
+            <div class="note-box devotional-flow">
+                <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
+
+                <div class="devotional-flow-header">
+                    <div>
+                        <div class="devotional-step-count">Paso ${activeIndex + 1} de ${steps.length}</div>
+                        <div class="devotional-flow-title">Profundiza en Su voz</div>
+                    </div>
+                    <div class="devotional-progress" aria-hidden="true">
+                        <span class="devotional-progress-fill" style="width: ${progress}%"></span>
+                    </div>
+                </div>
+
+                <div class="devotional-stepper" role="tablist" aria-label="Pasos de reflexión">
+                    ${steps.map((step, index) => `
+                        <button
+                            class="devotional-step-tab ${step.id === activeStep.id ? 'active' : ''} ${note[step.id]?.trim() ? 'completed' : ''}"
+                            type="button"
+                            data-action="devotional-step"
+                            data-step="${step.id}"
+                            data-date="${reading.date}"
+                            role="tab"
+                            aria-selected="${step.id === activeStep.id ? 'true' : 'false'}">
+                            <span class="devotional-step-index">${index + 1}</span>
+                            <span class="devotional-step-label">${step.label}</span>
+                        </button>
+                    `).join('')}
+                </div>
+
+                <div class="note-section devotional-step-card active" data-note-section="${activeStep.id}">
+                    <div class="note-title">${activeStep.icon} ${activeStep.title}</div>
+                    <p class="devotional-step-context">${activeStep.context}</p>
+                    <ul class="devotional-question-list">
+                        ${activeStep.questions.map(question => `<li>${question}</li>`).join('')}
+                    </ul>
+                    <textarea
+                        class="note-textarea active"
+                        data-field="${activeStep.id}"
+                        data-note-date="${reading.date}"
+                        placeholder="${activeStep.placeholder}">${this.escapeHtml(note[activeStep.id] || '')}</textarea>
+                </div>
+
+                <div class="devotional-nav">
+                    <button class="devotional-nav-btn" type="button" data-action="devotional-prev" data-date="${reading.date}" ${activeIndex === 0 ? 'disabled' : ''}>Anterior</button>
+                    <button class="devotional-nav-btn devotional-nav-btn-primary" type="button" data-action="devotional-next" data-date="${reading.date}" ${activeIndex === steps.length - 1 ? 'disabled' : ''}>Siguiente</button>
+                </div>
+
+                <div class="note-actions devotional-actions">
+                    <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
+                </div>
+            </div>
+        `;
+    },
     
    deleteNote: function(dateStr) {
     this.storage.remove(this.getNoteKey(dateStr));
@@ -4334,87 +4468,7 @@ restoreCalendarPosition: function() {
                 </button>
             </div>
 
-            ${this.openNoteDate === reading.date ? `
-                <div class="note-box">
-                    <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
-                    <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
-                        <div class="note-title-row">
-    <div class="note-title">👑 Cómo se muestra Dios aquí</div>
-    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
-        ☰
-    </button>
-</div>
-
-<div class="note-guide-panel" hidden>
-    <p>Observa al Padre, al Hijo y al Espíritu Santo en el pasaje.</p>
-    <ul>
-        <li>¿Qué obras o acciones de Dios aparecen?</li>
-        <li>¿Qué revela este texto acerca de su carácter?</li>
-        <li>¿Qué declara Dios o qué se dice de Él?</li>
-    </ul>
-</div>
-                        <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="¿Qué revela este texto acerca de Dios?">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
-                    </div>
-                    <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
-                        <div class="note-title-row">
-    <div class="note-title">📖 La enseñanza de este pasaje</div>
-    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
-        ☰
-    </button>
-</div>
-
-<div class="note-guide-panel" hidden>
-    <p>Busca la enseñanza principal del texto.</p>
-    <ul>
-        <li>¿Qué intenta comunicar el pasaje?</li>
-        <li>¿Qué aprendes de los personajes o circunstancias?</li>
-        <li>¿Es una enseñanza positiva, una advertencia o una corrección?</li>
-    </ul>
-</div>
-                        <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="¿Qué ejemplo, advertencia o enseñanza encuentro aquí?">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
-                    </div>
-                    <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
-                        <div class="note-title-row">
-    <div class="note-title">✅ Lo que pondré en práctica</div>
-    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
-        ☰
-    </button>
-</div>
-
-<div class="note-guide-panel" hidden>
-    <p>Escribe una respuesta concreta para hoy.</p>
-    <ul>
-        <li>¿Qué debo hacer, cambiar o recordar?</li>
-        <li>¿Con quién? ¿Qué? ¿Cómo? ¿Dónde? ¿Cuándo?</li>
-        <li>Evita respuestas generales; busca algo específico.</li>
-    </ul>
-</div>
-                        <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="¿Qué debo hacer, cambiar o recordar hoy?">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
-                    </div>
-                    <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
-                        <div class="note-title-row">
-    <div class="note-title">🙏 Mi oración delante de Dios</div>
-    <button class="note-guide-btn" type="button" data-action="toggle-note-guide" aria-expanded="false">
-        ☰
-    </button>
-</div>
-
-<div class="note-guide-panel" hidden>
-    <p>Responde a Dios en oración.</p>
-    <ul>
-        <li>Agradece por la palabra recibida.</li>
-        <li>Pide ayuda específica para obedecer.</li>
-        <li>Presenta delante de Dios tu decisión o entrega.</li>
-    </ul>
-</div>
-                        <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
-                    </div>
-                    <div class="note-actions">
-                        <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
-                        <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
-                    </div>
-                </div>
-            ` : ''}
+            ${this.openNoteDate === reading.date ? this.renderDevotionalGuide(reading) : ''}
 
             <div class="action-group">
                 <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
@@ -4544,38 +4598,7 @@ const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
     </button>
 </div>
 
-           ${this.openNoteDate === reading.date ? `
-    <div class="note-box">
-        <div class="note-privacy">
-            🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.
-        </div>
-
-        <div class="note-section ${this.activeNoteField === 'dios' ? 'active' : ''}" data-note-section="dios">
-            <div class="note-title">👑 Lo que veo de Dios</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'dios' ? 'active' : ''}" data-field="dios" data-note-date="${reading.date}" placeholder="Observa sus obras, palabras, carácter y la manera en que se da a conocer en este pasaje.">${this.escapeHtml(this.getNote(reading.date).dios)}</textarea>
-        </div>
-
-        <div class="note-section ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-note-section="aprendizaje">
-            <div class="note-title">📖 Lo que aprendo del pasaje</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'aprendizaje' ? 'active' : ''}" data-field="aprendizaje" data-note-date="${reading.date}" placeholder="Identifica qué enseña el texto, qué muestra de los personajes y qué verdad debes comprender.">${this.escapeHtml(this.getNote(reading.date).aprendizaje)}</textarea>
-        </div>
-
-        <div class="note-section ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-note-section="respuesta">
-            <div class="note-title">🙏 Mi respuesta hoy</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'respuesta' ? 'active' : ''}" data-field="respuesta" data-note-date="${reading.date}" placeholder="Agradece, pide ayuda específica y presenta delante de Dios tu respuesta a esta palabra.">${this.escapeHtml(this.getNote(reading.date).respuesta)}</textarea>
-        </div>
-
-        <div class="note-section ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-note-section="oracion">
-            <div class="note-title">🙏 Mi oración</div>
-            <textarea class="note-textarea ${this.activeNoteField === 'oracion' ? 'active' : ''}" data-field="oracion" data-note-date="${reading.date}" placeholder="Pídele a Dios que te ayude a vivir y obedecer lo que has comprendido hoy.">${this.escapeHtml(this.getNote(reading.date).oracion)}</textarea>
-        </div>
-
-        <div class="note-actions">
-            <button class="btn-secondary" data-action="export-pdf" data-date="${reading.date}">📄 Exportar PDF</button>
-            <button class="btn-secondary" data-action="delete-note" data-date="${reading.date}">🗑️ Borrar reflexión</button>
-        </div>
-    </div>
-` : ''}
+           ${this.openNoteDate === reading.date ? this.renderDevotionalGuide(reading) : ''}
             
          <div class="action-group">
     <button class="reading-action-card reading-action-read" data-action="mark-read" data-date="${reading.date}" ${this.isRead(reading.date) ? 'disabled' : ''}>
@@ -6648,6 +6671,42 @@ if (nextChapterBtn) {
     if (currentBook && this.selectedBibleChapter < currentBook.chapters) {
         this.selectedBibleChapter += 1;
         this.navigate('bible-reading');
+    }
+    return;
+}
+
+const devotionalStepBtn = e.target.closest('[data-action="devotional-step"]');
+if (devotionalStepBtn) {
+    const date = devotionalStepBtn.getAttribute('data-date');
+    const stepId = devotionalStepBtn.getAttribute('data-step');
+
+    this.setActiveDevotionalStep(stepId);
+    this.rerenderCurrentReadingView(date, true);
+    return;
+}
+
+const devotionalPrevBtn = e.target.closest('[data-action="devotional-prev"]');
+if (devotionalPrevBtn) {
+    const date = devotionalPrevBtn.getAttribute('data-date');
+    const steps = this.getDevotionalSteps();
+    const currentIndex = steps.findIndex(step => step.id === this.getActiveDevotionalStep());
+
+    if (currentIndex > 0) {
+        this.setActiveDevotionalStep(steps[currentIndex - 1].id);
+        this.rerenderCurrentReadingView(date, true);
+    }
+    return;
+}
+
+const devotionalNextBtn = e.target.closest('[data-action="devotional-next"]');
+if (devotionalNextBtn) {
+    const date = devotionalNextBtn.getAttribute('data-date');
+    const steps = this.getDevotionalSteps();
+    const currentIndex = steps.findIndex(step => step.id === this.getActiveDevotionalStep());
+
+    if (currentIndex >= 0 && currentIndex < steps.length - 1) {
+        this.setActiveDevotionalStep(steps[currentIndex + 1].id);
+        this.rerenderCurrentReadingView(date, true);
     }
     return;
 }
