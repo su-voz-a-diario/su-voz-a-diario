@@ -1694,8 +1694,8 @@ body.dark-mode .devotional-step-tab.active {
 
     .note-box[data-devotional-flow="v42"] .devotional-stepper {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 9px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
         margin: 0;
         padding: 2px 0 4px;
         overflow: visible;
@@ -1710,13 +1710,14 @@ body.dark-mode .devotional-step-tab.active {
     .note-box[data-devotional-flow="v42"] .devotional-chip {
         flex: initial;
         min-width: 0;
-        min-height: 48px;
-        padding: 9px 10px;
-        border-radius: 16px;
+        min-height: 62px;
+        padding: 8px 4px;
+        border-radius: 15px;
         display: inline-flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 7px;
+        gap: 5px;
         scroll-snap-align: none;
         background:
             linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 250, 252, 0.9));
@@ -1737,19 +1738,20 @@ body.dark-mode .devotional-step-tab.active {
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-step-index {
-        width: 26px;
-        height: 26px;
-        flex: 0 0 26px;
-        font-size: 0.78rem;
+        width: 24px;
+        height: 24px;
+        flex: 0 0 24px;
+        font-size: 0.74rem;
         background: rgba(148, 163, 184, 0.14);
     }
 
     .note-box[data-devotional-flow="v42"] .devotional-step-label {
         min-width: 0;
-        font-size: 0.8rem;
-        line-height: 1.1;
+        max-width: 100%;
+        font-size: 0.66rem;
+        line-height: 1.05;
         white-space: normal;
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
         text-align: center;
     }
 
