@@ -2073,7 +2073,7 @@ updateCommunityBadge: function() {
         const progress = ((activeIndex + 1) / steps.length) * 100;
 
         return `
-            <div class="note-box devotional-flow">
+            <div class="note-box devotional-flow" data-devotional-flow="v42">
                 <div class="note-privacy">🔒 Estas reflexiones son privadas y solo se guardan en tu dispositivo.</div>
 
                 <div class="devotional-flow-header">
@@ -2089,7 +2089,7 @@ updateCommunityBadge: function() {
                 <div class="devotional-stepper" role="tablist" aria-label="Pasos de reflexión">
                     ${steps.map((step, index) => `
                         <button
-                            class="devotional-step-tab ${step.id === activeStep.id ? 'active' : ''} ${note[step.id]?.trim() ? 'completed' : ''}"
+                            class="devotional-step-tab devotional-chip ${step.id === activeStep.id ? 'active is-active' : ''} ${note[step.id]?.trim() ? 'completed is-complete' : ''}"
                             type="button"
                             data-action="devotional-step"
                             data-step="${step.id}"
@@ -2102,22 +2102,22 @@ updateCommunityBadge: function() {
                     `).join('')}
                 </div>
 
-                <div class="note-section devotional-step-card active" data-note-section="${activeStep.id}">
+                <div class="note-section devotional-step-card active" data-note-section="${activeStep.id}" data-devotional-card="true">
                     <div class="note-title">${activeStep.icon} ${activeStep.title}</div>
                     <p class="devotional-step-context">${activeStep.context}</p>
                     <ul class="devotional-question-list">
                         ${activeStep.questions.map(question => `<li>${question}</li>`).join('')}
                     </ul>
                     <textarea
-                        class="note-textarea active"
+                        class="note-textarea devotional-textarea active"
                         data-field="${activeStep.id}"
                         data-note-date="${reading.date}"
                         placeholder="${activeStep.placeholder}">${this.escapeHtml(note[activeStep.id] || '')}</textarea>
                 </div>
 
                 <div class="devotional-nav">
-                    <button class="devotional-nav-btn" type="button" data-action="devotional-prev" data-date="${reading.date}" ${activeIndex === 0 ? 'disabled' : ''}>Anterior</button>
-                    <button class="devotional-nav-btn devotional-nav-btn-primary" type="button" data-action="devotional-next" data-date="${reading.date}" ${activeIndex === steps.length - 1 ? 'disabled' : ''}>Siguiente</button>
+                    <button class="devotional-nav-btn devotional-prev-btn" type="button" data-action="devotional-prev" data-date="${reading.date}" ${activeIndex === 0 ? 'disabled' : ''}>Anterior</button>
+                    <button class="devotional-nav-btn devotional-nav-btn-primary devotional-next-btn" type="button" data-action="devotional-next" data-date="${reading.date}" ${activeIndex === steps.length - 1 ? 'disabled' : ''}>Siguiente</button>
                 </div>
 
                 <div class="note-actions devotional-actions">

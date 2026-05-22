@@ -1670,7 +1670,8 @@ body.dark-mode .devotional-step-tab.active {
 }
 
 @media (max-width: 640px) {
-    .note-box.devotional-flow {
+    .note-box.devotional-flow,
+    .note-box[data-devotional-flow="v42"] {
         margin: 18px 0 calc(24px + var(--nav-height) + env(safe-area-inset-bottom));
         padding: 16px 14px calc(28px + env(safe-area-inset-bottom));
         border-radius: 18px;
@@ -1678,20 +1679,20 @@ body.dark-mode .devotional-step-tab.active {
         gap: 18px;
     }
 
-    .devotional-flow-header {
+    .note-box[data-devotional-flow="v42"] .devotional-flow-header {
         gap: 12px;
     }
 
-    .devotional-step-count {
+    .note-box[data-devotional-flow="v42"] .devotional-step-count {
         font-size: 0.76rem;
         letter-spacing: 0.04em;
     }
 
-    .devotional-progress {
+    .note-box[data-devotional-flow="v42"] .devotional-progress {
         height: 9px;
     }
 
-    .devotional-stepper {
+    .note-box[data-devotional-flow="v42"] .devotional-stepper {
         display: flex;
         grid-template-columns: none;
         gap: 10px;
@@ -1703,11 +1704,12 @@ body.dark-mode .devotional-step-tab.active {
         -webkit-overflow-scrolling: touch;
     }
 
-    .devotional-stepper::-webkit-scrollbar {
+    .note-box[data-devotional-flow="v42"] .devotional-stepper::-webkit-scrollbar {
         display: none;
     }
 
-    .devotional-step-tab {
+    .note-box[data-devotional-flow="v42"] .devotional-step-tab,
+    .note-box[data-devotional-flow="v42"] .devotional-chip {
         flex: 0 0 auto;
         min-width: 118px;
         min-height: 48px;
@@ -1725,7 +1727,8 @@ body.dark-mode .devotional-step-tab.active {
             inset 0 1px 0 rgba(255, 255, 255, 0.8);
     }
 
-    .devotional-step-tab.active {
+    .note-box[data-devotional-flow="v42"] .devotional-step-tab.active,
+    .note-box[data-devotional-flow="v42"] .devotional-chip.is-active {
         color: var(--accent);
         border-color: rgba(49, 130, 206, 0.58);
         background:
@@ -1735,7 +1738,7 @@ body.dark-mode .devotional-step-tab.active {
             inset 0 1px 0 rgba(255, 255, 255, 0.82);
     }
 
-    .devotional-step-index {
+    .note-box[data-devotional-flow="v42"] .devotional-step-index {
         width: 28px;
         height: 28px;
         flex: 0 0 28px;
@@ -1743,44 +1746,46 @@ body.dark-mode .devotional-step-tab.active {
         background: rgba(148, 163, 184, 0.14);
     }
 
-    .devotional-step-label {
+    .note-box[data-devotional-flow="v42"] .devotional-step-label {
         font-size: 0.82rem;
         line-height: 1;
         white-space: nowrap;
     }
 
-    .devotional-step-card {
+    .note-box[data-devotional-flow="v42"] .devotional-step-card,
+    .note-box[data-devotional-flow="v42"] [data-devotional-card="true"] {
         padding: 18px 16px;
         border-radius: 18px;
         box-shadow: 0 14px 30px rgba(15, 23, 42, 0.1);
     }
 
-    .devotional-step-card .note-title {
+    .note-box[data-devotional-flow="v42"] .devotional-step-card .note-title {
         font-size: 1rem;
         line-height: 1.28;
         margin-bottom: 10px;
     }
 
-    .devotional-step-context {
+    .note-box[data-devotional-flow="v42"] .devotional-step-context {
         font-size: 0.94rem;
         line-height: 1.58;
         margin-bottom: 12px;
     }
 
-    .devotional-question-list {
+    .note-box[data-devotional-flow="v42"] .devotional-question-list {
         margin: 0 0 16px;
         padding-left: 0;
         list-style-position: outside;
     }
 
-    .devotional-question-list li {
+    .note-box[data-devotional-flow="v42"] .devotional-question-list li {
         margin: 8px 0 8px 20px;
         padding-left: 2px;
         font-size: 0.94rem;
         line-height: 1.55;
     }
 
-    .devotional-step-card .note-textarea {
+    .note-box[data-devotional-flow="v42"] .devotional-step-card .note-textarea,
+    .note-box[data-devotional-flow="v42"] .devotional-textarea {
         min-height: 230px;
         max-height: min(46vh, 360px);
         padding: 15px;
@@ -1791,28 +1796,30 @@ body.dark-mode .devotional-step-tab.active {
         scroll-margin-bottom: calc(var(--nav-height) + 120px + env(safe-area-inset-bottom));
     }
 
-    .devotional-step-card .note-textarea.active {
+    .note-box[data-devotional-flow="v42"] .devotional-step-card .note-textarea.active,
+    .note-box[data-devotional-flow="v42"] .devotional-textarea.active {
         min-height: 250px;
     }
 
-    .devotional-nav {
+    .note-box[data-devotional-flow="v42"] .devotional-nav {
         gap: 12px;
         margin-top: 2px;
         padding-bottom: 2px;
     }
 
-    .devotional-nav-btn {
+    .note-box[data-devotional-flow="v42"] .devotional-nav-btn {
         min-height: 52px;
         border-radius: 16px;
         font-size: 0.98rem;
         box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
     }
 
-    .devotional-actions {
+    .note-box[data-devotional-flow="v42"] .devotional-actions {
         margin-bottom: calc(8px + env(safe-area-inset-bottom));
     }
 
-    body.dark-mode .devotional-step-tab {
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-step-tab,
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-chip {
         background:
             linear-gradient(180deg, rgba(30, 41, 59, 0.94), rgba(15, 23, 42, 0.88));
         box-shadow:
@@ -1820,11 +1827,19 @@ body.dark-mode .devotional-step-tab.active {
             inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
-    body.dark-mode .devotional-step-tab.active {
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-step-tab.active,
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-chip.is-active {
         color: #bfdbfe;
         background:
             linear-gradient(180deg, rgba(30, 64, 175, 0.42), rgba(15, 23, 42, 0.92));
         border-color: rgba(96, 165, 250, 0.56);
+    }
+
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-nav-btn-primary,
+    body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-next-btn {
+        color: #ffffff;
+        border-color: var(--accent);
+        background: var(--accent);
     }
 }
 
