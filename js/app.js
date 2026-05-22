@@ -472,6 +472,8 @@ currentSelectedText: null,
 currentSelectionDate: null,
 verseImageText: '',
 verseImageReference: '',
+verseImageVersionLabel: '',
+verseImageSource: 'home',
 currentSelectionColorDraft: null,
 _savedScrollY: null, 
 pushListenersReady: false,
@@ -2223,10 +2225,14 @@ applyVerseImageFormat: function() {
     const ctx = canvas.getContext('2d');
     const selectedText = (this.verseImageText || this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
     const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
+    const versionLabel = this.verseImageVersionLabel || this.getSelectedTextVersionLabel();
+    const sourceLabel = this.verseImageSource === 'bible'
+        ? 'Pasaje bíblico'
+        : 'Lectura bíblica diaria';
     const template = this.getVerseImageTemplate(this.verseImageTemplate || 'midnight');
 
     this.drawVerseImageBackgroundPremium(ctx, canvas, template);
-    this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template);
+    this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template, versionLabel, sourceLabel);
 
     return canvas;
 },
@@ -2401,7 +2407,7 @@ layout.textMaxWidth += profile.widthDelta;
 return layout;
 },
 
-drawVerseImageTextPremium: function(ctx, canvas, text, reference, template) {
+drawVerseImageTextPremium: function(ctx, canvas, text, reference, template, versionLabel = '', sourceLabel = 'Lectura bíblica diaria') {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     
@@ -2461,11 +2467,15 @@ finalLines.forEach((line, index) => {
 
     ctx.fillStyle = template.reference;
     ctx.font = '600 34px Inter, Arial, sans-serif';
-    ctx.fillText(reference, canvas.width / 2, layout.referenceY);
+    const referenceWithVersion = versionLabel
+        ? `${reference} · ${versionLabel}`
+        : reference;
+
+    ctx.fillText(referenceWithVersion, canvas.width / 2, layout.referenceY);
     
     ctx.fillStyle = template.muted;
     ctx.font = '500 24px Inter, Arial, sans-serif';
-    ctx.fillText('Lectura bíblica diaria', canvas.width / 2, layout.subtitleY);
+    ctx.fillText(sourceLabel, canvas.width / 2, layout.subtitleY);
     
    if (this.verseImageShowLink) {
     ctx.fillStyle = template.border;
@@ -2497,6 +2507,8 @@ if (!selectedText) {
 
 this.verseImageText = selectedText;
 this.verseImageReference = this.getSelectedTextReferenceLabel();
+this.verseImageVersionLabel = this.getSelectedTextVersionLabel();
+this.verseImageSource = this.getSelectedTextSource();
 
 this.hideSelectionPanel();
 
@@ -2553,7 +2565,7 @@ downloadVerseImage: async function() {
         return;
     }
 
-    const reference = this.getSelectedTextReferenceLabel();
+    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
     const safeReference = reference
         .replace(/[^\wáéíóúÁÉÍÓÚñÑ-]+/g, '-')
         .replace(/-+/g, '-')
@@ -2613,7 +2625,7 @@ shareVerseImageFromEditor: async function() {
         return;
     }
 
-    const reference = this.getSelectedTextReferenceLabel();
+    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
     const file = new File([blob], 'su-voz-a-diario.png', {
         type: 'image/png'
     });
@@ -2654,6 +2666,7 @@ shareVerseImageFromEditor: async function() {
     }
 
     const reference = this.getSelectedTextReferenceLabel();
+    const versionLabel = this.getSelectedTextVersionLabel();
 
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
@@ -2662,7 +2675,7 @@ shareVerseImageFromEditor: async function() {
     const ctx = canvas.getContext('2d');
 
     this.drawVerseImageBackground(ctx, canvas);
-    this.drawVerseImageContent(ctx, canvas, selectedText, reference);
+    this.drawVerseImageContent(ctx, canvas, selectedText, reference, versionLabel);
 
     canvas.toBlob(async (blob) => {
         if (!blob) {
@@ -2707,6 +2720,10 @@ shareVerseImageFromEditor: async function() {
 },
 
 getSelectedTextReferenceLabel: function() {
+    if (this.getSelectedTextSource() === 'bible') {
+        return this.getBibleSelectionReferenceLabel();
+    }
+
     const dateStr = this.currentSelectionDate || this.homeViewingDate || this.getTodayDateStr();
     const reading = this.data.find(item => item.date === dateStr);
 
@@ -2715,6 +2732,68 @@ getSelectedTextReferenceLabel: function() {
     }
 
     return 'Su voz a diario';
+},
+
+getSelectedTextSource: function() {
+    const dateStr = this.currentSelectionDate || '';
+
+    return dateStr.startsWith('bible-') ? 'bible' : 'home';
+},
+
+getSelectedTextVersionLabel: function() {
+    if (this.getSelectedTextSource() === 'bible') {
+        return this.getBibleVersionLabel('rv1909');
+    }
+
+    return this.getBibleVersionLabel(this.currentVersion);
+},
+
+getBibleVersionLabel: function(versionKey) {
+    const normalized = String(versionKey || '').trim().toLowerCase();
+    const labels = {
+        rvr60: 'RVR60',
+        ntv: 'NTV',
+        rv1909: 'RV1909'
+    };
+
+    return labels[normalized] || String(versionKey || '').trim().toUpperCase();
+},
+
+getBibleSelectionReferenceLabel: function() {
+    const dateStr = this.currentSelectionDate || '';
+    const match = dateStr.match(/^bible-(.+)-(\d+)$/);
+
+    if (!match) {
+        return 'Biblia';
+    }
+
+    const [, bookId, chapter] = match;
+    const book = this.bibleBooks.find(item => item.id === bookId);
+    const bookName = book?.name || bookId;
+    const selectedVerses = Array.from(
+        this.activeSelectionSurface?.querySelectorAll('.verse-selected') || []
+    )
+        .map(item => Number(item.getAttribute('data-verse-number')))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+
+    const verseNumber = Number(this.currentSelectedVerse?.getAttribute('data-verse-number'));
+
+    if (!selectedVerses.length && Number.isFinite(verseNumber)) {
+        selectedVerses.push(verseNumber);
+    }
+
+    if (!selectedVerses.length) {
+        return `${bookName} ${chapter}`;
+    }
+
+    const firstVerse = selectedVerses[0];
+    const lastVerse = selectedVerses[selectedVerses.length - 1];
+    const verseLabel = firstVerse === lastVerse
+        ? String(firstVerse)
+        : `${firstVerse}-${lastVerse}`;
+
+    return `${bookName} ${chapter}:${verseLabel}`;
 },
 
 drawVerseImageBackground: function(ctx, canvas) {
@@ -2747,7 +2826,7 @@ drawVerseImageBackground: function(ctx, canvas) {
     ctx.stroke();
 },
 
-drawVerseImageContent: function(ctx, canvas, text, reference) {
+drawVerseImageContent: function(ctx, canvas, text, reference, versionLabel = '') {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
@@ -2770,7 +2849,11 @@ drawVerseImageContent: function(ctx, canvas, text, reference) {
 
     ctx.fillStyle = '#d6b56d';
     ctx.font = '700 38px Inter, Arial, sans-serif';
-    ctx.fillText(reference, canvas.width / 2, 1035);
+    const referenceWithVersion = versionLabel
+        ? `${reference} · ${versionLabel}`
+        : reference;
+
+    ctx.fillText(referenceWithVersion, canvas.width / 2, 1035);
 
     ctx.fillStyle = 'rgba(255,255,255,0.72)';
     ctx.font = '500 30px Inter, Arial, sans-serif';
