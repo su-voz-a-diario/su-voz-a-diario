@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-voz-v11';
+const CACHE_NAME = 'su-voz-v39';
 const DYNAMIC_CACHE = 'su-voz-dynamic-v6';
 
 const STATIC_ASSETS = [
@@ -6,11 +6,25 @@ const STATIC_ASSETS = [
   './index.html',
   './css/styles.css',
   './js/app.js',
+  './js/core/constants.js',
+  './js/core/defaults.js',
+  './js/services/storageService.js',
+  './js/utils/dates.js',
+  './js/utils/dom.js',
+  './js/utils/formatters.js',
+  './js/utils/platform.js',
+  './js/utils/progress.js',
+  './js/utils/text.js',
   './manifest.json',
   './data/readings.json',
   './data/rv1909.json',
+  './data/rv1909_strong_map.json',
+  './data/strong-hebrew-clean.json',
+  './icons/icon-48.png',
+  './icons/icon-180.png',
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './icons/splash.png'
 ];
 
 // Firebase compat en Service Worker.
@@ -176,7 +190,7 @@ messaging.onBackgroundMessage((payload) => {
   const options = {
     body,
     icon: './icons/icon-192.png',
-    badge: './icons/icon-72.png',
+    badge: './icons/icon-48.png',
     data: { url },
     tag,
     renotify: false,
@@ -220,7 +234,7 @@ self.addEventListener('push', event => {
   const options = {
     body,
     icon: './icons/icon-192.png',
-    badge: './icons/icon-72.png',
+    badge: './icons/icon-48.png',
     data: { url },
     tag,
     renotify: false,
@@ -267,4 +281,4 @@ async function openAppAndNavigate(url) {
   }
 }
 
-console.log('[SW NUEVO] sw.js v11 cargado correctamente');
+console.log('[SW] sw.js v39 cargado correctamente');

@@ -16,20 +16,62 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
+import {
+    formatDateEs,
+    formatDateForCompare,
+    getTodayDateStr,
+    getYesterdayDateStr
+} from './utils/dates.js';
+
+import {
+    escapeBibleHtml
+} from './utils/text.js';
+
+import {
+    escapeHtml
+} from './utils/dom.js';
+
+import {
+    getHighlightColorLabel,
+    getVerseImageFormat,
+    getVerseImageTemplate,
+    renderIntroVideoHtml
+} from './utils/formatters.js';
+
+import {
+    findReadingByDate,
+    findBookByReference,
+    getChapterFromReading,
+    calculateProgressForBookId,
+    calculateReadingStats,
+    calculateUpdatedStreak,
+    isDateRead
+} from './utils/progress.js';
+
+import {
+    isRunningAsInstalledPWA,
+    isIOSDevice,
+    isAndroidDevice,
+    getPlatformLabel
+} from './utils/platform.js';
+
+import {
+    shouldShowIntroVideo
+} from './core/constants.js';
+
+import {
+    DEFAULT_SETTINGS,
+    DEFAULT_STREAK
+} from './core/defaults.js';
+
+import {
+    get as storageGet,
+    set as storageSet,
+    remove as storageRemove
+} from './services/storageService.js';
+
 const db = window.firebaseDb;
 const auth = window.firebaseAuth;
-
-function isRunningAsInstalledPWA() {
-    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-}
-
-function isIOSDevice() {
-    return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
-
-function isAndroidDevice() {
-    return /Android/i.test(navigator.userAgent);
-}
 
 const LOCAL_BIBLE_PATH = './data/rv1909.json';
 
@@ -123,15 +165,6 @@ async function loadRV1909Bible() {
     return rv1909BibleCache;
 }
 
-function escapeBibleHtml(value) {
-    return String(value || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;');
-}
-
 async function getBibleChapter(bookId, chapterNumber) {
     const bible = await loadRV1909Bible();
     const localAbbrev = RV1909_BOOK_MAP[bookId];
@@ -215,11 +248,6 @@ const App = {
     // ========================================
     // DATOS Y ESTADO
     // ========================================
-    headerState: null, // 'expanded' | 'compact'
-    _snapTimer: null,
-    lastScrollY: 0,
-    scrollDirection: 'up',
-    scrollIdleTimer: null,
     data: [],
     currentView: 'home',
     currentVersion: 'rvr60',
@@ -423,73 +451,16 @@ const App = {
   
     
     // Sistema de rachas
-    streak: {
-        current: 0,
-        longest: 0,
-        lastReadDate: null
-    },
+    streak: { ...DEFAULT_STREAK },
 
-    badgeLevels: [
-        { min: 365, key: 'corona', label: 'Corona', icon: '👑' },
-        { min: 180, key: 'diamante', label: 'Diamante', icon: '💎' },
-        { min: 100, key: 'oro', label: 'Oro', icon: '🥇' },
-        { min: 60, key: 'plata', label: 'Plata', icon: '🥈' },
-        { min: 30, key: 'bronce', label: 'Bronce', icon: '🥉' },
-        { min: 15, key: 'cobre', label: 'Cobre', icon: '🟤' }
-    ],
-
-    getCurrentBadge: function() {
-    const streakValue = this.streak.longest || 0;
-
-    for (const level of this.badgeLevels) {
-        if (streakValue >= level.min) {
-            return level;
-        }
-    }
-
-    return {
-        key: 'inicial',
-        label: 'Inicio',
-        icon: '⭐'
-    };
-},
     
     // Configuración
-    settings: {
-    reminderTime: '08:00',
-    notificationsEnabled: false,
-    autoSaveNotes: true,
-    fontSize: 1.08
-},
+    settings: { ...DEFAULT_SETTINGS },
 
     storage: {
-    get(key, fallback = null) {
-        try {
-            const raw = localStorage.getItem(key);
-            return raw ? JSON.parse(raw) : fallback;
-        } catch (error) {
-            console.error(`[Storage] Error leyendo ${key}:`, error);
-            return fallback;
-        }
-    },
-
-    set(key, value) {
-        try {
-            localStorage.setItem(key, JSON.stringify(value));
-            return true;
-        } catch (error) {
-            console.error(`[Storage] Error guardando ${key}:`, error);
-            return false;
-        }
-    },
-
-    remove(key) {
-        try {
-            localStorage.removeItem(key);
-        } catch (error) {
-            console.error(`[Storage] Error eliminando ${key}:`, error);
-        }
-    }
+    get: storageGet,
+    set: storageSet,
+    remove: storageRemove
 },
     
 // Estado de render y controles
@@ -505,8 +476,6 @@ currentSelectionColorDraft: null,
 _savedScrollY: null, 
 pushListenersReady: false,
 themeListenerReady: false,
-scrollCompactEnabled: false,
-scrollCompactActive: false,
 _selectionPanelEventsBound: false,
     
     // ========================================
@@ -779,14 +748,8 @@ showAprilMessageIfNeeded: function() {
     // SISTEMA DE RACHAS (MEJORADO)
     // ========================================
     loadStreak: function() {
-        const defaultStreak = {
-            current: 0,
-            longest: 0,
-            lastReadDate: null
-        };
-
         const savedStreak = this.storage.get('su-voz-streak', {});
-        this.streak = { ...defaultStreak, ...savedStreak };
+        this.streak = { ...DEFAULT_STREAK, ...savedStreak };
     },
     
    saveStreak: function() {
@@ -807,14 +770,7 @@ showAprilMessageIfNeeded: function() {
         return;
     }
 
-    if (this.streak.lastReadDate === yesterday) {
-        this.streak.current += 1;
-    } else {
-        this.streak.current = 1;
-    }
-
-    this.streak.lastReadDate = today;
-    this.streak.longest = Math.max(this.streak.longest, this.streak.current);
+    this.streak = calculateUpdatedStreak(this.streak, today, yesterday);
 
     if ([7, 30, 100].includes(this.streak.current)) {
         this.showCelebration(this.streak.current);
@@ -840,14 +796,7 @@ showAprilMessageIfNeeded: function() {
         }
     },
     
-   getYesterdayDateStr: function() {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const year = yesterday.getFullYear();
-    const month = String(yesterday.getMonth() + 1).padStart(2, '0');
-    const day = String(yesterday.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-    },
+   getYesterdayDateStr,
     
     updateStreakUI: function() {
         if (this.$streakIndicator && this.$streakCount) {
@@ -897,61 +846,31 @@ hitosPorLibro: {
 // Obtener libro actual basado en la lectura de hoy
 getLibroActual: function() {
     const hoy = this.getTodayDateStr();
-    const lecturaHoy = this.data.find(r => r.date === hoy);
+    const lecturaHoy = findReadingByDate(this.data, hoy);
     
     if (!lecturaHoy) return null;
     
-    const referencia = lecturaHoy.reference.toLowerCase();
-    
-    for (const libro of this.bibleBooks) {
-        if (referencia.includes(libro.name.toLowerCase())) {
-            return {
-                id: libro.id,
-                nombre: libro.name,
-                capitulosTotales: libro.chapters
-            };
-        }
-    }
-    
-    return null;
+    return findBookByReference(lecturaHoy.reference, this.bibleBooks);
 },
 
 // Obtener capítulo actual
 getCapituloActual: function() {
     const hoy = this.getTodayDateStr();
-    const lecturaHoy = this.data.find(r => r.date === hoy);
+    const lecturaHoy = findReadingByDate(this.data, hoy);
     
-    if (!lecturaHoy) return 0;
-    
-    const match = lecturaHoy.reference.match(/(\d+)/);
-    return match ? parseInt(match[1]) : 0;
+    return getChapterFromReading(lecturaHoy);
 },
 
 // Calcular progreso en el libro actual
 getProgresoLibro: function(libroId) {
-    const libro = this.bibleBooks.find(b => b.id === libroId);
-    if (!libro) return { leidos: [], total: 0, porcentaje: 0 };
-    
     const readDates = this.getReadDates();
-    const capitulosLeidos = new Set();
-    
-    // Identificar qué capítulos del libro se han leído
-    this.data.forEach(lectura => {
-        if (readDates.includes(lectura.date) && lectura.reference.toLowerCase().includes(libro.name.toLowerCase())) {
-            const match = lectura.reference.match(/(\d+)/);
-            if (match) capitulosLeidos.add(parseInt(match[1]));
-        }
-    });
-    
-    const leidos = Array.from(capitulosLeidos).sort((a, b) => a - b);
-    const porcentaje = Math.round((leidos.length / libro.chapters) * 100);
-    
-    return {
-        leidos,
-        total: libro.chapters,
-        porcentaje,
-        libroNombre: libro.name
-    };
+
+    return calculateProgressForBookId(
+        libroId,
+        this.bibleBooks,
+        this.data,
+        readDates
+    );
 },
 
 // Verificar si alcanzó un hito hoy
@@ -1086,15 +1005,8 @@ getProgresoLibroVisual: function() {
     // CONFIGURACIÓN (MEJORADA CON SW)
     // ========================================
     loadSettings: function() {
-        const defaultSettings = {
-    reminderTime: '08:00',
-    notificationsEnabled: false,
-    autoSaveNotes: true,
-    fontSize: 1.08
-};
-
         const savedSettings = this.storage.get('su-voz-settings', {});
-        this.settings = { ...defaultSettings, ...savedSettings };
+        this.settings = { ...DEFAULT_SETTINGS, ...savedSettings };
     },
     
    saveSettings: function() {
@@ -1109,7 +1021,9 @@ getDeviceId: function() {
     let deviceId = localStorage.getItem('su-voz-device-id');
 
     if (!deviceId) {
-        deviceId = crypto.randomUUID();
+        deviceId = window.crypto?.randomUUID
+            ? window.crypto.randomUUID()
+            : `device-${Date.now()}-${Math.random().toString(36).slice(2)}`;
         localStorage.setItem('su-voz-device-id', deviceId);
     }
 
@@ -1117,9 +1031,7 @@ getDeviceId: function() {
 },
 
 getPlatformLabel: function() {
-    if (isIOSDevice()) return 'ios';
-    if (isAndroidDevice()) return 'android';
-    return 'web';
+    return getPlatformLabel();
 },
     
     loadFontSize: function() {
@@ -1133,15 +1045,6 @@ getPlatformLabel: function() {
             document.documentElement.style.setProperty('--reading-size', this.settings.fontSize + 'rem');
         }
     },
-
-isReadingLikeView: function(view = this.currentView) {
-    return ['home', 'reading', 'bible-reading'].includes(view);
-},
-
-setScrollCompactState: function(isCompact) {
-    this.scrollCompactActive = false;
-    document.body.classList.remove('reading-scroll-compact');
-},
 
 openStrongForWord: function(strongWord) {
     const word = strongWord.dataset.word || strongWord.textContent.trim();
@@ -1266,25 +1169,7 @@ checkReminderOnOpen: function() {
     // ========================================
     getStats: function() {
         const readDates = this.getReadDates();
-        const totalRead = readDates.length;
         const totalAvailable = this.data.length;
-        
-        // Calcular días consecutivos actuales (más preciso)
-        let currentStreak = 0;
-        let checkDate = new Date();
-        
-        while (true) {
-            const dateStr = this.formatDateForCompare(checkDate);
-            if (readDates.includes(dateStr)) {
-                currentStreak++;
-                checkDate.setDate(checkDate.getDate() - 1);
-            } else {
-                break;
-            }
-        }
-        
-        // Calcular porcentaje
-        const percentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
         
     // Notas totales
 let totalNotes = 0;
@@ -1324,15 +1209,13 @@ for (let i = 0; i < localStorage.length; i++) {
     }
 }
         
-        return {
-            totalRead,
+        return calculateReadingStats({
+            readDates,
             totalAvailable,
-            percentage,
-            currentStreak,
             longestStreak: this.streak.longest,
             totalNotes,
             totalHighlights
-        };
+        });
     },
     
     // ========================================
@@ -1373,7 +1256,7 @@ for (let i = 0; i < localStorage.length; i++) {
     },
     
     isRead: function(dateStr) {
-    return this.getReadDates().includes(dateStr);
+    return isDateRead(this.getReadDates(), dateStr);
     },
     
     getHighlightsKey: function(dateStr) {
@@ -2168,31 +2051,8 @@ updateCommunityBadge: function() {
         }, duration);
     },
 
-    getVerseImageFormat: function(formatKey = 'post') {
-    const formats = {
-        post: {
-            key: 'post',
-            label: 'Post',
-            width: 1080,
-            height: 1350
-        },
-
-        story: {
-            key: 'story',
-            label: 'Historia',
-            width: 1080,
-            height: 1920
-        },
-
-        square: {
-            key: 'square',
-            label: 'Cuadrado',
-            width: 1080,
-            height: 1080
-        }
-    };
-
-    return formats[formatKey] || formats.post;
+    getVerseImageFormat(formatKey) {
+    return getVerseImageFormat(formatKey);
 },
 
 applyVerseImageFormat: function() {
@@ -2237,43 +2097,8 @@ applyVerseImageFormat: function() {
     return canvas;
 },
 
-getVerseImageTemplate: function(templateKey = 'midnight') {
-    const templates = {
-        midnight: {
-            key: 'midnight',
-            background: ['#07111f', '#182235', '#2b2118'],
-            card: 'rgba(255,255,255,0.075)',
-            border: 'rgba(255,255,255,0.16)',
-            quote: '#f8f3ea',
-            reference: '#d6b56d',
-            muted: 'rgba(255,255,255,0.64)',
-            accent: 'rgba(214,181,109,0.22)'
-        },
-
-        warm: {
-            key: 'warm',
-            background: ['#2b1810', '#6b3f24', '#c29a62'],
-            card: 'rgba(255,248,238,0.13)',
-            border: 'rgba(255,239,210,0.22)',
-            quote: '#fff8ec',
-            reference: '#ffe0a1',
-            muted: 'rgba(255,248,236,0.72)',
-            accent: 'rgba(255,224,161,0.22)'
-        },
-
-        paper: {
-            key: 'paper',
-            background: ['#eee3d2', '#f8f1e7', '#d2b48c'],
-            card: 'rgba(255,255,255,0.46)',
-            border: 'rgba(89,64,42,0.16)',
-            quote: '#2f241c',
-            reference: '#8a5a24',
-            muted: 'rgba(47,36,28,0.62)',
-            accent: 'rgba(138,90,36,0.12)'
-        }
-    };
-
-    return templates[templateKey] || templates.midnight;
+getVerseImageTemplate(templateKey) {
+    return getVerseImageTemplate(templateKey);
 },
 
 drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
@@ -3942,18 +3767,9 @@ updateNavUI: function() {
     });
 },
     
-    formatDateEs: function(dateStr) {
-        const date = new Date(dateStr + 'T12:00:00');
-        const options = { day: 'numeric', month: 'long' };
-        return date.toLocaleDateString('es-ES', options);
-    },
+    formatDateEs,
     
-    formatDateForCompare: function(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    },
+    formatDateForCompare,
 
     getReadingIndexByDate: function(dateStr) {
     return this.data.findIndex(item => item.date === dateStr);
@@ -4379,14 +4195,7 @@ positionSelectionSheet: function() {
 },
 
 getHighlightColorLabel: function(color) {
-    const labels = {
-        yellow: 'amarillo',
-        blue: 'azul',
-        green: 'verde',
-        rose: 'rosa'
-    };
-
-    return labels[color] || color || 'color';
+    return getHighlightColorLabel(color);
 },
 
 saveSelectedHighlight: function(selectedText, color, dateStr) {
@@ -4439,13 +4248,7 @@ saveSelectedHighlight: function(selectedText, color, dateStr) {
 this.rerenderCurrentReadingView(dateStr, true);
 },
     
-   getTodayDateStr: function() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-    },
+   getTodayDateStr,
 
     saveCalendarScroll: function() {
     this.calendarScrollTop = window.scrollY || window.pageYOffset || 0;
@@ -4481,25 +4284,11 @@ restoreCalendarPosition: function() {
         // Construir la vista con el pergamino incluido
         const dateFormatted = this.formatDateEs(reading.date);
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
-        const currentBadge = this.getCurrentBadge();
 
         // Video intro (si aplica)
-        const introStartDate = '2026-04-07';
-        const introEndDate = '2026-04-11';
-        const showIntroVideo = reading.date >= introStartDate && reading.date <= introEndDate;
+        const showIntroVideo = shouldShowIntroVideo(reading.date);
         
-        const introVideoHtml = showIntroVideo ? `
-            <div class="intro-video-card">
-                <div class="intro-video-head">
-                    <div class="intro-video-label">🎬 Video introductorio</div>
-                    <div class="intro-video-title">Introducción a Deuteronomio</div>
-                </div>
-                <div class="intro-video-frame">
-                    <iframe src="https://www.youtube.com/embed/LfGZnrbmWaM" title="Introducción a Deuteronomio" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-                </div>
-                <div class="intro-video-note">Antes de comenzar la lectura, puedes ver esta introducción.</div>
-            </div>
-        ` : '';
+        const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
 
         const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
         const hasPrev = currentIndex > 0;
@@ -4700,37 +4489,10 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
         
         const dateFormatted = this.formatDateEs(reading.date);
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
-        const currentBadge = this.getCurrentBadge();
 
-       const introStartDate = '2026-04-07';
-        const introEndDate = '2026-04-11';
+       const showIntroVideo = shouldShowIntroVideo(reading.date);
 
-        const showIntroVideo =
-            reading.date >= introStartDate &&
-            reading.date <= introEndDate;
-
-const introVideoHtml = showIntroVideo ? `
-    <div class="intro-video-card">
-        <div class="intro-video-head">
-            <div class="intro-video-label">🎬 Video introductorio</div>
-            <div class="intro-video-title">Introducción a Deuteronomio</div>
-        </div>
-
-       <div class="intro-video-frame">
-    <iframe
-        src="https://www.youtube.com/embed/LfGZnrbmWaM"
-        title="Introducción a Deuteronomio"
-        frameborder="0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen>
-    </iframe>
-</div>
-
-        <div class="intro-video-note">
-            Antes de comenzar la lectura, puedes ver esta introducción.
-        </div>
-    </div>
-` : '';
+const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
         
         const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
         const hasPrev = currentIndex > 0;
@@ -4874,12 +4636,7 @@ const introVideoHtml = showIntroVideo ? `
             this.restoreSelectionNotesInDOM(reading.date);
     },
     
-    escapeHtml: function(text) {
-        if (!text) return '';
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    },
+    escapeHtml,
 
 // ========================================
 // FUNCIONES DE BÚSQUEDA EN LA BIBLIA
@@ -6382,13 +6139,8 @@ if (notificationsToggle) {
 
         keys.forEach(key => this.storage.remove(key));
 
-        this.streak = { current: 0, longest: 0, lastReadDate: null };
-        this.settings = {
-    reminderTime: '08:00',
-    notificationsEnabled: false,
-    autoSaveNotes: true,
-    fontSize: 1.08
-};
+        this.streak = { ...DEFAULT_STREAK };
+        this.settings = { ...DEFAULT_SETTINGS };
 
         this.showToast('🗑️ Todos los datos han sido reiniciados');
         setTimeout(() => location.reload(), 1000);
@@ -6992,9 +6744,17 @@ const noteSection = e.target.closest('.note-section');
 
        if (navigator.share) {
            navigator.share({ title: 'Su voz a diario', text: shareText })
-                .catch(() => {});
+                .catch(error => {
+                    if (error?.name !== 'AbortError') {
+                        console.warn('[Share] No se pudo compartir la lectura:', error);
+                    }
+                });
        } else if (navigator.clipboard) {
-            navigator.clipboard.writeText(shareText).then(() => this.showToast('Lectura copiada al portapapeles'));
+            navigator.clipboard.writeText(shareText)
+                .then(() => this.showToast('Lectura copiada al portapapeles'))
+                .catch(error => {
+                    console.warn('[Share] No se pudo copiar la lectura:', error);
+                });
         }
     }
     return;
