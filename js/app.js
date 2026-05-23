@@ -1,22 +1,4 @@
 import {
-    collection,
-    addDoc,
-    getDocs,
-    query,
-    orderBy,
-    serverTimestamp,
-    deleteDoc,
-    doc,
-    setDoc,
-    getDoc
-} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
-
-import {
-    signInAnonymously,
-    onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-
-import {
     formatDateEs,
     formatDateForCompare,
     getTodayDateStr,
@@ -70,8 +52,30 @@ import {
     remove as storageRemove
 } from './services/storageService.js';
 
-const db = window.firebaseDb;
-const auth = window.firebaseAuth;
+function getFirebaseFunction(name) {
+    const fn = window.firebaseFns?.[name];
+
+    if (typeof fn !== 'function') {
+        throw new Error(`Firebase no disponible: ${name}`);
+    }
+
+    return fn;
+}
+
+const collection = (dbArg, ...args) => getFirebaseFunction('collection')(dbArg || window.firebaseDb, ...args);
+const addDoc = (...args) => getFirebaseFunction('addDoc')(...args);
+const getDocs = (...args) => getFirebaseFunction('getDocs')(...args);
+const query = (...args) => getFirebaseFunction('query')(...args);
+const orderBy = (...args) => getFirebaseFunction('orderBy')(...args);
+const serverTimestamp = (...args) => getFirebaseFunction('serverTimestamp')(...args);
+const deleteDoc = (...args) => getFirebaseFunction('deleteDoc')(...args);
+const doc = (dbArg, ...args) => getFirebaseFunction('doc')(dbArg || window.firebaseDb, ...args);
+const setDoc = (...args) => getFirebaseFunction('setDoc')(...args);
+const getDoc = (...args) => getFirebaseFunction('getDoc')(...args);
+const signInAnonymously = (authArg, ...args) => getFirebaseFunction('signInAnonymously')(authArg || window.firebaseAuth, ...args);
+const onAuthStateChanged = (authArg, ...args) => getFirebaseFunction('onAuthStateChanged')(authArg || window.firebaseAuth, ...args);
+const db = null;
+const auth = null;
 
 const LOCAL_BIBLE_PATH = './data/rv1909.json';
 
@@ -6252,9 +6256,15 @@ if (notificationsToggle) {
         setTimeout(() => location.reload(), 1000);
     },
 
- initAuth: async function() {
-        return new Promise((resolve) => {
-            onAuthStateChanged(auth, async (user) => {
+	 initAuth: async function() {
+        if (!window.firebaseAuth || !window.firebaseFns?.onAuthStateChanged || !window.firebaseFns?.signInAnonymously) {
+            console.warn('[Auth] Firebase Auth no disponible. La app continuará sin comunidad autenticada.');
+            this.currentUser = null;
+            return;
+        }
+
+	        return new Promise((resolve) => {
+	            onAuthStateChanged(auth, async (user) => {
                 if (user) {
                     this.currentUser = user;
                     console.log('[Auth] Usuario anónimo activo:', user.uid);
@@ -7479,24 +7489,38 @@ const Sanitizer = {
     }
 };
 
+function hideSplashScreen(delay = 0) {
+    const splash = document.getElementById('splash-screen');
+    if (!splash) return;
+
+    setTimeout(() => {
+        if (!splash.isConnected) return;
+        splash.style.opacity = '0';
+
+        setTimeout(() => {
+            if (splash.isConnected) splash.remove();
+        }, 800);
+    }, delay);
+}
+
 // Inicializar la app
 document.addEventListener('DOMContentLoaded', () => {
-    App.init().catch(error => {
-        console.error('[App] Error al inicializar:', error);
-    });
+    const splashFallback = setTimeout(() => {
+        hideSplashScreen();
+    }, 3500);
+
+    App.init()
+        .catch(error => {
+            console.error('[App] Error al inicializar:', error);
+        })
+        .finally(() => {
+            clearTimeout(splashFallback);
+            hideSplashScreen(250);
+        });
 });
 
 window.App = App;
 
 window.addEventListener('load', () => {
-    const splash = document.getElementById('splash-screen');
-    if (!splash) return;
-
-    setTimeout(() => {
-        splash.style.opacity = '0';
-
-        setTimeout(() => {
-            splash.remove();
-        }, 800);
-    }, 1800);
+    hideSplashScreen(1200);
 });

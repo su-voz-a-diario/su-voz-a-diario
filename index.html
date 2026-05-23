@@ -18,7 +18,7 @@
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
-    <link rel="stylesheet" href="./css/styles.css?v=45">
+    <link rel="stylesheet" href="./css/styles.css?v=49">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +32,30 @@
 <div id="splash-screen">
     <img src="icons/splash.png" alt="Splash">
 </div>
+
+<script>
+(function () {
+    function hideSplashFallback(delay) {
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (!splash) return;
+
+            splash.style.opacity = '0';
+
+            setTimeout(() => {
+                if (splash && splash.parentNode) {
+                    splash.parentNode.removeChild(splash);
+                }
+            }, 800);
+        }, delay);
+    }
+
+    window.suVozHideSplash = hideSplashFallback;
+    document.addEventListener('DOMContentLoaded', () => hideSplashFallback(3500));
+    window.addEventListener('load', () => hideSplashFallback(1800));
+    hideSplashFallback(6500);
+})();
+</script>
 
 <div id="april-message" class="april-message hidden">
     <div class="april-box">
@@ -408,39 +432,61 @@
    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-  import { getFirestore } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js";
-  import { getAuth } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
-  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js";
+<script>
+(function () {
+    const firebaseConfig = {
+        apiKey: "AIzaSyBuU5X87K-zyHvkFT7xirBZjN90MpID7Uo",
+        authDomain: "su-voz-a-diario-v2-f3a87.firebaseapp.com",
+        projectId: "su-voz-a-diario-v2-f3a87",
+        storageBucket: "su-voz-a-diario-v2-f3a87.firebasestorage.app",
+        messagingSenderId: "112607423194",
+        appId: "1:112607423194:web:62a17cfe618a81b3ac53e3"
+    };
 
-  const firebaseConfig = {
-  apiKey: "AIzaSyBuU5X87K-zyHvkFT7xirBZjN90MpID7Uo",
-  authDomain: "su-voz-a-diario-v2-f3a87.firebaseapp.com",
-  projectId: "su-voz-a-diario-v2-f3a87",
-  storageBucket: "su-voz-a-diario-v2-f3a87.firebasestorage.app",
-  messagingSenderId: "112607423194",
-  appId: "1:112607423194:web:62a17cfe618a81b3ac53e3"
-  };
+    window.firebaseFns = {};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
-  const messaging = getMessaging(app);
+    Promise.all([
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js")
+    ])
+        .then(([appModule, firestoreModule, authModule, messagingModule]) => {
+            const app = appModule.initializeApp(firebaseConfig);
 
-  // Exponer a window
-  window.firebaseDb = db;
-  window.firebaseAuth = auth;
-  window.firebaseMessaging = messaging;
-  
-  // También exponer las funciones individuales (por si acaso)
-  window.fcmGetToken = getToken;
-  window.fcmOnMessage = onMessage;
-  
-  console.log('[Index] Firebase inicializado correctamente');
+            window.firebaseDb = firestoreModule.getFirestore(app);
+            window.firebaseAuth = authModule.getAuth(app);
+            window.firebaseMessaging = messagingModule.getMessaging(app);
+
+            window.firebaseFns = {
+                collection: firestoreModule.collection,
+                addDoc: firestoreModule.addDoc,
+                getDocs: firestoreModule.getDocs,
+                query: firestoreModule.query,
+                orderBy: firestoreModule.orderBy,
+                serverTimestamp: firestoreModule.serverTimestamp,
+                deleteDoc: firestoreModule.deleteDoc,
+                doc: firestoreModule.doc,
+                setDoc: firestoreModule.setDoc,
+                getDoc: firestoreModule.getDoc,
+                signInAnonymously: authModule.signInAnonymously,
+                onAuthStateChanged: authModule.onAuthStateChanged
+            };
+
+            window.fcmGetToken = messagingModule.getToken;
+            window.fcmOnMessage = messagingModule.onMessage;
+
+            window.dispatchEvent(new Event('suvoz-firebase-ready'));
+            console.log('[Index] Firebase inicializado correctamente');
+        })
+        .catch(error => {
+            console.warn('[Index] Firebase no disponible. La lectura seguirá funcionando.', error);
+            window.dispatchEvent(new Event('suvoz-firebase-unavailable'));
+        });
+})();
 </script>
 
-<script type="module" src="js/app.js?v=44"></script>
+<script type="module" src="js/app.js?v=49"></script>
 
 <script>
 (function () {
@@ -461,7 +507,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
-                const registration = await navigator.serviceWorker.register('./sw.js?v=45', {
+                const registration = await navigator.serviceWorker.register('./sw.js?v=49', {
                     scope: './'
                 });
 
