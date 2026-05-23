@@ -681,12 +681,51 @@ showAprilMessageIfNeeded: function() {
         console.warn('[App] Service Worker no soportado');
         return;
     }
+
+    const swReloadKey = 'su-voz-sw-reloaded-v51';
+    let refreshingForUpdate = false;
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshingForUpdate || sessionStorage.getItem(swReloadKey) === 'true') return;
+
+        refreshingForUpdate = true;
+        sessionStorage.setItem(swReloadKey, 'true');
+        window.location.reload();
+    });
+
+    navigator.serviceWorker.getRegistration().then(registration => {
+        if (!registration) return;
+
+        registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (!newWorker) return;
+
+            newWorker.addEventListener('statechange', () => {
+                if (
+                    newWorker.state === 'installed' &&
+                    navigator.serviceWorker.controller
+                ) {
+                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                }
+            });
+        });
+
+        if (registration.waiting && navigator.serviceWorker.controller) {
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+        }
+    }).catch(error => {
+        console.warn('[App] No se pudo revisar actualización del Service Worker:', error);
+    });
     
     // Escuchar mensajes del Service Worker
     navigator.serviceWorker.addEventListener('message', (event) => {
         const { data } = event;
         
         switch (data.type) {
+            case 'SW_ACTIVATED':
+                console.log('[App] Service Worker actualizado:', data.version);
+                break;
+
             case 'CHECK_READ_STATUS':
                 // El SW pregunta si ya se leyó hoy (para notificaciones)
                 const todayStr = this.getTodayDateStr();

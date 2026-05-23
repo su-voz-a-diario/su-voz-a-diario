@@ -1,11 +1,12 @@
-const CACHE_NAME = 'su-voz-v50';
-const DYNAMIC_CACHE = 'su-voz-dynamic-v6';
+const APP_VERSION = 'v51';
+const CACHE_NAME = `su-voz-${APP_VERSION}`;
+const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './css/styles.css',
-  './js/app.js',
+  './css/styles.css?v=51',
+  './js/app.js?v=51',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -69,20 +70,43 @@ self.addEventListener('install', event => {
 
 self.addEventListener('activate', event => {
   event.waitUntil(
-    Promise.all([
-      caches.keys().then(keys =>
-        Promise.all(
-          keys.map(key => {
-            if (key !== CACHE_NAME && key !== DYNAMIC_CACHE) {
-              return caches.delete(key);
-            }
-            return Promise.resolve();
-          })
-        )
-      ),
-      self.clients.claim()
-    ])
+    (async () => {
+      const keys = await caches.keys();
+
+      await Promise.all(
+        keys.map(key => {
+          const isSuVozCache = key.startsWith('su-voz-');
+          const isCurrentCache = key === CACHE_NAME || key === DYNAMIC_CACHE;
+
+          if (isSuVozCache && !isCurrentCache) {
+            return caches.delete(key);
+          }
+
+          return Promise.resolve();
+        })
+      );
+
+      await self.clients.claim();
+
+      const clientsList = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true
+      });
+
+      clientsList.forEach(client => {
+        client.postMessage({
+          type: 'SW_ACTIVATED',
+          version: APP_VERSION
+        });
+      });
+    })()
   );
+});
+
+self.addEventListener('message', event => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', event => {
@@ -91,6 +115,16 @@ self.addEventListener('fetch', event => {
 
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
+
+  if (
+    request.mode === 'navigate' ||
+    request.destination === 'document' ||
+    request.destination === 'script' ||
+    request.destination === 'style'
+  ) {
+    event.respondWith(networkFirstStrategy(request));
+    return;
+  }
 
   if (url.pathname.includes('/data/readings.json')) {
     event.respondWith(networkFirstStrategy(request));
@@ -281,4 +315,4 @@ async function openAppAndNavigate(url) {
   }
 }
 
-console.log('[SW] sw.js v39 cargado correctamente');
+console.log(`[SW] sw.js ${APP_VERSION} cargado correctamente`);
