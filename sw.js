@@ -1,12 +1,12 @@
-const APP_VERSION = 'v51';
+const APP_VERSION = 'v52';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './css/styles.css?v=51',
-  './js/app.js?v=51',
+  './css/styles.css?v=52',
+  './js/app.js?v=52',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -50,7 +50,7 @@ self.addEventListener('install', event => {
 
     for (const asset of STATIC_ASSETS) {
       try {
-        const request = new Request(asset, { cache: 'no-cache' });
+        const request = new Request(asset, { cache: 'reload' });
         const response = await fetch(request);
 
         if (!response.ok) {
@@ -122,12 +122,12 @@ self.addEventListener('fetch', event => {
     request.destination === 'script' ||
     request.destination === 'style'
   ) {
-    event.respondWith(networkFirstStrategy(request));
+    event.respondWith(networkFirstStrategy(request, { bypassHttpCache: true }));
     return;
   }
 
   if (url.pathname.includes('/data/readings.json')) {
-    event.respondWith(networkFirstStrategy(request));
+    event.respondWith(networkFirstStrategy(request, { bypassHttpCache: true }));
     return;
   }
 
@@ -151,9 +151,12 @@ async function cacheFirstStrategy(request) {
   return response;
 }
 
-async function networkFirstStrategy(request) {
+async function networkFirstStrategy(request, options = {}) {
   try {
-    const response = await fetch(request);
+    const networkRequest = options.bypassHttpCache
+      ? new Request(request, { cache: 'reload' })
+      : request;
+    const response = await fetch(networkRequest);
     if (response && response.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       await cache.put(request, response.clone());
