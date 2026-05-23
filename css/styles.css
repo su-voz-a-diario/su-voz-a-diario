@@ -1579,6 +1579,20 @@ body.light-mode .note-box[data-devotional-flow="v42"] .devotional-chip.is-active
     border-color: rgba(49, 130, 206, 0.42);
 }
 
+body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-step-tab.completed:not(.active) .devotional-step-index,
+body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-chip.is-complete:not(.is-active) .devotional-step-index {
+    color: var(--text-main);
+    background: rgba(148, 163, 184, 0.14);
+    border-color: var(--border-color);
+}
+
+body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-step-tab.active .devotional-step-index,
+body.dark-mode .note-box[data-devotional-flow="v42"] .devotional-chip.is-active .devotional-step-index {
+    color: #bfdbfe;
+    background: rgba(96, 165, 250, 0.16);
+    border-color: rgba(96, 165, 250, 0.48);
+}
+
 .devotional-step-label {
     max-width: 100%;
     overflow: hidden;

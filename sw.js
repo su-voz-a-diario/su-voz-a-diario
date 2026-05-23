@@ -1,4 +1,4 @@
-const CACHE_NAME = 'su-voz-v49';
+const CACHE_NAME = 'su-voz-v50';
 const DYNAMIC_CACHE = 'su-voz-dynamic-v6';
 
 const STATIC_ASSETS = [
