@@ -1,12 +1,14 @@
-const APP_VERSION = 'v52';
+const APP_VERSION = 'v53';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
+const OFFICIAL_ORIGIN = 'https://suvoz.app';
 
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './css/styles.css?v=52',
-  './js/app.js?v=52',
+  './manifest.json?v=53',
+  './css/styles.css?v=53',
+  './js/app.js?v=53',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -16,7 +18,6 @@ const STATIC_ASSETS = [
   './js/utils/platform.js',
   './js/utils/progress.js',
   './js/utils/text.js',
-  './manifest.json',
   './data/readings.json',
   './data/rv1909.json',
   './data/rv1909_strong_map.json',
@@ -114,6 +115,21 @@ self.addEventListener('fetch', event => {
   const url = new URL(request.url);
 
   if (request.method !== 'GET') return;
+
+  if (
+    self.location.hostname.includes('github.io') &&
+    (
+      request.mode === 'navigate' ||
+      request.destination === 'document'
+    )
+  ) {
+    const targetUrl = new URL('/', OFFICIAL_ORIGIN);
+    targetUrl.search = url.search;
+    targetUrl.hash = url.hash;
+    event.respondWith(Response.redirect(targetUrl.href, 302));
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   if (

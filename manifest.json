@@ -1,11 +1,11 @@
 {
-  "id": "./",
+  "id": "https://suvoz.app/",
   "name": "Su Voz a Diario",
   "short_name": "Su Voz",
   "description": "Lectura bíblica diaria con reflexiones personales. Medita la Palabra de Dios cada día.",
 
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "https://suvoz.app/",
+  "scope": "https://suvoz.app/",
 
   "display": "standalone",
   "orientation": "portrait",
