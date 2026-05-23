@@ -444,6 +444,11 @@ const App = {
     replyDrafts: {},
     replyCharLimit: 300,
     previousView: null,
+    dailyReadingVoice: {
+        utterance: null,
+        status: 'idle',
+        date: null
+    },
     
     calendarInitialized: false,
     calendarScrollTop: 0,
@@ -3910,6 +3915,10 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
     const param = parts[1] || null;
     const oldView = this.currentView;
 
+    if (oldView === 'home' && view !== 'home') {
+        this.stopDailyReadingVoice(true);
+    }
+
     // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
     if (this.currentView === 'community' && view !== 'community') {
     this.saveCommunityScrollPosition();
@@ -4010,8 +4019,210 @@ changeHomeDay: function(direction) {
 
     if (newIndex < 0 || newIndex >= this.data.length) return;
 
+    this.stopDailyReadingVoice(true);
     this.homeViewingDate = this.data[newIndex].date;
     this.renderHome();
+},
+
+getCleanDailyReadingText: function(reading, rawText = '') {
+    if (!reading) return '';
+
+    const sourceText = rawText || reading.versions?.[this.currentVersion] || reading.text || '';
+    const tempDiv = document.createElement('div');
+
+    tempDiv.innerHTML = sourceText
+        .replace(/<br\s*\/?>/gi, ' ')
+        .replace(/<\/(p|div|li|h[1-6])>/gi, '. ');
+
+    const passageText = (tempDiv.textContent || '')
+        .replace(/\s+/g, ' ')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .trim();
+
+    return [reading.reference, passageText].filter(Boolean).join('. ');
+},
+
+selectSpanishVoice: function(voices = []) {
+    return voices.find(voice => voice.lang === 'es-MX')
+        || voices.find(voice => voice.lang === 'es-ES')
+        || voices.find(voice => voice.lang?.toLowerCase().startsWith('es'))
+        || null;
+},
+
+renderDailyReadingVoiceControl: function(reading) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        return `
+            <div class="daily-reading-voice daily-reading-voice-unsupported" role="note">
+                La lectura en voz alta no está disponible en este navegador.
+            </div>
+        `;
+    }
+
+    const isSameReading = this.dailyReadingVoice.date === reading.date;
+    const status = isSameReading ? this.dailyReadingVoice.status : 'idle';
+    const isReading = status === 'speaking';
+    const isPaused = status === 'paused';
+    const label = isReading
+        ? 'Escuchando lectura'
+        : (isPaused ? 'Continuar lectura' : 'Escuchar lectura');
+    const icon = isReading ? 'pause' : 'play';
+    const ariaLabel = isReading
+        ? 'Pausar lectura en voz alta'
+        : (isPaused ? 'Continuar lectura en voz alta' : 'Escuchar lectura en voz alta');
+
+    return `
+        <div class="daily-reading-voice" data-voice-date="${reading.date}">
+            <button
+                class="daily-reading-voice-main"
+                type="button"
+                data-action="daily-reading-voice-toggle"
+                data-date="${reading.date}"
+                aria-label="${ariaLabel}"
+            >
+                <span class="daily-reading-voice-icon daily-reading-voice-icon-${icon}" aria-hidden="true"></span>
+                <span class="daily-reading-voice-label">${label}</span>
+            </button>
+            ${isReading || isPaused ? `
+                <button
+                    class="daily-reading-voice-stop"
+                    type="button"
+                    data-action="daily-reading-voice-stop"
+                    aria-label="Detener lectura en voz alta"
+                    title="Detener"
+                >
+                    <span aria-hidden="true"></span>
+                </button>
+            ` : ''}
+        </div>
+    `;
+},
+
+startDailyReadingVoice: function(date, text) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        this.showToast('La lectura en voz alta no está disponible en este navegador');
+        return;
+    }
+
+    const cleanText = (text || '').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return;
+
+    this.stopDailyReadingVoice(true);
+
+    try {
+        const utterance = new SpeechSynthesisUtterance(cleanText);
+        const voices = window.speechSynthesis.getVoices();
+        const spanishVoice = this.selectSpanishVoice(voices);
+
+        if (spanishVoice) utterance.voice = spanishVoice;
+        utterance.lang = spanishVoice?.lang || 'es-MX';
+        utterance.rate = 0.92;
+        utterance.pitch = 1;
+
+        utterance.onend = () => {
+            if (this.dailyReadingVoice.utterance !== utterance) return;
+
+            this.dailyReadingVoice = { utterance: null, status: 'idle', date: null };
+            this.updateDailyReadingVoiceUI();
+        };
+
+        utterance.onerror = (error) => {
+            if (this.dailyReadingVoice.utterance !== utterance) return;
+
+            console.warn('[Voice] No se pudo leer la lectura:', error);
+            this.dailyReadingVoice = { utterance: null, status: 'idle', date: null };
+            this.updateDailyReadingVoiceUI();
+        };
+
+        this.dailyReadingVoice = { utterance, status: 'speaking', date };
+        window.speechSynthesis.speak(utterance);
+        this.updateDailyReadingVoiceUI();
+    } catch (error) {
+        console.warn('[Voice] Error iniciando lectura:', error);
+        this.dailyReadingVoice = { utterance: null, status: 'idle', date: null };
+        this.updateDailyReadingVoiceUI();
+    }
+},
+
+pauseOrResumeDailyReadingVoice: function(date, text) {
+    if (!('speechSynthesis' in window)) return;
+
+    if (this.dailyReadingVoice.status === 'speaking' && this.dailyReadingVoice.date === date) {
+        window.speechSynthesis.pause();
+        this.dailyReadingVoice.status = 'paused';
+        this.updateDailyReadingVoiceUI();
+        return;
+    }
+
+    if (this.dailyReadingVoice.status === 'paused' && this.dailyReadingVoice.date === date) {
+        window.speechSynthesis.resume();
+        this.dailyReadingVoice.status = 'speaking';
+        this.updateDailyReadingVoiceUI();
+        return;
+    }
+
+    this.startDailyReadingVoice(date, text);
+},
+
+stopDailyReadingVoice: function(silent = false) {
+    if ('speechSynthesis' in window) {
+        try {
+            window.speechSynthesis.cancel();
+        } catch (error) {
+            if (!silent) console.warn('[Voice] No se pudo detener la lectura:', error);
+        }
+    }
+
+    this.dailyReadingVoice = { utterance: null, status: 'idle', date: null };
+    this.updateDailyReadingVoiceUI();
+},
+
+updateDailyReadingVoiceUI: function() {
+    const control = document.querySelector('.daily-reading-voice[data-voice-date]');
+    if (!control) return;
+
+    const mainBtn = control.querySelector('[data-action="daily-reading-voice-toggle"]');
+    if (!mainBtn) return;
+
+    const isSameReading = this.dailyReadingVoice.date === control.getAttribute('data-voice-date');
+    const status = isSameReading ? this.dailyReadingVoice.status : 'idle';
+    const isReading = status === 'speaking';
+    const isPaused = status === 'paused';
+    const icon = mainBtn.querySelector('.daily-reading-voice-icon');
+    const label = mainBtn.querySelector('.daily-reading-voice-label');
+
+    if (icon) {
+        icon.className = `daily-reading-voice-icon daily-reading-voice-icon-${isReading ? 'pause' : 'play'}`;
+    }
+
+    if (label) {
+        label.textContent = isReading
+            ? 'Escuchando lectura'
+            : (isPaused ? 'Continuar lectura' : 'Escuchar lectura');
+    }
+
+    mainBtn.setAttribute(
+        'aria-label',
+        isReading
+            ? 'Pausar lectura en voz alta'
+            : (isPaused ? 'Continuar lectura en voz alta' : 'Escuchar lectura en voz alta')
+    );
+
+    const currentStopBtn = control.querySelector('[data-action="daily-reading-voice-stop"]');
+    if ((isReading || isPaused) && !currentStopBtn) {
+        control.insertAdjacentHTML('beforeend', `
+            <button
+                class="daily-reading-voice-stop"
+                type="button"
+                data-action="daily-reading-voice-stop"
+                aria-label="Detener lectura en voz alta"
+                title="Detener"
+            >
+                <span aria-hidden="true"></span>
+            </button>
+        `);
+    } else if (!isReading && !isPaused && currentStopBtn) {
+        currentStopBtn.remove();
+    }
 },
 
     formatCommunityDateLabel: function(dateStr) {
@@ -4492,6 +4703,8 @@ restoreCalendarPosition: function() {
 },
     
    renderHome: function() {
+    this.stopDailyReadingVoice(true);
+
     const viewingDate = this.getHomeViewingDate();
     const reading = this.data.find(r => r.date === viewingDate);
     
@@ -4533,6 +4746,7 @@ restoreCalendarPosition: function() {
             <div class="reading-card">
                 <div class="section-title">${readingLabel}</div>
                 <h2 class="reading-reference">${reading.reference}</h2>
+                ${this.renderDailyReadingVoiceControl(reading)}
                 <div class="reading-text-shell" data-reading-date="${reading.date}">
                     <div class="reading-text selection-surface verse-container" data-selection-surface="true">
                         ${this.renderVerseText(readingText, reading.date)}
@@ -4658,6 +4872,7 @@ const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
                 <div class="reading-card">
                     <div class="section-title">${readingLabel}</div>
                     <h2 class="reading-reference">${reading.reference}</h2>
+                    ${isHome ? this.renderDailyReadingVoiceControl(reading) : ''}
                     <div class="reading-text-shell" data-reading-date="${reading.date}">
     <div class="reading-text selection-surface verse-container" data-selection-surface="true">
         ${this.renderVerseText(readingText, reading.date)}
@@ -6909,6 +7124,22 @@ const noteSection = e.target.closest('.note-section');
                 });
         }
     }
+    return;
+}
+
+const dailyReadingVoiceToggleBtn = e.target.closest('[data-action="daily-reading-voice-toggle"]');
+if (dailyReadingVoiceToggleBtn) {
+    const date = dailyReadingVoiceToggleBtn.getAttribute('data-date');
+    const reading = this.data.find(item => item.date === date);
+    const text = this.getCleanDailyReadingText(reading);
+
+    this.pauseOrResumeDailyReadingVoice(date, text);
+    return;
+}
+
+const dailyReadingVoiceStopBtn = e.target.closest('[data-action="daily-reading-voice-stop"]');
+if (dailyReadingVoiceStopBtn) {
+    this.stopDailyReadingVoice();
     return;
 }
 
