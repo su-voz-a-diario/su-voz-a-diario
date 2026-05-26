@@ -2453,7 +2453,16 @@ drawVerseImageBackgroundSinai: function(ctx, canvas, template, backgroundImage =
 
     if (backgroundImage) {
         this.drawImageCover(ctx, backgroundImage, canvas);
-        ctx.fillStyle = 'rgba(3,8,20,0.48)';
+        ctx.fillStyle = 'rgba(3,8,20,0.60)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const textShade = ctx.createLinearGradient(0, canvas.height * 0.16, 0, canvas.height * 0.84);
+        textShade.addColorStop(0, 'rgba(3,8,20,0.18)');
+        textShade.addColorStop(0.32, 'rgba(3,8,20,0.44)');
+        textShade.addColorStop(0.62, 'rgba(3,8,20,0.40)');
+        textShade.addColorStop(1, 'rgba(3,8,20,0.18)');
+
+        ctx.fillStyle = textShade;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     } else {
         const verticalGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
@@ -2516,8 +2525,8 @@ drawVerseImageBackgroundSinai: function(ctx, canvas, template, backgroundImage =
         canvas.width * 0.78
     );
     vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(0.62, 'rgba(0,0,0,0.16)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.58)');
+    vignette.addColorStop(0.62, backgroundImage ? 'rgba(0,0,0,0.22)' : 'rgba(0,0,0,0.16)');
+    vignette.addColorStop(1, backgroundImage ? 'rgba(0,0,0,0.66)' : 'rgba(0,0,0,0.58)');
 
     ctx.fillStyle = vignette;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
