@@ -6777,30 +6777,60 @@ body.light-mode .verse-study-btn:hover {
 }
 
 .verse-image-preview-wrap {
+    position: relative;
     width: min(78vw, 270px);
     margin: 8px auto 20px;
     padding: 10px;
     border-radius: 28px;
-    background: rgba(255, 255, 255, 0.075);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.055)),
+        rgba(12, 15, 24, 0.76);
+    border: 1px solid rgba(255, 248, 236, 0.16);
     box-shadow:
-        0 24px 58px rgba(0, 0, 0, 0.38),
-        0 6px 18px rgba(214, 181, 109, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.10);
+        0 30px 70px rgba(0, 0, 0, 0.46),
+        0 12px 30px rgba(15, 23, 42, 0.22),
+        0 2px 18px rgba(205, 172, 112, 0.10),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.18);
     transition:
         box-shadow 220ms ease,
         opacity 220ms ease;
+    isolation: isolate;
+}
+
+.verse-image-preview-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -18px -22px;
+    z-index: -2;
+    border-radius: inherit;
+    background:
+        radial-gradient(circle at 50% 12%, rgba(205, 172, 112, 0.16), transparent 42%),
+        radial-gradient(circle at 50% 92%, rgba(42, 65, 105, 0.18), transparent 48%);
+    pointer-events: none;
+}
+
+.verse-image-preview-wrap::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    border-radius: 24px;
+    border: 1px solid rgba(255, 248, 236, 0.08);
+    pointer-events: none;
 }
 
 #verseImagePreview {
+    position: relative;
     display: block;
     width: 100%;
     height: auto;
     border-radius: 22px;
     background: #111827;
     box-shadow:
-        0 14px 34px rgba(0, 0, 0, 0.34),
-        inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        0 18px 38px rgba(0, 0, 0, 0.40),
+        0 1px 0 rgba(255, 248, 236, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.06);
     opacity: 1;
     transition: opacity 320ms ease, transform 320ms ease;
 }
