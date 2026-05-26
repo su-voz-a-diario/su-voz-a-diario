@@ -2561,16 +2561,16 @@ drawVerseImageBackgroundSinai: function(ctx, canvas, template, backgroundImage =
     const cardH = canvas.height * 0.825;
     const cardRadius = 52;
 
-    ctx.fillStyle = template.card;
+    ctx.fillStyle = 'rgba(255,250,240,0.058)';
     this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
     ctx.fill();
 
-    ctx.strokeStyle = template.border;
-    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = 'rgba(226,191,122,0.14)';
+    ctx.lineWidth = 2;
     this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(226,191,122,0.28)';
+    ctx.fillStyle = 'rgba(226,191,122,0.22)';
     this.roundRect(
         ctx,
         cardX + 118,
@@ -2694,6 +2694,10 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template, vers
     const linkFont = isSinaiTemplate
         ? '500 20px "Cormorant Garamond", Georgia, serif'
         : '500 20px Inter, Arial, sans-serif';
+    ctx.shadowColor = isSinaiTemplate ? 'rgba(0,0,0,0.38)' : 'transparent';
+    ctx.shadowBlur = isSinaiTemplate ? 7 : 0;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = isSinaiTemplate ? 2 : 0;
 
     ctx.fillStyle = template.muted;
     ctx.font = headerFont;
@@ -2722,7 +2726,9 @@ const finalLines = lines.length > maxLines
     : lines;
 
 /* Interlineado editorial */
-const lineHeight = layout.lineHeight;
+const lineHeight = isSinaiTemplate
+    ? layout.lineHeight + 4
+    : layout.lineHeight;
 
 const totalHeight = finalLines.length * lineHeight;
 
@@ -2760,9 +2766,21 @@ finalLines.forEach((line, index) => {
     ctx.fillText(sourceLabel, canvas.width / 2, layout.subtitleY);
     
    if (this.verseImageShowLink) {
+    if (isSinaiTemplate) {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+    }
+
     ctx.fillStyle = template.border;
     this.roundRect(ctx, 360, layout.dividerY, 360, 2, 2);
     ctx.fill();
+
+    if (isSinaiTemplate) {
+        ctx.shadowColor = 'rgba(0,0,0,0.32)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 1;
+    }
 
     ctx.fillStyle = template.muted;
     ctx.font = linkFont;
@@ -2772,6 +2790,11 @@ finalLines.forEach((line, index) => {
         layout.linkY
     );
 }
+
+ctx.shadowColor = 'transparent';
+ctx.shadowBlur = 0;
+ctx.shadowOffsetX = 0;
+ctx.shadowOffsetY = 0;
 },
 
     openVerseImageEditor: function() {
