@@ -537,6 +537,23 @@ this.initAuth().then(async () => {
 
 console.log('[App] Inicialización completada');
 },
+
+ensureSinaiTemplateButton: function() {
+    if (document.querySelector('.verse-template-btn[data-template="sinai"]')) return;
+
+    const templateGrid = document.querySelector('.verse-template-grid')
+        || document.querySelector('.verse-template-btn')?.parentElement;
+
+    if (!templateGrid) return;
+
+    const button = document.createElement('button');
+    button.className = 'verse-template-btn';
+    button.type = 'button';
+    button.dataset.template = 'sinai';
+    button.textContent = 'Sinaí';
+
+    templateGrid.appendChild(button);
+},
     
 cacheDOM: function() {
     this.$content = document.getElementById('app-content');
@@ -567,6 +584,7 @@ cacheDOM: function() {
     this.$verseImageCanvas = document.getElementById('verseImagePreview');
     this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
     this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
+    this.ensureSinaiTemplateButton();
     this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
     this.$verseFormatButtons = Array.from(document.querySelectorAll('.verse-format-btn'));
     this.$verseTextSizeButtons = Array.from(document.querySelectorAll('.verse-text-size-btn'));
