@@ -17,70 +17,132 @@ export function calculateProgress(completed, total) {
     return total > 0 ? Math.round((completed / total) * 100) : 0;
 }
 
-export function getVerseImageFormat(formatKey = 'post') {
-    const formats = {
-        post: {
-            key: 'post',
-            label: 'Post',
-            width: 1080,
-            height: 1350
-        },
+const VERSE_IMAGE_FALLBACKS = {
+    template: 'midnight',
+    format: 'post',
+    textSize: 'normal'
+};
 
-        story: {
-            key: 'story',
-            label: 'Historia',
-            width: 1080,
-            height: 1920
-        },
+const VERSE_IMAGE_FORMATS = {
+    post: {
+        key: 'post',
+        label: 'Post',
+        width: 1080,
+        height: 1350
+    },
 
-        square: {
-            key: 'square',
-            label: 'Cuadrado',
-            width: 1080,
-            height: 1080
-        }
+    story: {
+        key: 'story',
+        label: 'Historia',
+        width: 1080,
+        height: 1920
+    },
+
+    square: {
+        key: 'square',
+        label: 'Cuadrado',
+        width: 1080,
+        height: 1080
+    }
+};
+
+const VERSE_IMAGE_TEMPLATES = {
+    midnight: {
+        key: 'midnight',
+        background: ['#07111f', '#182235', '#2b2118'],
+        card: 'rgba(255,255,255,0.075)',
+        border: 'rgba(255,255,255,0.16)',
+        quote: '#f8f3ea',
+        reference: '#d6b56d',
+        muted: 'rgba(255,255,255,0.64)',
+        accent: 'rgba(214,181,109,0.22)'
+    },
+
+    warm: {
+        key: 'warm',
+        background: ['#2b1810', '#6b3f24', '#c29a62'],
+        card: 'rgba(255,248,238,0.13)',
+        border: 'rgba(255,239,210,0.22)',
+        quote: '#fff8ec',
+        reference: '#ffe0a1',
+        muted: 'rgba(255,248,236,0.72)',
+        accent: 'rgba(255,224,161,0.22)'
+    },
+
+    paper: {
+        key: 'paper',
+        background: ['#eee3d2', '#f8f1e7', '#d2b48c'],
+        card: 'rgba(255,255,255,0.46)',
+        border: 'rgba(89,64,42,0.16)',
+        quote: '#2f241c',
+        reference: '#8a5a24',
+        muted: 'rgba(47,36,28,0.62)',
+        accent: 'rgba(138,90,36,0.12)'
+    }
+};
+
+const VERSE_IMAGE_TEXT_SIZES = new Set(['compact', 'normal', 'large']);
+
+function isDevelopmentEnvironment() {
+    if (typeof window === 'undefined') return false;
+
+    const { hostname, protocol } = window.location;
+
+    return protocol === 'file:'
+        || hostname === 'localhost'
+        || hostname === '127.0.0.1'
+        || hostname === '';
+}
+
+function warnMissingVerseImageConfig(type, key, fallback) {
+    if (!isDevelopmentEnvironment() || !key || key === fallback) return;
+
+    console.warn(`[Verse image] Configuración ${type} "${key}" no existe. Usando "${fallback}".`);
+}
+
+export function getSafeVerseImageFormat(formatKey = VERSE_IMAGE_FALLBACKS.format) {
+    const format = VERSE_IMAGE_FORMATS[formatKey];
+
+    if (!format) {
+        warnMissingVerseImageConfig('format', formatKey, VERSE_IMAGE_FALLBACKS.format);
+    }
+
+    return format || VERSE_IMAGE_FORMATS[VERSE_IMAGE_FALLBACKS.format];
+}
+
+export function getSafeVerseImageTemplate(templateKey = VERSE_IMAGE_FALLBACKS.template) {
+    const template = VERSE_IMAGE_TEMPLATES[templateKey];
+
+    if (!template) {
+        warnMissingVerseImageConfig('template', templateKey, VERSE_IMAGE_FALLBACKS.template);
+    }
+
+    return template || VERSE_IMAGE_TEMPLATES[VERSE_IMAGE_FALLBACKS.template];
+}
+
+export function getSafeVerseImageTextSize(textSize = VERSE_IMAGE_FALLBACKS.textSize) {
+    if (!VERSE_IMAGE_TEXT_SIZES.has(textSize)) {
+        warnMissingVerseImageConfig('textSize', textSize, VERSE_IMAGE_FALLBACKS.textSize);
+        return VERSE_IMAGE_FALLBACKS.textSize;
+    }
+
+    return textSize;
+}
+
+export function validateVerseImageState(state = {}) {
+    return {
+        template: getSafeVerseImageTemplate(state.template).key,
+        format: getSafeVerseImageFormat(state.format).key,
+        textSize: getSafeVerseImageTextSize(state.textSize)
     };
+}
 
-    return formats[formatKey] || formats.post;
+export function getVerseImageFormat(formatKey = 'post') {
+    return getSafeVerseImageFormat(formatKey);
 }
 
 export function getVerseImageTemplate(templateKey = 'midnight') {
-    const templates = {
-        midnight: {
-            key: 'midnight',
-            background: ['#07111f', '#182235', '#2b2118'],
-            card: 'rgba(255,255,255,0.075)',
-            border: 'rgba(255,255,255,0.16)',
-            quote: '#f8f3ea',
-            reference: '#d6b56d',
-            muted: 'rgba(255,255,255,0.64)',
-            accent: 'rgba(214,181,109,0.22)'
-        },
-
-        warm: {
-            key: 'warm',
-            background: ['#2b1810', '#6b3f24', '#c29a62'],
-            card: 'rgba(255,248,238,0.13)',
-            border: 'rgba(255,239,210,0.22)',
-            quote: '#fff8ec',
-            reference: '#ffe0a1',
-            muted: 'rgba(255,248,236,0.72)',
-            accent: 'rgba(255,224,161,0.22)'
-        },
-
-        paper: {
-            key: 'paper',
-            background: ['#eee3d2', '#f8f1e7', '#d2b48c'],
-            card: 'rgba(255,255,255,0.46)',
-            border: 'rgba(89,64,42,0.16)',
-            quote: '#2f241c',
-            reference: '#8a5a24',
-            muted: 'rgba(47,36,28,0.62)',
-            accent: 'rgba(138,90,36,0.12)'
-        }
-    };
-
-    return templates[templateKey] || templates.midnight;
+    return getSafeVerseImageTemplate(templateKey);
 }
 
 export function renderIntroVideoHtml(config = INTRO_VIDEO_CONFIG) {

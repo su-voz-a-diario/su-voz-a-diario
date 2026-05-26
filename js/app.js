@@ -17,6 +17,7 @@ import {
     getHighlightColorLabel,
     getVerseImageFormat,
     getVerseImageTemplate,
+    validateVerseImageState,
     renderIntroVideoHtml
 } from './utils/formatters.js';
 
@@ -2196,12 +2197,28 @@ updateCommunityBadge: function() {
     return getVerseImageFormat(formatKey);
 },
 
+validateVerseImageState: function() {
+    const safeState = validateVerseImageState({
+        template: this.verseImageTemplate,
+        format: this.verseImageFormat,
+        textSize: this.verseImageTextSize
+    });
+
+    this.verseImageTemplate = safeState.template;
+    this.verseImageFormat = safeState.format;
+    this.verseImageTextSize = safeState.textSize;
+
+    return safeState;
+},
+
 applyVerseImageFormat: function() {
     const canvas = this.$verseImageCanvas;
 
     if (!canvas) return;
 
-    const format = this.getVerseImageFormat(this.verseImageFormat || 'post');
+    this.validateVerseImageState();
+
+    const format = this.getVerseImageFormat(this.verseImageFormat);
 
     canvas.width = format.width;
     canvas.height = format.height;
@@ -2234,7 +2251,9 @@ applyVerseImageFormat: function() {
     const sourceLabel = this.verseImageSource === 'bible'
         ? 'Pasaje bíblico'
         : 'Lectura bíblica diaria';
-    const template = this.getVerseImageTemplate(this.verseImageTemplate || 'midnight');
+    this.validateVerseImageState();
+
+    const template = this.getVerseImageTemplate(this.verseImageTemplate);
 
     this.drawVerseImageBackgroundPremium(ctx, canvas, template);
     this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template, versionLabel, sourceLabel);
@@ -2326,7 +2345,8 @@ ctx.fill();
 },
 
 getVerseImageLayout: function(canvas) {
-    const format = canvas.dataset.format || 'post';
+    const safeState = this.validateVerseImageState();
+    const format = canvas.dataset.format || safeState.format;
 
     const layouts = {
         post: {
@@ -2381,7 +2401,7 @@ getVerseImageLayout: function(canvas) {
 
    const layout = { ...(layouts[format] || layouts.post) };
 
-const textSize = this.verseImageTextSize || 'normal';
+const textSize = safeState.textSize;
 
 const sizeProfiles = {
     compact: {
@@ -2518,7 +2538,7 @@ this.verseImageSource = this.getSelectedTextSource();
 this.hideSelectionPanel();
 
 setTimeout(() => {
-    this.verseImageTemplate = this.verseImageTemplate || 'midnight';
+    this.validateVerseImageState();
 
     this.$verseTemplateButtons.forEach(button => {
         button.classList.toggle(
@@ -3474,9 +3494,13 @@ bindVerseImageEditorEvents: function() {
             e.preventDefault();
 
             this.verseImageTemplate = templateBtn.dataset.template || 'midnight';
+            this.validateVerseImageState();
 
             this.$verseTemplateButtons.forEach(button => {
-                button.classList.toggle('is-active', button === templateBtn);
+                button.classList.toggle(
+                    'is-active',
+                    button.dataset.template === this.verseImageTemplate
+                );
             });
 
             this.renderVerseImagePreview();
@@ -3489,9 +3513,13 @@ if (formatBtn) {
     e.preventDefault();
 
     this.verseImageFormat = formatBtn.dataset.format || 'post';
+    this.validateVerseImageState();
 
     this.$verseFormatButtons.forEach(button => {
-        button.classList.toggle('is-active', button === formatBtn);
+        button.classList.toggle(
+            'is-active',
+            button.dataset.format === this.verseImageFormat
+        );
     });
 
     this.applyVerseImageFormat();
@@ -3505,9 +3533,13 @@ if (textSizeBtn) {
     e.preventDefault();
 
     this.verseImageTextSize = textSizeBtn.dataset.textSize || 'normal';
+    this.validateVerseImageState();
 
     this.$verseTextSizeButtons.forEach(button => {
-        button.classList.toggle('is-active', button === textSizeBtn);
+        button.classList.toggle(
+            'is-active',
+            button.dataset.textSize === this.verseImageTextSize
+        );
     });
 
     this.renderVerseImagePreview();
