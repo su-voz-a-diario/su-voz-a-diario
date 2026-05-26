@@ -15,160 +15,34 @@
 
         if (!isLegacyGithubOrigin) return;
 
-        window.SUVOZ_LEGACY_DOMAIN = true;
-        document.documentElement.setAttribute('data-legacy-migration', 'true');
-        window.suVozOpenOfficialApp = function () {
-            location.href = OFFICIAL_ORIGIN + '/';
+        const redirectToOfficialDomain = async () => {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(registration => registration.unregister()));
+                }
+
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(
+                        keys
+                            .filter(key => key.startsWith('su-voz-'))
+                            .map(key => caches.delete(key))
+                    );
+                }
+            } catch (error) {
+                console.warn('[Domain Migration] No se pudo limpiar el origen anterior:', error);
+            } finally {
+                const targetUrl = new URL('/', OFFICIAL_ORIGIN);
+                targetUrl.search = location.search;
+                targetUrl.hash = location.hash;
+                location.replace(targetUrl.href);
+            }
         };
+
+        redirectToOfficialDomain();
     })();
     </script>
-
-    <style>
-        html[data-legacy-migration="true"],
-        html[data-legacy-migration="true"] body {
-            min-height: 100%;
-            margin: 0;
-            background: #f6f8fb;
-            color: #172033;
-            font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        }
-
-        html[data-legacy-migration="true"] body > :not(#legacy-migration-screen) {
-            display: none !important;
-        }
-
-        .legacy-migration-screen {
-            min-height: 100vh;
-            min-height: 100dvh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            background:
-                radial-gradient(circle at 50% 0%, rgba(49, 130, 206, 0.14), transparent 34%),
-                #f6f8fb;
-            box-sizing: border-box;
-        }
-
-        .legacy-migration-card {
-            width: min(100%, 420px);
-            padding: 28px 22px 22px;
-            border: 1px solid rgba(148, 163, 184, 0.28);
-            border-radius: 28px;
-            background: rgba(255, 255, 255, 0.92);
-            box-shadow:
-                0 24px 60px rgba(15, 23, 42, 0.13),
-                inset 0 1px 0 rgba(255, 255, 255, 0.72);
-            text-align: center;
-            box-sizing: border-box;
-        }
-
-        .legacy-migration-icon {
-            width: 58px;
-            height: 58px;
-            margin: 0 auto 18px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(180deg, #3182ce, #2563eb);
-            color: #ffffff;
-            box-shadow: 0 12px 26px rgba(37, 99, 235, 0.28);
-        }
-
-        .legacy-migration-icon svg {
-            width: 30px;
-            height: 30px;
-        }
-
-        .legacy-migration-card h1 {
-            margin: 0 0 10px;
-            color: #10213d;
-            font-size: 1.55rem;
-            line-height: 1.15;
-            letter-spacing: 0;
-        }
-
-        .legacy-migration-card p {
-            margin: 0;
-            color: #526173;
-            font-size: 0.98rem;
-            line-height: 1.55;
-        }
-
-        .legacy-migration-note {
-            margin-top: 16px !important;
-            padding: 12px 14px;
-            border-radius: 16px;
-            background: rgba(49, 130, 206, 0.08);
-            color: #33506f !important;
-            font-size: 0.88rem !important;
-        }
-
-        .legacy-migration-primary {
-            width: 100%;
-            min-height: 48px;
-            margin-top: 22px;
-            border: none;
-            border-radius: 999px;
-            background: #3182ce;
-            color: #ffffff;
-            font-size: 1rem;
-            font-weight: 800;
-            cursor: pointer;
-            box-shadow: 0 12px 22px rgba(49, 130, 206, 0.24);
-        }
-
-        .legacy-migration-primary:active {
-            transform: scale(0.98);
-        }
-
-        .legacy-migration-footer {
-            margin-top: 16px !important;
-            color: #7a8797 !important;
-            font-size: 0.78rem !important;
-            line-height: 1.45 !important;
-        }
-
-        @media (prefers-color-scheme: dark) {
-            html[data-legacy-migration="true"],
-            html[data-legacy-migration="true"] body {
-                background: #080b12;
-                color: #edf4ff;
-            }
-
-            .legacy-migration-screen {
-                background:
-                    radial-gradient(circle at 50% 0%, rgba(96, 165, 250, 0.18), transparent 36%),
-                    #080b12;
-            }
-
-            .legacy-migration-card {
-                border-color: rgba(255, 255, 255, 0.09);
-                background: rgba(17, 24, 39, 0.94);
-                box-shadow:
-                    0 24px 70px rgba(0, 0, 0, 0.38),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-            }
-
-            .legacy-migration-card h1 {
-                color: #f8fbff;
-            }
-
-            .legacy-migration-card p {
-                color: #aab7ca;
-            }
-
-            .legacy-migration-note {
-                background: rgba(96, 165, 250, 0.12);
-                color: #cfe2ff !important;
-            }
-
-            .legacy-migration-footer {
-                color: #8f9cb0 !important;
-            }
-        }
-    </style>
 
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -191,33 +65,6 @@
 </head>
 
 <body>
-
-<script>
-(function () {
-    if (!window.SUVOZ_LEGACY_DOMAIN) return;
-
-    document.body.innerHTML = `
-        <main id="legacy-migration-screen" class="legacy-migration-screen">
-            <section class="legacy-migration-card" aria-labelledby="legacyMigrationTitle">
-                <div class="legacy-migration-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 3v12"></path>
-                        <path d="m7 10 5 5 5-5"></path>
-                        <path d="M5 21h14"></path>
-                    </svg>
-                </div>
-                <h1 id="legacyMigrationTitle">Instala la versión oficial</h1>
-                <p>Esta versión anterior ya no recibe correctamente las actualizaciones. Para usar la app con todas sus mejoras, abre e instala la versión oficial desde suvoz.app.</p>
-                <button class="legacy-migration-primary" type="button" onclick="window.suVozOpenOfficialApp()">
-                    Abrir versión oficial
-                </button>
-                <p class="legacy-migration-note">Si tienes notas o progreso guardados en esta versión, exporta tus datos antes de eliminarla.</p>
-                <p class="legacy-migration-footer">Después de instalar la versión oficial, puedes eliminar esta versión antigua.</p>
-            </section>
-        </main>
-    `;
-})();
-</script>
 
 <div id="splash-screen">
     <img src="icons/splash.png" alt="Splash">
@@ -556,10 +403,6 @@
         <button class="verse-template-btn" type="button" data-template="paper">
           Papel
         </button>
-
-        <button class="verse-template-btn" type="button" data-template="sinai">
-          Sinaí
-        </button>
       </div>
     </div>
 
@@ -680,16 +523,7 @@
 })();
 </script>
 
-<script>
-(function () {
-    if (window.SUVOZ_LEGACY_DOMAIN) return;
-
-    const appScript = document.createElement('script');
-    appScript.type = 'module';
-    appScript.src = 'js/app.js?v=53';
-    document.body.appendChild(appScript);
-})();
-</script>
+<script type="module" src="js/app.js?v=53"></script>
 
 <script>
 (function () {
@@ -701,11 +535,6 @@
         ua.includes('FBIOS') ||
         ua.includes('FB_IAB') ||
         ua.includes('Instagram');
-
-    if (window.SUVOZ_LEGACY_DOMAIN) {
-        console.warn('[Index] Dominio anterior detectado. No se registra Service Worker.');
-        return;
-    }
 
     if (isFacebookInAppBrowser) {
         console.warn('[Index] Navegador interno de Facebook/Instagram detectado. No se registra Service Worker.');

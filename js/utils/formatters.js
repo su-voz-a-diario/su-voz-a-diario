@@ -78,17 +78,6 @@ const VERSE_IMAGE_TEMPLATES = {
         reference: '#8a5a24',
         muted: 'rgba(47,36,28,0.62)',
         accent: 'rgba(138,90,36,0.12)'
-    },
-
-    sinai: {
-        key: 'sinai',
-        background: ['#050915', '#111f33', '#2a1d14'],
-        card: 'rgba(255,250,240,0.082)',
-        border: 'rgba(226,191,122,0.20)',
-        quote: '#fff7e8',
-        reference: '#dfbd78',
-        muted: 'rgba(255,247,232,0.70)',
-        accent: 'rgba(226,191,122,0.18)'
     }
 };
 
