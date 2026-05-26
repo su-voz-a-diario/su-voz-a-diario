@@ -6750,13 +6750,13 @@ body.light-mode .verse-study-btn:hover {
 }
 
 .verse-image-header {
-    padding: 26px 46px 14px 4px;
+    padding: 22px 46px 12px 4px;
 }
 
 .verse-image-kicker {
     display: block;
     margin-bottom: 8px;
-    color: #d6b56d;
+    color: #cdac70;
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 0.16em;
@@ -6765,15 +6765,15 @@ body.light-mode .verse-study-btn:hover {
 .verse-image-header h3 {
     margin: 0;
     color: #fff8ec;
-    font-size: 23px;
+    font-size: 22px;
     line-height: 1.15;
 }
 
 .verse-image-header p {
-    margin: 8px 0 0;
-    color: rgba(255, 255, 255, 0.66);
-    font-size: 14px;
-    line-height: 1.45;
+    margin: 7px 0 0;
+    color: rgba(255, 248, 236, 0.64);
+    font-size: 13.5px;
+    line-height: 1.42;
 }
 
 .verse-image-preview-wrap {
@@ -6859,7 +6859,7 @@ body.light-mode .verse-study-btn:hover {
 
 .verse-template-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
 }
 
@@ -6874,20 +6874,75 @@ body.light-mode .verse-study-btn:hover {
 }
 
 .verse-template-btn {
-    min-height: 46px;
+    position: relative;
+    min-height: 76px;
+    overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.115);
-    border-radius: 14px;
+    border-radius: 16px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.052));
     color: rgba(255, 248, 236, 0.80);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 750;
+    text-align: left;
+    padding: 42px 12px 10px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.075);
     transition:
         background 180ms ease,
         border-color 180ms ease,
         box-shadow 180ms ease,
         color 180ms ease;
+}
+
+.verse-template-btn::before {
+    content: "";
+    position: absolute;
+    inset: 8px 8px auto;
+    height: 28px;
+    border-radius: 11px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.12),
+        0 8px 16px rgba(0, 0, 0, 0.12);
+}
+
+.verse-template-btn::after {
+    content: "";
+    position: absolute;
+    right: 11px;
+    bottom: 12px;
+    width: 7px;
+    height: 7px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.28);
+}
+
+.verse-template-btn[data-template="midnight"]::before {
+    background:
+        radial-gradient(circle at 78% 20%, rgba(214, 181, 109, 0.28), transparent 30%),
+        linear-gradient(135deg, #07111f, #182235 58%, #2b2118);
+}
+
+.verse-template-btn[data-template="warm"]::before {
+    background:
+        radial-gradient(circle at 78% 26%, rgba(255, 224, 161, 0.35), transparent 34%),
+        linear-gradient(135deg, #2b1810, #6b3f24 56%, #c29a62);
+}
+
+.verse-template-btn[data-template="paper"] {
+    color: rgba(255, 248, 236, 0.82);
+}
+
+.verse-template-btn[data-template="paper"]::before {
+    background:
+        linear-gradient(135deg, rgba(89, 64, 42, 0.08), transparent 42%),
+        linear-gradient(135deg, #eee3d2, #f8f1e7 55%, #d2b48c);
+}
+
+.verse-template-btn[data-template="sinai"]::before {
+    background:
+        radial-gradient(circle at 72% 22%, rgba(223, 189, 120, 0.30), transparent 35%),
+        linear-gradient(135deg, #030814, #111f33 58%, #2a1d14);
 }
 
 .verse-template-btn.is-active {
@@ -6900,36 +6955,57 @@ body.light-mode .verse-study-btn:hover {
         inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
+.verse-template-btn.is-active::after {
+    background: #e1c68d;
+    box-shadow: 0 0 0 4px rgba(205, 172, 112, 0.16);
+}
+
 .verse-image-actions {
     display: grid;
-    grid-template-columns: 1fr 1fr 1.15fr;
+    grid-template-columns: 0.82fr 0.95fr 1.45fr;
     gap: 10px;
-    margin-top: 18px;
+    margin-top: 20px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .verse-image-secondary,
 .verse-image-primary {
-    min-height: 48px;
-    border: 0;
-    border-radius: 16px;
+    min-height: 50px;
+    border: 1px solid transparent;
+    border-radius: 15px;
     font-size: 14px;
     font-weight: 800;
+    letter-spacing: -0.01em;
+    transition:
+        background 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        color 180ms ease;
 }
 
 .verse-image-secondary {
-    background: rgba(255, 255, 255, 0.08);
-    color: rgba(255, 255, 255, 0.76);
+    border-color: rgba(255, 255, 255, 0.095);
+    background: rgba(255, 255, 255, 0.055);
+    color: rgba(255, 248, 236, 0.62);
 }
 
 .verse-image-primary {
-    background: rgba(255, 255, 255, 0.14);
-    color: #fff8ec;
+    border-color: rgba(255, 255, 255, 0.12);
+    background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.055));
+    color: rgba(255, 248, 236, 0.78);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .verse-image-primary.strong {
-    background: linear-gradient(135deg, #d6b56d, #f3dca2);
-    color: #21170d;
-    box-shadow: 0 14px 36px rgba(214, 181, 109, 0.26);
+    border-color: rgba(205, 172, 112, 0.56);
+    background:
+        linear-gradient(135deg, #8f6b3d, #b89056);
+    color: #fff8ec;
+    box-shadow:
+        0 16px 34px rgba(177, 137, 78, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.24);
 }
 
 @media (max-width: 420px) {
@@ -7006,22 +7082,30 @@ body.light-mode .verse-study-btn:hover {
     }
 
     .verse-template-btn {
-        min-height: 36px;
-        border-radius: 11px;
-        font-size: 12.5px;
+        min-height: 64px;
+        border-radius: 13px;
+        padding: 35px 10px 9px;
+        font-size: 12px;
+    }
+
+    .verse-template-btn::before {
+        inset: 7px 7px auto;
+        height: 23px;
+        border-radius: 9px;
     }
 
     .verse-image-actions {
-        gap: 7px;
-        margin-top: 12px;
-        grid-template-columns: 1fr 1fr 1fr;
+        gap: 6px;
+        margin-top: 14px;
+        padding-top: 10px;
+        grid-template-columns: 0.72fr 0.95fr 1.48fr;
     }
 
     .verse-image-secondary,
     .verse-image-primary {
-        min-height: 39px;
+        min-height: 40px;
         border-radius: 12px;
-        font-size: 12.5px;
+        font-size: 12px;
     }
 }
 
@@ -7317,78 +7401,6 @@ body.dark-mode .note-guide-panel li {
 
     .verse-image-preview-wrap.format-square {
         width: min(64vw, 230px);
-    }
-}
-
-.verse-link-toggle-wrap {
-    display: flex;
-    justify-content: center;
-    padding: 4px;
-    border-radius: 18px;
-    background: rgba(0, 0, 0, 0.105);
-    border: 1px solid rgba(255, 255, 255, 0.085);
-}
-
-.verse-link-toggle-btn {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    min-height: 44px;
-    padding: 4px 14px 4px 5px;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 999px;
-    background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.074), rgba(255, 255, 255, 0.042));
-    color: rgba(255, 248, 236, 0.72);
-    font-size: 13px;
-    font-weight: 800;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
-    transition:
-        background 180ms ease,
-        border-color 180ms ease,
-        box-shadow 180ms ease,
-        color 180ms ease;
-}
-
-.verse-link-toggle-indicator {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
-    transition: transform 0.22s ease, background 0.22s ease;
-}
-
-.verse-link-toggle-btn.is-active {
-    color: #f7ecd8;
-    background: linear-gradient(135deg, #8f6b3d, #b89056);
-    border-color: rgba(205, 172, 112, 0.50);
-    box-shadow:
-        0 12px 28px rgba(177, 137, 78, 0.18),
-        inset 0 1px 0 rgba(255, 255, 255, 0.22);
-}
-
-.verse-link-toggle-btn.is-active .verse-link-toggle-indicator {
-    background: rgba(38, 27, 17, 0.86);
-    transform: translateX(4px);
-}
-
-.verse-link-toggle-text {
-    flex: 1;
-    text-align: center;
-}
-
-@media (max-width: 520px) {
-    .verse-link-toggle-btn {
-        min-height: 36px;
-        font-size: 12px;
-    }
-
-    .verse-link-toggle-indicator {
-        width: 28px;
-        height: 28px;
     }
 }
 

@@ -554,6 +554,16 @@ ensureSinaiTemplateButton: function() {
 
     templateGrid.appendChild(button);
 },
+
+normalizeVerseImageActionLabels: function() {
+    if (this.$verseImageDownloadBtn) {
+        this.$verseImageDownloadBtn.textContent = 'Descargar';
+    }
+
+    if (this.$verseImageShareBtn) {
+        this.$verseImageShareBtn.textContent = 'Compartir imagen';
+    }
+},
     
 cacheDOM: function() {
     this.$content = document.getElementById('app-content');
@@ -584,6 +594,7 @@ cacheDOM: function() {
     this.$verseImageCanvas = document.getElementById('verseImagePreview');
     this.$verseImageDownloadBtn = document.getElementById('downloadVerseImageBtn');
     this.$verseImageShareBtn = document.getElementById('shareVerseImageFinalBtn');
+    this.normalizeVerseImageActionLabels();
     this.ensureSinaiTemplateButton();
     this.$verseTemplateButtons = Array.from(document.querySelectorAll('.verse-template-btn'));
     this.$verseFormatButtons = Array.from(document.querySelectorAll('.verse-format-btn'));
@@ -2270,6 +2281,7 @@ applyVerseImageFormat: function() {
         ? 'Pasaje bíblico'
         : 'Lectura bíblica diaria';
     this.validateVerseImageState();
+    this.verseImageShowLink = true;
 
     const template = this.getVerseImageTemplate(this.verseImageTemplate);
 
@@ -3830,25 +3842,6 @@ if (textSizeBtn) {
     return;
     }
 
-    const linkToggleBtn = e.target.closest('#verseLinkToggleBtn');
-
-if (linkToggleBtn) {
-    e.preventDefault();
-
-    this.verseImageShowLink = !this.verseImageShowLink;
-
-    linkToggleBtn.classList.toggle('is-active', this.verseImageShowLink);
-    linkToggleBtn.setAttribute('aria-pressed', String(this.verseImageShowLink));
-
-    const textEl = linkToggleBtn.querySelector('.verse-link-toggle-text');
-
-    if (textEl) {
-        textEl.textContent = this.verseImageShowLink ? 'Visible' : 'Oculto';
-    }
-
-    this.renderVerseImagePreview();
-    return;
-}
     });
 
     this.$verseImageDownloadBtn?.addEventListener('click', async (e) => {
