@@ -2296,6 +2296,10 @@ applyVerseImageFormat: function() {
 
     this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template, versionLabel, sourceLabel);
 
+    canvas.classList.remove('is-refreshing');
+    void canvas.offsetWidth;
+    canvas.classList.add('is-refreshing');
+
     return canvas;
 },
 
