@@ -2274,8 +2274,18 @@ applyVerseImageFormat: function() {
     const template = this.getVerseImageTemplate(this.verseImageTemplate);
 
     if (template.key === 'sinai') {
+        const backgroundImage = this.getLoadedVerseImageBackground(template.backgroundImage);
+
+        if (template.backgroundImage && !backgroundImage) {
+            this.loadVerseImageBackground(template.backgroundImage).then((image) => {
+                if (image && this.verseImageTemplate === 'sinai') {
+                    this.renderVerseImagePreview();
+                }
+            });
+        }
+
         try {
-            this.drawVerseImageBackgroundSinai(ctx, canvas, template);
+            this.drawVerseImageBackgroundSinai(ctx, canvas, template, backgroundImage);
         } catch (error) {
             console.warn('[Verse image] No se pudo dibujar Sinaí. Usando fondo estándar.', error);
             this.drawVerseImageBackgroundPremium(ctx, canvas, template);
@@ -2291,6 +2301,72 @@ applyVerseImageFormat: function() {
 
 getVerseImageTemplate(templateKey) {
     return getVerseImageTemplate(templateKey);
+},
+
+getLoadedVerseImageBackground: function(src) {
+    if (!src || !this._verseImageBackgroundCache) return null;
+
+    const entry = this._verseImageBackgroundCache[src];
+
+    return entry?.status === 'loaded' ? entry.image : null;
+},
+
+loadVerseImageBackground: function(src) {
+    if (!src || typeof Image === 'undefined') {
+        return Promise.resolve(null);
+    }
+
+    this._verseImageBackgroundCache = this._verseImageBackgroundCache || {};
+
+    const cached = this._verseImageBackgroundCache[src];
+
+    if (cached?.status === 'loaded') return Promise.resolve(cached.image);
+    if (cached?.status === 'failed') return Promise.resolve(null);
+    if (cached?.promise) return cached.promise;
+
+    const promise = new Promise((resolve) => {
+        const image = new Image();
+
+        image.onload = () => {
+            this._verseImageBackgroundCache[src] = {
+                status: 'loaded',
+                image
+            };
+            resolve(image);
+        };
+
+        image.onerror = () => {
+            this._verseImageBackgroundCache[src] = {
+                status: 'failed',
+                image: null
+            };
+            resolve(null);
+        };
+
+        image.src = src;
+    });
+
+    this._verseImageBackgroundCache[src] = {
+        status: 'loading',
+        promise
+    };
+
+    return promise;
+},
+
+drawImageCover: function(ctx, image, canvas) {
+    const imageRatio = image.naturalWidth / image.naturalHeight;
+    const canvasRatio = canvas.width / canvas.height;
+    const drawHeight = imageRatio > canvasRatio
+        ? canvas.height
+        : canvas.width / imageRatio;
+    const drawWidth = imageRatio > canvasRatio
+        ? canvas.height * imageRatio
+        : canvas.width;
+    const drawX = (canvas.width - drawWidth) / 2;
+    const drawY = (canvas.height - drawHeight) / 2;
+
+    ctx.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 },
 
 drawVerseImageBackgroundPremium: function(ctx, canvas, template) {
@@ -2372,17 +2448,23 @@ this.roundRect(
 ctx.fill();
 },
 
-drawVerseImageBackgroundSinai: function(ctx, canvas, template) {
+drawVerseImageBackgroundSinai: function(ctx, canvas, template, backgroundImage = null) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    const verticalGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    verticalGradient.addColorStop(0, '#030814');
-    verticalGradient.addColorStop(0.34, template.background[0]);
-    verticalGradient.addColorStop(0.68, template.background[1]);
-    verticalGradient.addColorStop(1, template.background[2]);
+    if (backgroundImage) {
+        this.drawImageCover(ctx, backgroundImage, canvas);
+        ctx.fillStyle = 'rgba(3,8,20,0.48)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    } else {
+        const verticalGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        verticalGradient.addColorStop(0, '#030814');
+        verticalGradient.addColorStop(0.34, template.background[0]);
+        verticalGradient.addColorStop(0.68, template.background[1]);
+        verticalGradient.addColorStop(1, template.background[2]);
 
-    ctx.fillStyle = verticalGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = verticalGradient;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
 
     const distantLight = ctx.createRadialGradient(
         canvas.width * 0.5,

@@ -82,6 +82,7 @@ const VERSE_IMAGE_TEMPLATES = {
 
     sinai: {
         key: 'sinai',
+        backgroundImage: './assets/export/backgrounds/sinai-01.webp',
         background: ['#050915', '#111f33', '#2a1d14'],
         card: 'rgba(255,250,240,0.082)',
         border: 'rgba(226,191,122,0.20)',
