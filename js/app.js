@@ -2273,7 +2273,17 @@ applyVerseImageFormat: function() {
 
     const template = this.getVerseImageTemplate(this.verseImageTemplate);
 
-    this.drawVerseImageBackgroundPremium(ctx, canvas, template);
+    if (template.key === 'sinai') {
+        try {
+            this.drawVerseImageBackgroundSinai(ctx, canvas, template);
+        } catch (error) {
+            console.warn('[Verse image] No se pudo dibujar Sinaí. Usando fondo estándar.', error);
+            this.drawVerseImageBackgroundPremium(ctx, canvas, template);
+        }
+    } else {
+        this.drawVerseImageBackgroundPremium(ctx, canvas, template);
+    }
+
     this.drawVerseImageTextPremium(ctx, canvas, selectedText, reference, template, versionLabel, sourceLabel);
 
     return canvas;
@@ -2362,6 +2372,125 @@ this.roundRect(
 ctx.fill();
 },
 
+drawVerseImageBackgroundSinai: function(ctx, canvas, template) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const verticalGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    verticalGradient.addColorStop(0, '#030814');
+    verticalGradient.addColorStop(0.34, template.background[0]);
+    verticalGradient.addColorStop(0.68, template.background[1]);
+    verticalGradient.addColorStop(1, template.background[2]);
+
+    ctx.fillStyle = verticalGradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const distantLight = ctx.createRadialGradient(
+        canvas.width * 0.5,
+        canvas.height * 0.28,
+        canvas.width * 0.04,
+        canvas.width * 0.5,
+        canvas.height * 0.28,
+        canvas.width * 0.72
+    );
+    distantLight.addColorStop(0, 'rgba(223,189,120,0.24)');
+    distantLight.addColorStop(0.36, 'rgba(223,189,120,0.10)');
+    distantLight.addColorStop(1, 'rgba(223,189,120,0)');
+
+    ctx.fillStyle = distantLight;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = 'rgba(255,247,232,0.18)';
+    ctx.lineWidth = 1;
+
+    for (let y = canvas.height * 0.18; y < canvas.height * 0.86; y += 34) {
+        ctx.beginPath();
+        ctx.moveTo(canvas.width * 0.14, y);
+        ctx.lineTo(canvas.width * 0.86, y + Math.sin(y * 0.018) * 8);
+        ctx.stroke();
+    }
+
+    ctx.fillStyle = 'rgba(255,247,232,0.16)';
+
+    for (let i = 0; i < 70; i++) {
+        const x = ((i * 149) % 860) + 110;
+        const y = ((i * 211) % Math.floor(canvas.height * 0.70)) + canvas.height * 0.12;
+        const radius = i % 5 === 0 ? 1.4 : 0.75;
+
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    ctx.restore();
+
+    const vignette = ctx.createRadialGradient(
+        canvas.width * 0.5,
+        canvas.height * 0.46,
+        canvas.width * 0.18,
+        canvas.width * 0.5,
+        canvas.height * 0.46,
+        canvas.width * 0.78
+    );
+    vignette.addColorStop(0, 'rgba(0,0,0,0)');
+    vignette.addColorStop(0.62, 'rgba(0,0,0,0.16)');
+    vignette.addColorStop(1, 'rgba(0,0,0,0.58)');
+
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    const frameX = 105;
+    const frameY = canvas.height * 0.10;
+    const frameW = canvas.width - 210;
+    const frameH = canvas.height * 0.78;
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(226,191,122,0.17)';
+    ctx.lineWidth = 2;
+
+    for (let i = 0; i < 5; i++) {
+        ctx.globalAlpha = 0.08 + i * 0.016;
+        this.roundRect(
+            ctx,
+            frameX + i * 11,
+            frameY + i * 11,
+            frameW - i * 22,
+            frameH - i * 22,
+            46
+        );
+        ctx.stroke();
+    }
+
+    ctx.restore();
+
+    const cardX = 88;
+    const cardY = canvas.height * 0.088;
+    const cardW = canvas.width - 176;
+    const cardH = canvas.height * 0.825;
+    const cardRadius = 52;
+
+    ctx.fillStyle = template.card;
+    this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.fill();
+
+    ctx.strokeStyle = template.border;
+    ctx.lineWidth = 2.5;
+    this.roundRect(ctx, cardX, cardY, cardW, cardH, cardRadius);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(226,191,122,0.28)';
+    this.roundRect(
+        ctx,
+        cardX + 118,
+        cardY + 76,
+        cardW - 236,
+        5,
+        5
+    );
+    ctx.fill();
+},
+
 getVerseImageLayout: function(canvas) {
     const safeState = this.validateVerseImageState();
     const format = canvas.dataset.format || safeState.format;
@@ -2398,22 +2527,22 @@ getVerseImageLayout: function(canvas) {
         },
 
     square: {
-    headerY: 165,
-    quoteY: 245,
+    headerY: 220,
+    quoteY: 315,
 
-    textCenterYShort: 455,
-    textCenterYMedium: 495,
-    textCenterYLong: 535,
+    textCenterYShort: 535,
+    textCenterYMedium: 560,
+    textCenterYLong: 545,
 
     textMaxWidth: 720,
 
-    textFontSize: 52,
-    lineHeight: 62,
+    textFontSize: 48,
+    lineHeight: 58,
 
-    referenceY: 760,
-    subtitleY: 825,
-    dividerY: 865,
-    linkY: 925
+    referenceY: 785,
+    subtitleY: 840,
+    dividerY: 880,
+    linkY: 935
     }
     };
 
