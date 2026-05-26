@@ -2584,19 +2584,38 @@ drawVerseImageTextPremium: function(ctx, canvas, text, reference, template, vers
     ctx.textBaseline = 'middle';
     
     const layout = this.getVerseImageLayout(canvas);
+    const isSinaiTemplate = template.key === 'sinai';
+    const headerFont = isSinaiTemplate
+        ? '600 26px "Cormorant Garamond", Georgia, serif'
+        : '500 26px Inter, Arial, sans-serif';
+    const quoteFont = isSinaiTemplate
+        ? '96px "Cormorant Garamond", Georgia, serif'
+        : '96px Merriweather, Georgia, serif';
+    const verseFont = isSinaiTemplate
+        ? `600 ${layout.textFontSize}px "Cormorant Garamond", Georgia, serif`
+        : `500 ${layout.textFontSize}px "Cormorant Garamond", serif`;
+    const referenceFont = isSinaiTemplate
+        ? '600 34px "Cormorant Garamond", Georgia, serif'
+        : '600 34px Inter, Arial, sans-serif';
+    const subtitleFont = isSinaiTemplate
+        ? '500 24px "Cormorant Garamond", Georgia, serif'
+        : '500 24px Inter, Arial, sans-serif';
+    const linkFont = isSinaiTemplate
+        ? '500 20px "Cormorant Garamond", Georgia, serif'
+        : '500 20px Inter, Arial, sans-serif';
 
     ctx.fillStyle = template.muted;
-    ctx.font = '500 26px Inter, Arial, sans-serif';
+    ctx.font = headerFont;
     ctx.fillText('SU VOZ A DIARIO', canvas.width / 2, layout.headerY);
 
     ctx.fillStyle = template.accent;
-    ctx.font = '96px Merriweather, Georgia, serif';
+    ctx.font = quoteFont;
     ctx.fillText('“', canvas.width / 2, layout.quoteY);
 
    ctx.fillStyle = template.quote;
 
 /* Tipografía mucho más elegante */
-ctx.font = `500 ${layout.textFontSize}px "Cormorant Garamond", serif`;
+ctx.font = verseFont;
 
 const cleanText = text.length > 430
     ? `${text.slice(0, 430).trim()}…`
@@ -2638,7 +2657,7 @@ finalLines.forEach((line, index) => {
 });
 
     ctx.fillStyle = template.reference;
-    ctx.font = '600 34px Inter, Arial, sans-serif';
+    ctx.font = referenceFont;
     const referenceWithVersion = versionLabel
         ? `${reference} · ${versionLabel}`
         : reference;
@@ -2646,7 +2665,7 @@ finalLines.forEach((line, index) => {
     ctx.fillText(referenceWithVersion, canvas.width / 2, layout.referenceY);
     
     ctx.fillStyle = template.muted;
-    ctx.font = '500 24px Inter, Arial, sans-serif';
+    ctx.font = subtitleFont;
     ctx.fillText(sourceLabel, canvas.width / 2, layout.subtitleY);
     
    if (this.verseImageShowLink) {
@@ -2655,7 +2674,7 @@ finalLines.forEach((line, index) => {
     ctx.fill();
 
     ctx.fillStyle = template.muted;
-    ctx.font = '500 20px Inter, Arial, sans-serif';
+    ctx.font = linkFont;
     ctx.fillText(
         'suvoz.app',
         canvas.width / 2,
