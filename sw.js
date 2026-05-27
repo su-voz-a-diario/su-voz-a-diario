@@ -1,4 +1,4 @@
-const APP_VERSION = 'v53';
+const APP_VERSION = 'v54';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=53',
-  './css/styles.css?v=53',
-  './js/app.js?v=53',
+  './manifest.json?v=54',
+  './css/styles.css?v=54',
+  './js/app.js?v=54',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -19,6 +19,10 @@ const STATIC_ASSETS = [
   './js/utils/progress.js',
   './js/utils/text.js',
   './data/readings.json',
+  './data/readings/index.json',
+  './data/readings/2026-04.json',
+  './data/readings/2026-05.json',
+  './data/readings/2026-06.json',
   './data/rv1909.json',
   './data/rv1909_strong_map.json',
   './data/strong-hebrew-clean.json',
@@ -144,6 +148,11 @@ self.addEventListener('fetch', event => {
 
   if (url.pathname.includes('/data/readings.json')) {
     event.respondWith(networkFirstStrategy(request, { bypassHttpCache: true }));
+    return;
+  }
+
+  if (url.pathname.includes('/data/readings/')) {
+    event.respondWith(staleWhileRevalidateStrategy(request));
     return;
   }
 

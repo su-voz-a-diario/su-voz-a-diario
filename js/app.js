@@ -241,6 +241,11 @@ const App = {
     // DATOS Y ESTADO
     // ========================================
     data: [],
+    readingIndex: [],
+    readingIndexLoaded: false,
+    readingIndexLoadPromise: null,
+    monthlyReadingsCache: {},
+    monthlyReadingsLoadPromises: {},
     currentView: 'home',
     currentVersion: 'rvr60',
     bibleBooks: [
@@ -1208,7 +1213,7 @@ checkReminderOnOpen: function() {
     // ========================================
     getStats: function() {
         const readDates = this.getReadDates();
-        const totalAvailable = this.data.length;
+        const totalAvailable = this.getCalendarReadings().length;
         
     // Notas totales
 let totalNotes = 0;
@@ -1282,7 +1287,9 @@ for (let i = 0; i < localStorage.length; i++) {
     
     // Actualizar UI si estamos en home
     if (this.currentView === 'home') {
-        this.renderHome();
+        this.renderHome().catch(error => {
+            console.warn('[Readings] No se pudo refrescar Inicio después de marcar lectura:', error);
+        });
     }
 },
 
@@ -2277,7 +2284,7 @@ applyVerseImageFormat: function() {
         
     const ctx = canvas.getContext('2d');
     const selectedText = (this.verseImageText || this.currentSelectedText || '').replace(/\s+/g, ' ').trim();
-    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
+    const reference = this.verseImageReference || this.getSelectedTextReferenceLabelSync();
     const versionLabel = this.verseImageVersionLabel || this.getSelectedTextVersionLabel();
     const sourceLabel = this.verseImageSource === 'bible'
         ? 'Pasaje bíblico'
@@ -2815,7 +2822,7 @@ ctx.shadowOffsetX = 0;
 ctx.shadowOffsetY = 0;
 },
 
-    openVerseImageEditor: function() {
+    openVerseImageEditor: async function() {
     if (!this.$verseImagePanel || !this.$verseImageCanvas) {
         this.showToast('El editor de imagen no está disponible');
         return;
@@ -2828,8 +2835,8 @@ if (!selectedText) {
     return;
 }
 
-this.verseImageText = selectedText;
-this.verseImageReference = this.getSelectedTextReferenceLabel();
+	this.verseImageText = selectedText;
+	this.verseImageReference = await this.getSelectedTextReferenceLabel();
 this.verseImageVersionLabel = this.getSelectedTextVersionLabel();
 this.verseImageSource = this.getSelectedTextSource();
 
@@ -2888,7 +2895,7 @@ downloadVerseImage: async function() {
         return;
     }
 
-    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
+    const reference = this.verseImageReference || await this.getSelectedTextReferenceLabel();
     const safeReference = reference
         .replace(/[^\wáéíóúÁÉÍÓÚñÑ-]+/g, '-')
         .replace(/-+/g, '-')
@@ -2948,7 +2955,7 @@ shareVerseImageFromEditor: async function() {
         return;
     }
 
-    const reference = this.verseImageReference || this.getSelectedTextReferenceLabel();
+    const reference = this.verseImageReference || await this.getSelectedTextReferenceLabel();
     const file = new File([blob], 'su-voz-a-diario.png', {
         type: 'image/png'
     });
@@ -2988,7 +2995,7 @@ shareVerseImageFromEditor: async function() {
         return;
     }
 
-    const reference = this.getSelectedTextReferenceLabel();
+    const reference = await this.getSelectedTextReferenceLabel();
     const versionLabel = this.getSelectedTextVersionLabel();
 
     const canvas = document.createElement('canvas');
@@ -3042,7 +3049,7 @@ shareVerseImageFromEditor: async function() {
     }, 'image/png', 0.95);
 },
 
-getSelectedTextReferenceLabel: function() {
+getSelectedTextReferenceLabelSync: function() {
     if (this.getSelectedTextSource() === 'bible') {
         return this.getBibleSelectionReferenceLabel();
     }
@@ -3055,6 +3062,21 @@ getSelectedTextReferenceLabel: function() {
     }
 
     return 'Su voz a diario';
+},
+
+getSelectedTextReferenceLabel: async function() {
+    if (this.getSelectedTextSource() === 'bible') {
+        return this.getBibleSelectionReferenceLabel();
+    }
+
+    const dateStr = this.currentSelectionDate || this.homeViewingDate || this.getTodayDateStr();
+    const reading = await this.getReadingByDate(dateStr);
+
+    if (reading?.reference) {
+        return reading.reference;
+    }
+
+    return this.getSelectedTextReferenceLabelSync();
 },
 
 getSelectedTextSource: function() {
@@ -3222,8 +3244,8 @@ roundRect: function(ctx, x, y, width, height, radius) {
     ctx.closePath();
 },
     
-   exportReflectionPDF: function(dateStr) {
-    const reading = this.data.find(r => r.date === dateStr);
+   exportReflectionPDF: async function(dateStr) {
+    const reading = await this.getReadingByDate(dateStr);
     if (!reading) return;
 
     if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -3896,7 +3918,7 @@ bindSelectionPanelEvents: function() {
     }
 
 if (this.$selectionShareImageBtn) {
-    this.$selectionShareImageBtn.addEventListener('click', (e) => {
+    this.$selectionShareImageBtn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
@@ -3905,7 +3927,7 @@ if (this.$selectionShareImageBtn) {
             return;
         }
 
-        this.openVerseImageEditor();
+        await this.openVerseImageEditor();
     });
 }
 
@@ -4194,6 +4216,12 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
             if (!response.ok) throw new Error('Error al cargar lecturas');
             this.data = await response.json();
             this.data.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            try {
+                await this.loadReadingIndex();
+            } catch (indexError) {
+                console.warn('[Readings] No se pudo cargar el índice liviano. Se usará readings.json como fallback.', indexError);
+            }
         } catch (error) {
             console.error('Error loading data:', error);
             this.$content.innerHTML = `
@@ -4204,6 +4232,124 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
                 </div>
             `;
         }
+    },
+
+    loadReadingIndex: async function() {
+        if (this.readingIndexLoaded) {
+            return this.readingIndex;
+        }
+
+        if (this.readingIndexLoadPromise) {
+            return this.readingIndexLoadPromise;
+        }
+
+        this.readingIndexLoadPromise = fetch('data/readings/index.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error al cargar índice de lecturas: ${response.status}`);
+                }
+
+                return response.json();
+            })
+            .then(index => {
+                if (!Array.isArray(index)) {
+                    throw new Error('El índice de lecturas no es un arreglo');
+                }
+
+                this.readingIndex = index;
+                this.readingIndexLoaded = true;
+                return this.readingIndex;
+            })
+            .finally(() => {
+                this.readingIndexLoadPromise = null;
+            });
+
+        return this.readingIndexLoadPromise;
+    },
+
+    loadMonthlyReadings: async function(month, file) {
+        const monthKey = String(month || '').trim();
+        const filePath = String(file || `data/readings/${monthKey}.json`).trim();
+
+        if (!monthKey || !filePath) {
+            throw new Error('Mes o archivo mensual inválido');
+        }
+
+        if (this.monthlyReadingsCache[monthKey]) {
+            return this.monthlyReadingsCache[monthKey];
+        }
+
+        if (this.monthlyReadingsLoadPromises[monthKey]) {
+            return this.monthlyReadingsLoadPromises[monthKey];
+        }
+
+        this.monthlyReadingsLoadPromises[monthKey] = fetch(filePath)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Error al cargar lecturas de ${monthKey}: ${response.status}`);
+                }
+
+                return response.json();
+            })
+            .then(readings => {
+                if (!Array.isArray(readings)) {
+                    throw new Error(`El archivo mensual ${filePath} no es un arreglo`);
+                }
+
+                this.monthlyReadingsCache[monthKey] = readings;
+                return readings;
+            })
+            .finally(() => {
+                delete this.monthlyReadingsLoadPromises[monthKey];
+            });
+
+        return this.monthlyReadingsLoadPromises[monthKey];
+    },
+
+    getReadingByDate: async function(dateStr) {
+        const targetDate = String(dateStr || '').trim();
+
+        if (!targetDate) return null;
+
+        try {
+            const index = await this.loadReadingIndex();
+            const indexEntry = index.find(item => item.date === targetDate);
+
+            if (indexEntry) {
+                const monthlyReadings = await this.loadMonthlyReadings(indexEntry.month, indexEntry.file);
+                const reading = monthlyReadings.find(item => item.date === targetDate);
+
+                if (reading) return reading;
+
+                console.warn('[Readings] La lectura no existe dentro del archivo mensual:', targetDate, indexEntry.file);
+            }
+        } catch (error) {
+            console.warn('[Readings] Falló la carga mensual. Se usará readings.json como fallback.', error);
+        }
+
+        return this.data.find(item => item.date === targetDate) || null;
+    },
+
+    getReadingMetadataByDate: function(dateStr) {
+        const targetDate = String(dateStr || '').trim();
+
+        if (!targetDate) return null;
+
+        const metadataSource = this.readingIndexLoaded && this.readingIndex.length > 0
+            ? this.readingIndex
+            : this.data;
+
+        const item = metadataSource.find(reading => reading.date === targetDate);
+
+        if (!item) return null;
+
+        return {
+            date: item.date,
+            reference: item.reference,
+            bookId: item.bookId || null,
+            month: item.month || String(item.date || '').slice(0, 7),
+            file: item.file || null
+        };
     },
     
     navigate: function(view, param = null) {
@@ -4263,7 +4409,7 @@ this.updateNavUI();
     if (!this.homeViewingDate) {
         this.homeViewingDate = this.getTodayDateStr();
     }
-    this.renderHome();
+    await this.renderHome();
 } else if (view === 'bible') {
     this.renderBible();
 } else if (view === 'bible-search') {
@@ -4281,7 +4427,7 @@ this.updateNavUI();
     this.renderSettings();
 } else if (view === 'reading' && param) {
     this.scrollWindowInstantly(0);
-    this.renderReading(param);
+    await this.renderReading(param);
     this.resetReadingScrollPosition();
     requestAnimationFrame(() => {
         this.resetReadingScrollPosition();
@@ -4292,7 +4438,7 @@ this.updateNavUI();
 } else {
     this.currentView = 'home';
     this.updateNavUI();
-    this.renderHome();
+    await this.renderHome();
 }
 },
     
@@ -4328,7 +4474,7 @@ getHomeViewingDate: function() {
     return this.homeViewingDate || this.getTodayDateStr();
 },
 
-changeHomeDay: function(direction) {
+changeHomeDay: async function(direction) {
     const currentDate = this.getHomeViewingDate();
     const currentIndex = this.getReadingIndexByDate(currentDate);
 
@@ -4340,7 +4486,7 @@ changeHomeDay: function(direction) {
 
     this.stopDailyReadingVoice(true);
     this.homeViewingDate = this.data[newIndex].date;
-    this.renderHome();
+    await this.renderHome();
 },
 
 getCleanDailyReadingText: function(reading, rawText = '') {
@@ -5266,11 +5412,11 @@ restoreCalendarPosition: function() {
     this.calendarScrollTop = Math.max(0, top);
 },
     
-   renderHome: function() {
+   renderHome: async function() {
     this.stopDailyReadingVoice(true);
 
     const viewingDate = this.getHomeViewingDate();
-    const reading = this.data.find(r => r.date === viewingDate);
+    const reading = await this.getReadingByDate(viewingDate);
     
     // Verificar si está viendo el día de hoy
     const isToday = viewingDate === this.getTodayDateStr();
@@ -5369,9 +5515,9 @@ restoreCalendarPosition: function() {
     }
 },
     
-    renderReading: function(dateStr) {
+    renderReading: async function(dateStr) {
         this.homeViewingDate = dateStr;
-        this.renderHome();
+        await this.renderHome();
     },
 
 rerenderCurrentReadingView: async function(dateStr = null, force = false) {
@@ -5380,7 +5526,7 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
     if (!force && panelOpen) return;
 
     if (this.currentView === 'home') {
-        this.renderHome();
+        await this.renderHome();
         return;
     }
 
@@ -5390,7 +5536,7 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
     }
 
     const targetDate = dateStr || this.getTodayDateStr();
-    this.renderReading(targetDate);
+    await this.renderReading(targetDate);
 },
     
     renderViewContent: function(reading, isHome = false) {
@@ -6530,14 +6676,50 @@ getBookNameFromReference: function(reference) {
     }) || null;
 },
 
-getCalendarBookGroups: function() {
+getCalendarReadings: function() {
+    const source = this.readingIndexLoaded && this.readingIndex.length > 0
+        ? this.readingIndex
+        : this.data;
+
+    return source
+        .filter(item => item?.date && item?.reference)
+        .map(item => ({
+            date: item.date,
+            reference: item.reference,
+            bookId: item.bookId || null
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+},
+
+getCalendarBookInfo: function(item) {
+    if (item.bookId) {
+        const book = this.bibleBooks.find(bookItem => bookItem.id === item.bookId);
+
+        if (book) {
+            return {
+                id: book.id,
+                name: book.name
+            };
+        }
+    }
+
+    const bookInfo = this.getBookNameFromReference(item.reference)
+        || findBookByReference(item.reference, this.bibleBooks);
+
+    return {
+        id: bookInfo?.id || 'otros',
+        name: bookInfo?.name || bookInfo?.nombre || 'Otras lecturas'
+    };
+},
+
+getCalendarBookGroups: function(items = this.getCalendarReadings()) {
     const groups = [];
     const groupMap = new Map();
 
-    this.data.forEach(item => {
-        const bookInfo = this.getBookNameFromReference(item.reference) || findBookByReference(item.reference, this.bibleBooks);
-        const bookId = bookInfo?.id || 'otros';
-        const bookName = bookInfo?.name || bookInfo?.nombre || 'Otras lecturas';
+    items.forEach(item => {
+        const bookInfo = this.getCalendarBookInfo(item);
+        const bookId = bookInfo.id;
+        const bookName = bookInfo.name;
 
         if (!groupMap.has(bookId)) {
             const group = {
@@ -6854,7 +7036,9 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
 },
 
    renderCalendar: function() {
-    if (this.data.length === 0) {
+    const calendarReadings = this.getCalendarReadings();
+
+    if (calendarReadings.length === 0) {
         this.$content.innerHTML = `<div class="empty-state">📅 No hay lecturas disponibles.</div>`;
         return;
     }
@@ -6862,9 +7046,9 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
     const todayStr = this.getTodayDateStr();
     const readDates = this.getReadDates();
     const readDateSet = new Set(readDates);
-    const groups = this.getCalendarBookGroups();
-    const totalRead = this.data.filter(item => readDateSet.has(item.date)).length;
-    const totalAvailable = this.data.length;
+    const groups = this.getCalendarBookGroups(calendarReadings);
+    const totalRead = calendarReadings.filter(item => readDateSet.has(item.date)).length;
+    const totalAvailable = calendarReadings.length;
     const totalPercentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
 
     let html = `
@@ -6898,7 +7082,7 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
 
    renderCommunity: async function() {
     const todayStr = this.getTodayDateStr();
-    const todayReading = this.data.find(r => r.date === todayStr);
+    const todayReading = this.getReadingMetadataByDate(todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
     
     // Mostrar skeleton loading mientras carga
@@ -8002,7 +8186,7 @@ const noteSection = e.target.closest('.note-section');
           const shareBtn = e.target.closest('[data-action="share-reading"]');
           if (shareBtn) {
             const date = shareBtn.getAttribute('data-date');
-            const reading = this.data.find(r => r.date === date);
+            const reading = await this.getReadingByDate(date);
 
         if (reading) {
         const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
@@ -8048,7 +8232,7 @@ const noteSection = e.target.closest('.note-section');
 const dailyReadingVoiceToggleBtn = e.target.closest('[data-action="daily-reading-voice-toggle"]');
 if (dailyReadingVoiceToggleBtn) {
     const date = dailyReadingVoiceToggleBtn.getAttribute('data-date');
-    const reading = this.data.find(item => item.date === date);
+    const reading = await this.getReadingByDate(date);
     const text = this.getCleanDailyReadingText(reading);
 
     this.pauseOrResumeDailyReadingVoice(date, text);
@@ -8083,13 +8267,17 @@ if (bibleChapterVoiceStopBtn) {
 
 const prevDayBtn = e.target.closest('[data-action="home-prev-day"]');
 if (prevDayBtn) {
-    this.changeHomeDay(-1);
+    this.changeHomeDay(-1).catch(error => {
+        console.warn('[Readings] No se pudo cambiar al día anterior:', error);
+    });
     return;
 }
 
 const nextDayBtn = e.target.closest('[data-action="home-next-day"]');
 if (nextDayBtn) {
-    this.changeHomeDay(1);
+    this.changeHomeDay(1).catch(error => {
+        console.warn('[Readings] No se pudo cambiar al día siguiente:', error);
+    });
     return;
 }
            
@@ -8172,7 +8360,7 @@ if (publishCommunityBtn) {
     }
 
     const todayStr = this.getTodayDateStr();
-    const todayReading = this.data.find(r => r.date === todayStr);
+    const todayReading = this.getReadingMetadataByDate(todayStr);
 
     const newPost = {
         reference: todayReading ? todayReading.reference : 'Lectura del día',
@@ -8368,7 +8556,7 @@ if (communityReactionBtn) {
 const pdfBtn = e.target.closest('[data-action="export-pdf"]');
 if (pdfBtn) {
     const date = pdfBtn.getAttribute('data-date');
-    this.exportReflectionPDF(date);
+    await this.exportReflectionPDF(date);
     return;
 }
 
