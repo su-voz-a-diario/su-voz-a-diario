@@ -445,6 +445,8 @@ const App = {
     
     calendarInitialized: false,
     calendarScrollTop: 0,
+    calendarBookOpenState: {},
+    calendarActiveFilter: 'all',
 
      // ✅ NUEVAS PROPIEDADES PARA OPTIMIZACIÓN
     communityCache: null,           // Para caché de posts
@@ -4278,7 +4280,15 @@ this.updateNavUI();
 } else if (view === 'settings') {
     this.renderSettings();
 } else if (view === 'reading' && param) {
+    this.scrollWindowInstantly(0);
     this.renderReading(param);
+    this.resetReadingScrollPosition();
+    requestAnimationFrame(() => {
+        this.resetReadingScrollPosition();
+        requestAnimationFrame(() => {
+            this.resetReadingScrollPosition();
+        });
+    });
 } else {
     this.currentView = 'home';
     this.updateNavUI();
@@ -5192,21 +5202,65 @@ this.rerenderCurrentReadingView(dateStr, true);
     
    getTodayDateStr,
 
+scrollWindowInstantly: function(top = 0) {
+    const html = document.documentElement;
+    const targetTop = Math.max(0, top);
+
+    html.classList.add('no-smooth-scroll');
+    document.body.classList.add('no-smooth-scroll');
+    html.style.scrollBehavior = 'auto';
+    document.body.style.scrollBehavior = 'auto';
+    html.scrollTop = targetTop;
+    document.body.scrollTop = targetTop;
+    window.scrollTo(0, targetTop);
+
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            html.style.scrollBehavior = '';
+            document.body.style.scrollBehavior = '';
+            html.classList.remove('no-smooth-scroll');
+            document.body.classList.remove('no-smooth-scroll');
+        });
+    });
+},
+
+resetReadingScrollPosition: function() {
+    if (this.$content) {
+        this.$content.scrollTop = 0;
+    }
+
+    document.body.scrollTop = 0;
+    document.documentElement.scrollTop = 0;
+    this.scrollWindowInstantly(0);
+},
+
     saveCalendarScroll: function() {
     this.calendarScrollTop = window.scrollY || window.pageYOffset || 0;
 },
 
 restoreCalendarPosition: function() {
-    const todayCard = this.$content.querySelector('.calendar-day.today');
-    if (!todayCard) return;
+    const calendarCards = Array.from(this.$content.querySelectorAll('.calendar-day[data-calendar-date]'));
+    if (!calendarCards.length) return;
+
+    const todayStr = this.getTodayDateStr();
+    const targetCard = this.$content.querySelector('.calendar-day[data-calendar-today="true"]')
+        || calendarCards.reduce((closest, card) => {
+            const closestDate = new Date(`${closest.dataset.calendarDate}T12:00:00`);
+            const cardDate = new Date(`${card.dataset.calendarDate}T12:00:00`);
+            const todayDate = new Date(`${todayStr}T12:00:00`);
+
+            return Math.abs(cardDate - todayDate) < Math.abs(closestDate - todayDate)
+                ? card
+                : closest;
+        }, calendarCards[0]);
 
     if (this.calendarInitialized) {
-        window.scrollTo(0, this.calendarScrollTop || 0);
+        this.scrollWindowInstantly(this.calendarScrollTop || 0);
         return;
     }
 
-    const top = todayCard.getBoundingClientRect().top + window.scrollY - 100;
-    window.scrollTo(0, Math.max(0, top));
+    const top = targetCard.getBoundingClientRect().top + window.scrollY - 130;
+    this.scrollWindowInstantly(top);
 
     this.calendarInitialized = true;
     this.calendarScrollTop = Math.max(0, top);
@@ -5316,8 +5370,8 @@ restoreCalendarPosition: function() {
 },
     
     renderReading: function(dateStr) {
-        const reading = this.data.find(r => r.date === dateStr);
-        this.renderViewContent(reading, false);
+        this.homeViewingDate = dateStr;
+        this.renderHome();
     },
 
 rerenderCurrentReadingView: async function(dateStr = null, force = false) {
@@ -6453,6 +6507,352 @@ renderBibleReading: async function() {
     }
 },
     
+normalizeCalendarBookText: function(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+},
+
+getBookNameFromReference: function(reference) {
+    const normalizedReference = this.normalizeCalendarBookText(reference);
+    const booksBySpecificName = [...this.bibleBooks].sort((a, b) =>
+        this.normalizeCalendarBookText(b.name).length - this.normalizeCalendarBookText(a.name).length
+    );
+
+    return booksBySpecificName.find(book => {
+        const normalizedName = this.normalizeCalendarBookText(book.name);
+        return normalizedReference === normalizedName
+            || normalizedReference.startsWith(`${normalizedName} `)
+            || normalizedReference.startsWith(`${normalizedName}:`);
+    }) || null;
+},
+
+getCalendarBookGroups: function() {
+    const groups = [];
+    const groupMap = new Map();
+
+    this.data.forEach(item => {
+        const bookInfo = this.getBookNameFromReference(item.reference) || findBookByReference(item.reference, this.bibleBooks);
+        const bookId = bookInfo?.id || 'otros';
+        const bookName = bookInfo?.name || bookInfo?.nombre || 'Otras lecturas';
+
+        if (!groupMap.has(bookId)) {
+            const group = {
+                id: bookId,
+                name: bookName,
+                items: []
+            };
+
+            groupMap.set(bookId, group);
+            groups.push(group);
+        }
+
+        groupMap.get(bookId).items.push(item);
+    });
+
+    return groups.sort((a, b) => {
+        const firstDateA = a.items[0]?.date || '';
+        const firstDateB = b.items[0]?.date || '';
+        return firstDateA.localeCompare(firstDateB);
+    });
+},
+
+getCalendarBookMeta: function(group, readDateSet, todayStr) {
+    const total = group.items.length;
+    const completed = group.items.filter(item => readDateSet.has(item.date)).length;
+    const firstDate = group.items[0]?.date || '';
+    const lastDate = group.items[group.items.length - 1]?.date || '';
+    const isCompleted = total > 0 && completed === total;
+    const isUpcoming = group.items.every(item => item.date > todayStr);
+    const isCurrent = firstDate && lastDate && todayStr >= firstDate && todayStr <= lastDate;
+    const hasPastUnread = group.items.some(item => item.date <= todayStr && !readDateSet.has(item.date));
+    const stateKey = isCompleted
+        ? 'completed'
+        : isUpcoming
+            ? 'upcoming'
+            : isCurrent
+                ? 'current'
+                : hasPastUnread
+                    ? 'pending'
+                    : 'pending';
+    const stateLabelMap = {
+        upcoming: 'Próximo',
+        current: 'En curso',
+        completed: 'Completado',
+        pending: 'Pendiente'
+    };
+
+    return {
+        total,
+        completed,
+        firstDate,
+        lastDate,
+        stateKey,
+        stateLabel: stateLabelMap[stateKey],
+        hasPastUnread,
+        isCompleted,
+        isUpcoming,
+        isCurrent
+    };
+},
+
+getActiveCalendarBookId: function(groups, todayStr) {
+    const groupForToday = groups.find(group => {
+        const firstDate = group.items[0]?.date;
+        const lastDate = group.items[group.items.length - 1]?.date;
+        return firstDate && lastDate && todayStr >= firstDate && todayStr <= lastDate;
+    });
+
+    if (groupForToday) return groupForToday.id;
+
+    const todayDate = new Date(`${todayStr}T12:00:00`);
+    const closestGroup = groups.reduce((closest, group) => {
+        const closestDate = new Date(`${closest.items[0]?.date || todayStr}T12:00:00`);
+        const groupDate = new Date(`${group.items[0]?.date || todayStr}T12:00:00`);
+
+        return Math.abs(groupDate - todayDate) < Math.abs(closestDate - todayDate)
+            ? group
+            : closest;
+    }, groups[0]);
+
+    return closestGroup?.id || '';
+},
+
+renderCalendarBookSelector: function(groups, readDateSet, todayStr) {
+    const activeBookId = this.getActiveCalendarBookId(groups, todayStr);
+
+    return `
+        <nav class="calendar-book-selector" aria-label="Libros del plan">
+            ${groups.map(group => {
+                const meta = this.getCalendarBookMeta(group, readDateSet, todayStr);
+                const isActive = group.id === activeBookId;
+
+                return `
+                    <button
+                        class="calendar-book-selector-btn ${isActive ? 'is-active' : ''}"
+                        type="button"
+                        data-action="jump-calendar-book"
+                        data-book-id="${this.escapeHtml(group.id)}"
+                        aria-current="${isActive ? 'true' : 'false'}">
+                        <span>${this.escapeHtml(group.name)}</span>
+                        <small>${meta.stateLabel}</small>
+                    </button>
+                `;
+            }).join('')}
+        </nav>
+    `;
+},
+
+getCalendarFilterOptions: function() {
+    return [
+        { id: 'all', label: 'Todo' },
+        { id: 'today', label: 'Hoy' },
+        { id: 'pending', label: 'Pend.' },
+        { id: 'upcoming', label: 'Próx.' },
+        { id: 'read', label: 'Leídas' },
+        { id: 'notes', label: 'Reflexión' },
+        { id: 'highlights', label: 'Resaltados' }
+    ];
+},
+
+renderCalendarFilters: function() {
+    const activeFilter = this.calendarActiveFilter || 'all';
+
+    return `
+        <nav class="calendar-filter-bar" aria-label="Filtrar lecturas del calendario">
+            ${this.getCalendarFilterOptions().map(filter => {
+                const isActive = filter.id === activeFilter;
+
+                return `
+                    <button
+                        class="calendar-filter-chip ${isActive ? 'is-active' : ''}"
+                        type="button"
+                        data-action="set-calendar-filter"
+                        data-filter="${this.escapeHtml(filter.id)}"
+                        aria-pressed="${isActive ? 'true' : 'false'}">
+                        ${this.escapeHtml(filter.label)}
+                    </button>
+                `;
+            }).join('')}
+        </nav>
+    `;
+},
+
+filterCalendarItems: function(items, readDateSet, todayStr) {
+    const activeFilter = this.calendarActiveFilter || 'all';
+
+    return items.filter(item => {
+        if (activeFilter === 'today') return item.date === todayStr;
+        if (activeFilter === 'pending') return item.date <= todayStr && !readDateSet.has(item.date);
+        if (activeFilter === 'upcoming') return item.date > todayStr;
+        if (activeFilter === 'read') return readDateSet.has(item.date);
+        if (activeFilter === 'notes') return this.hasNote(item.date);
+        if (activeFilter === 'highlights') return this.hasHighlights(item.date);
+        return true;
+    });
+},
+
+renderCalendarBookSection: function(group, readDateSet, todayStr) {
+    const meta = this.getCalendarBookMeta(group, readDateSet, todayStr);
+    const total = meta.total;
+    const completed = meta.completed;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const firstDate = meta.firstDate;
+    const lastDate = meta.lastDate;
+    const isCompleted = meta.isCompleted;
+    const isUpcoming = meta.isUpcoming;
+    const stateKey = meta.stateKey;
+    const firstReading = group.items[0] || null;
+    const todayReading = group.items.find(item => item.date === todayStr) || null;
+    const nextPendingReading = group.items.find(item => !readDateSet.has(item.date)) || null;
+    const latestCompletedReading = [...group.items].reverse().find(item => readDateSet.has(item.date)) || null;
+    let actionReading = nextPendingReading || firstReading;
+    let actionLabel = 'Continuar pendiente';
+
+    if (isCompleted) {
+        actionReading = firstReading;
+        actionLabel = 'Repasar libro';
+    } else if (todayReading) {
+        actionReading = todayReading;
+        actionLabel = 'Ir a la lectura de hoy';
+    } else if (isUpcoming) {
+        actionReading = firstReading;
+        actionLabel = 'Ver primera lectura';
+    }
+    const pendingLabel = nextPendingReading
+        ? `${this.formatDateEs(nextPendingReading.date)} · ${nextPendingReading.reference}`
+        : 'Todas las lecturas completadas';
+    const latestCompletedLabel = latestCompletedReading
+        ? `${this.formatDateEs(latestCompletedReading.date)} · ${latestCompletedReading.reference}`
+        : 'Aún no hay lecturas completadas';
+    const noteCount = group.items.filter(item => this.hasNote(item.date)).length;
+    const highlightDayCount = group.items.filter(item => this.hasHighlights(item.date)).length;
+    const defaultOpen = stateKey === 'current' || (stateKey === 'pending' && meta.hasPastUnread);
+    const isOpen = Object.prototype.hasOwnProperty.call(this.calendarBookOpenState, group.id)
+        ? this.calendarBookOpenState[group.id]
+        : defaultOpen;
+    const rangeLabel = firstDate && lastDate
+        ? `${this.formatDateEs(firstDate)} - ${this.formatDateEs(lastDate)}`
+        : '';
+    const visibleItems = this.filterCalendarItems(group.items, readDateSet, todayStr);
+
+    return `
+        <section class="calendar-book-road ${isOpen ? 'is-open' : 'is-collapsed'}" data-calendar-book="${this.escapeHtml(group.id)}" id="calendar-book-${this.escapeHtml(group.id)}">
+            <button class="calendar-book-header" type="button" data-action="toggle-calendar-book" data-book-id="${this.escapeHtml(group.id)}" aria-expanded="${isOpen ? 'true' : 'false'}">
+                <div>
+                    <span class="calendar-book-kicker">Libro</span>
+                    <h3>${this.escapeHtml(group.name)}</h3>
+                    <p>${this.escapeHtml(rangeLabel)}</p>
+                </div>
+                <div class="calendar-book-side">
+                    <span class="calendar-book-state calendar-book-state-${stateKey}">
+                        ${meta.stateLabel}
+                    </span>
+                    <div class="calendar-book-progress-summary">
+                        <strong>${completed}/${total}</strong>
+                        <span>${percentage}%</span>
+                    </div>
+                    <span class="calendar-book-toggle">
+                        ${isOpen ? 'Ocultar lecturas' : 'Ver lecturas'}
+                    </span>
+                </div>
+            </button>
+
+            <div class="calendar-book-progress" aria-hidden="true">
+                <span style="width: ${percentage}%"></span>
+            </div>
+
+            <div class="calendar-book-micro-summary">
+                <div class="calendar-book-micro-grid">
+                    <div>
+                        <span>Próxima pendiente</span>
+                        <strong>${this.escapeHtml(pendingLabel)}</strong>
+                    </div>
+                    <div>
+                        <span>Reflexiones</span>
+                        <strong>${noteCount}</strong>
+                    </div>
+                    <div>
+                        <span>Días con resaltados</span>
+                        <strong>${highlightDayCount}</strong>
+                    </div>
+                    <div>
+                        <span>Última completada</span>
+                        <strong>${this.escapeHtml(latestCompletedLabel)}</strong>
+                    </div>
+                </div>
+                ${actionReading ? `
+                    <button class="calendar-book-action" type="button" data-nav="reading" data-param="${this.escapeHtml(actionReading.date)}">
+                        ${actionLabel}
+                    </button>
+                ` : ''}
+            </div>
+
+            ${isCompleted ? `
+                <div class="calendar-book-completion">
+                    <div class="calendar-book-completion-header">
+                        <span>Libro completado</span>
+                        <strong>${this.escapeHtml(group.name)}</strong>
+                        <small>${this.escapeHtml(rangeLabel)}</small>
+                    </div>
+                    <div class="calendar-book-completion-stats">
+                        <div>
+                            <span>Lecturas completadas</span>
+                            <strong>${completed}/${total}</strong>
+                        </div>
+                        <div>
+                            <span>Reflexiones escritas</span>
+                            <strong>${noteCount}</strong>
+                        </div>
+                        <div>
+                            <span>Días con resaltados</span>
+                            <strong>${highlightDayCount}</strong>
+                        </div>
+                    </div>
+                    <p>Has terminado este recorrido. Vuelve a tus notas y resaltados para repasar lo que meditaste.</p>
+                    ${firstReading ? `
+                        <button class="calendar-book-completion-action" type="button" data-nav="reading" data-param="${this.escapeHtml(firstReading.date)}">
+                            Repasar desde el inicio
+                        </button>
+                    ` : ''}
+                </div>
+            ` : ''}
+
+            <div class="calendar-path ${isOpen ? 'is-expanded' : 'is-collapsed'}" ${isOpen ? 'aria-hidden="false"' : 'hidden aria-hidden="true"'}>
+                ${visibleItems.length === 0 ? `
+                    <div class="calendar-filter-empty">No hay lecturas en este filtro.</div>
+                ` : visibleItems.map((item) => {
+                    const isRead = readDateSet.has(item.date);
+                    const isToday = item.date === todayStr;
+                    const readClass = isRead ? 'read' : '';
+                    const todayClass = isToday ? 'today' : '';
+                    const stepNumber = group.items.indexOf(item) + 1;
+
+                    return `
+                        <button class="calendar-day ${readClass} ${todayClass}" type="button" data-nav="reading" data-param="${this.escapeHtml(item.date)}" data-calendar-date="${this.escapeHtml(item.date)}" ${isToday ? 'data-calendar-today="true"' : ''}>
+                            ${isToday ? '<span class="today-badge">HOY</span>' : ''}
+                            <span class="calendar-step">${stepNumber}</span>
+                            <span class="cal-date">${this.escapeHtml(this.formatDateEs(item.date))}</span>
+                            <span class="cal-ref">
+                                ${this.escapeHtml(item.reference)}
+                                <span class="calendar-status-badges">
+                                    ${isRead ? '<span class="read-badge" title="Leído">✓</span>' : ''}
+                                    ${this.hasNote(item.date) ? '<span class="note-badge" title="Tiene reflexión">📝</span>' : ''}
+                                    ${this.hasHighlights(item.date) ? '<span class="highlight-badge" title="Tiene resaltados">✨</span>' : ''}
+                                </span>
+                            </span>
+                            <span class="cal-arrow">Abrir lectura</span>
+                        </button>
+                    `;
+                }).join('')}
+            </div>
+        </section>
+    `;
+},
+
    renderCalendar: function() {
     if (this.data.length === 0) {
         this.$content.innerHTML = `<div class="empty-state">📅 No hay lecturas disponibles.</div>`;
@@ -6460,37 +6860,35 @@ renderBibleReading: async function() {
     }
 
     const todayStr = this.getTodayDateStr();
+    const readDates = this.getReadDates();
+    const readDateSet = new Set(readDates);
+    const groups = this.getCalendarBookGroups();
+    const totalRead = this.data.filter(item => readDateSet.has(item.date)).length;
+    const totalAvailable = this.data.length;
+    const totalPercentage = totalAvailable > 0 ? Math.round((totalRead / totalAvailable) * 100) : 0;
 
     let html = `
     ${this.renderViewHeader(
-        'Calendario de lecturas',
-        'Avanza día a día en el plan y vuelve a tus lecturas guardadas.'
+        'Camino de lectura',
+        'Avanza por libros bíblicos y vuelve a cada lectura guardada.'
     )}
-    <div class="calendar-grid">
+    ${this.renderCalendarBookSelector(groups, readDateSet, todayStr)}
+    ${this.renderCalendarFilters()}
+    <section class="calendar-overview">
+        <div>
+            <span>Plan completo</span>
+            <strong>${totalPercentage}%</strong>
+        </div>
+        <div class="calendar-overview-stats">
+            <span>${totalAvailable} lecturas</span>
+            <span>${totalRead} completadas</span>
+            <span>${groups.length} ${groups.length === 1 ? 'libro' : 'libros'}</span>
+        </div>
+    </section>
+    <div class="calendar-book-list">
+        ${groups.map(group => this.renderCalendarBookSection(group, readDateSet, todayStr)).join('')}
+    </div>
 `;
-
-    this.data.forEach(item => {
-        const dateStr = this.formatDateEs(item.date);
-        const readClass = this.isRead(item.date) ? 'read' : '';
-        const isToday = item.date === todayStr;
-        const todayClass = isToday ? 'today' : '';
-
-        html += `
-            <div class="calendar-day ${readClass} ${todayClass}" data-nav="reading" data-param="${item.date}">
-                ${isToday ? '<div class="today-badge">HOY</div>' : ''}
-                <div class="cal-date">${dateStr}</div>
-                <div class="cal-ref">
-                    ${item.reference}
-                    ${this.isRead(item.date) ? '<span class="read-badge" title="Leído">✓</span>' : ''}
-                    ${this.hasNote(item.date) ? '<span class="note-badge" title="Tiene reflexión">📝</span>' : ''}
-                    ${this.hasHighlights(item.date) ? '<span class="highlight-badge" title="Tiene resaltados">✨</span>' : ''}
-                </div>
-                <div class="cal-arrow">→</div>
-            </div>
-        `;
-    });
-
-    html += '</div>';
     this.$content.innerHTML = html;
 
     requestAnimationFrame(() => {
@@ -7988,6 +8386,47 @@ if (deleteNoteBtn) {
     const date = deleteNoteBtn.getAttribute('data-date');
     this.deleteNote(date);
     this.rerenderCurrentReadingView(date);
+    return;
+}
+
+const calendarFilterBtn = e.target.closest('[data-action="set-calendar-filter"]');
+if (calendarFilterBtn) {
+    const filterId = calendarFilterBtn.getAttribute('data-filter') || 'all';
+    const validFilters = this.getCalendarFilterOptions().map(filter => filter.id);
+
+    if (validFilters.includes(filterId)) {
+        this.calendarActiveFilter = filterId;
+        this.saveCalendarScroll();
+        this.renderCalendar();
+    }
+    return;
+}
+
+const toggleCalendarBookBtn = e.target.closest('[data-action="toggle-calendar-book"]');
+if (toggleCalendarBookBtn) {
+    const bookId = toggleCalendarBookBtn.getAttribute('data-book-id');
+    if (bookId) {
+        const isOpen = toggleCalendarBookBtn.getAttribute('aria-expanded') === 'true';
+        this.calendarBookOpenState[bookId] = !isOpen;
+        this.saveCalendarScroll();
+        this.renderCalendar();
+    }
+    return;
+}
+
+const jumpCalendarBookBtn = e.target.closest('[data-action="jump-calendar-book"]');
+if (jumpCalendarBookBtn) {
+    const bookId = jumpCalendarBookBtn.getAttribute('data-book-id');
+    const target = bookId
+        ? Array.from(this.$content.querySelectorAll('[data-calendar-book]'))
+            .find(section => section.dataset.calendarBook === bookId)
+        : null;
+
+    if (target) {
+        const top = target.getBoundingClientRect().top + window.scrollY - 92;
+        this.scrollWindowInstantly(top);
+        this.calendarScrollTop = Math.max(0, top);
+    }
     return;
 }
 
