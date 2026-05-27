@@ -7003,14 +7003,15 @@ body.light-mode .verse-study-btn:hover {
 .verse-image-actions {
     display: grid;
     grid-template-columns: 0.82fr 0.95fr 1.45fr;
-    gap: 10px;
-    margin-top: 20px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 11px;
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 248, 236, 0.09);
 }
 
 .verse-image-secondary,
 .verse-image-primary {
+    position: relative;
     min-height: 50px;
     border: 1px solid transparent;
     border-radius: 15px;
@@ -7025,27 +7026,32 @@ body.light-mode .verse-study-btn:hover {
 }
 
 .verse-image-secondary {
-    border-color: rgba(255, 255, 255, 0.095);
-    background: rgba(255, 255, 255, 0.055);
-    color: rgba(255, 248, 236, 0.62);
+    border-color: rgba(255, 248, 236, 0.08);
+    background: rgba(255, 255, 255, 0.036);
+    color: rgba(255, 248, 236, 0.52);
 }
 
 .verse-image-primary {
-    border-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 248, 236, 0.13);
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.055));
+        linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.046));
     color: rgba(255, 248, 236, 0.78);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 8px 18px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.09);
 }
 
 .verse-image-primary.strong {
-    border-color: rgba(205, 172, 112, 0.56);
+    border-color: rgba(217, 189, 130, 0.64);
     background:
-        linear-gradient(135deg, #8f6b3d, #b89056);
+        radial-gradient(circle at 22% 18%, rgba(255, 248, 236, 0.18), transparent 30%),
+        linear-gradient(135deg, #876338, #b28750 62%, #c09a5f);
     color: #fff8ec;
     box-shadow:
-        0 16px 34px rgba(177, 137, 78, 0.22),
-        inset 0 1px 0 rgba(255, 255, 255, 0.24);
+        0 16px 34px rgba(177, 137, 78, 0.24),
+        0 4px 14px rgba(0, 0, 0, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.26),
+        inset 0 -1px 0 rgba(78, 48, 21, 0.24);
 }
 
 @media (max-width: 420px) {
@@ -7135,9 +7141,9 @@ body.light-mode .verse-study-btn:hover {
     }
 
     .verse-image-actions {
-        gap: 6px;
-        margin-top: 14px;
-        padding-top: 10px;
+        gap: 7px;
+        margin-top: 15px;
+        padding-top: 11px;
         grid-template-columns: 0.72fr 0.95fr 1.48fr;
     }
 
