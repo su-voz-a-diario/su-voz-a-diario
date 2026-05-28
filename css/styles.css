@@ -3126,6 +3126,45 @@ body.dark-mode .devotional-step-tab.active {
     line-height: 1.45;
 }
 
+.community-load-more {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0 2px;
+}
+
+.community-load-more-btn {
+    min-height: 40px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+    border-radius: 999px;
+    padding: 0 16px;
+    background: color-mix(in srgb, var(--surface-color) 92%, var(--bg-color));
+    color: var(--text-main);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.84rem;
+    font-weight: 750;
+    transition: border-color 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+}
+
+.community-load-more-btn:hover:not(:disabled) {
+    border-color: rgba(49, 130, 206, 0.28);
+    color: var(--accent);
+    background: rgba(49, 130, 206, 0.06);
+}
+
+.community-load-more-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
+}
+
+.community-load-more-end {
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 650;
+    line-height: 1.35;
+    text-align: center;
+}
+
 .community-header {
     text-align: center;
     margin: 4px 0 6px 0;
@@ -3478,6 +3517,16 @@ body.dark-mode .community-activity-signal {
 
 body.dark-mode .community-empty-state {
     background: rgba(255, 255, 255, 0.022);
+}
+
+body.dark-mode .community-load-more-btn {
+    background: rgba(255, 255, 255, 0.032);
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode .community-load-more-btn:hover:not(:disabled) {
+    background: rgba(96, 165, 250, 0.11);
+    border-color: rgba(96, 165, 250, 0.24);
 }
 
 body.dark-mode .community-activity-empty-mark,

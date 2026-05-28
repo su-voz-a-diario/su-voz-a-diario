@@ -68,6 +68,8 @@ const addDoc = (...args) => getFirebaseFunction('addDoc')(...args);
 const getDocs = (...args) => getFirebaseFunction('getDocs')(...args);
 const query = (...args) => getFirebaseFunction('query')(...args);
 const orderBy = (...args) => getFirebaseFunction('orderBy')(...args);
+const limit = (...args) => getFirebaseFunction('limit')(...args);
+const startAfter = (...args) => getFirebaseFunction('startAfter')(...args);
 const serverTimestamp = (...args) => getFirebaseFunction('serverTimestamp')(...args);
 const deleteDoc = (...args) => getFirebaseFunction('deleteDoc')(...args);
 const doc = (dbArg, ...args) => getFirebaseFunction('doc')(dbArg || window.firebaseDb, ...args);
@@ -436,6 +438,11 @@ const App = {
     openReplyPostId: null,
     replyDrafts: {},
     replyCharLimit: 300,
+    communityPageSize: 20,
+    communityLastVisible: null,
+    communityHasMorePosts: true,
+    communityLoadingMore: false,
+    communityPostsLoaded: false,
     previousView: null,
     dailyReadingVoice: {
         utterance: null,
@@ -1374,18 +1381,39 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
     return `su-voz-note-${dateStr}`;
     },
 
-   async getCommunityPosts() {
+   async getCommunityPosts(options = {}) {
     try {
-        const q = query(collection(db, "communityPosts"), orderBy("createdAt", "desc"));
+        const pageSize = options.pageSize || this.communityPageSize || 20;
+        const constraints = [
+            orderBy("createdAt", "desc")
+        ];
+
+        if (options.startAfterDoc) {
+            constraints.push(startAfter(options.startAfterDoc));
+        }
+
+        constraints.push(limit(pageSize));
+
+        const q = query(collection(db, "communityPosts"), ...constraints);
         const snapshot = await getDocs(q);
 
-        return snapshot.docs.map(docSnap => ({
+        const posts = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
         }));
+
+        return {
+            posts,
+            lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
+            hasMore: snapshot.docs.length === pageSize
+        };
     } catch (error) {
         console.error("Error cargando posts:", error);
-        return [];
+        return {
+            posts: [],
+            lastVisible: null,
+            hasMore: false
+        };
     }
 },
 
@@ -1398,25 +1426,93 @@ getCommunityPostsCached: async function() {
     const CACHE_DURATION = 30000; // 30 segundos de caché
     const now = Date.now();
     
-    if (this.communityCache && 
-        this.communityCache.posts && 
-        (now - this.communityCache.timestamp) < CACHE_DURATION) {
+    if (this.communityCache &&
+        this.communityCache.posts &&
+        (
+            (now - this.communityCache.timestamp) < CACHE_DURATION ||
+            this.communityCache.posts.length > this.communityPageSize
+        )) {
         console.log('[Community] Usando caché de posts');
+        this.communityLastVisible = this.communityCache.lastVisible || null;
+        this.communityHasMorePosts = Boolean(this.communityCache.hasMore);
+        this.communityPostsLoaded = true;
         return this.communityCache.posts;
     }
     
-    console.log('[Community] Cargando posts desde Firestore');
-    const posts = await this.getCommunityPosts();
+    console.log('[Community] Cargando primera página desde Firestore');
+    const page = await this.getCommunityPosts({
+        pageSize: this.communityPageSize
+    });
+    const posts = page.posts;
+
+    this.communityLastVisible = page.lastVisible;
+    this.communityHasMorePosts = page.hasMore;
+    this.communityPostsLoaded = true;
     this.communityCache = {
-    posts,
-    timestamp: now
-};
+        posts,
+        lastVisible: page.lastVisible,
+        hasMore: page.hasMore,
+        timestamp: now
+    };
     return posts;
+},
+
+loadMoreCommunityPosts: async function() {
+    if (this.communityLoadingMore || !this.communityHasMorePosts) {
+        return this.communityCache?.posts || [];
+    }
+
+    this.communityLoadingMore = true;
+
+    try {
+        if (!this.communityPostsLoaded || !this.communityCache?.posts) {
+            await this.getCommunityPostsCached();
+        }
+
+        if (!this.communityLastVisible) {
+            this.communityHasMorePosts = false;
+            if (this.communityCache) {
+                this.communityCache.hasMore = false;
+            }
+            return this.communityCache?.posts || [];
+        }
+
+        const page = await this.getCommunityPosts({
+            pageSize: this.communityPageSize,
+            startAfterDoc: this.communityLastVisible
+        });
+
+        const existingPosts = this.communityCache?.posts || [];
+        const existingIds = new Set(existingPosts.map(post => post.id));
+        const nextPosts = page.posts.filter(post => !existingIds.has(post.id));
+        const posts = [...existingPosts, ...nextPosts];
+
+        this.communityLastVisible = page.lastVisible || this.communityLastVisible;
+        this.communityHasMorePosts = page.hasMore;
+        this.communityPostsLoaded = true;
+        this.communityCache = {
+            posts,
+            lastVisible: this.communityLastVisible,
+            hasMore: this.communityHasMorePosts,
+            timestamp: Date.now()
+        };
+
+        return posts;
+    } catch (error) {
+        console.error('[Community] Error cargando más posts:', error);
+        return this.communityCache?.posts || [];
+    } finally {
+        this.communityLoadingMore = false;
+    }
 },
 
 // Invalidar caché (llamar después de publicar/eliminar)
 invalidateCommunityCache: function() {
     this.communityCache = null;
+    this.communityLastVisible = null;
+    this.communityHasMorePosts = true;
+    this.communityLoadingMore = false;
+    this.communityPostsLoaded = false;
     console.log('[Community] Caché invalidada');
 },
 
@@ -7089,22 +7185,25 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
 });
 },
 
-   renderCommunity: async function() {
+   renderCommunity: async function(options = {}) {
     const todayStr = this.getTodayDateStr();
     const todayReading = this.getReadingMetadataByDate(todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
+    const showSkeleton = options.showSkeleton !== false;
     
     // Mostrar skeleton loading mientras carga
-    this.$content.innerHTML = `
-        <div class="community-container">
-            <div class="skeleton-loading">
-                <div class="skeleton-header"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
-                <div class="skeleton-card"></div>
+    if (showSkeleton) {
+        this.$content.innerHTML = `
+            <div class="community-container">
+                <div class="skeleton-loading">
+                    <div class="skeleton-header"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                    <div class="skeleton-card"></div>
+                </div>
             </div>
-        </div>
-    `;
+        `;
+    }
     
    // Cargar posts primero
 const posts = await this.getCommunityPostsCached();
@@ -7311,6 +7410,23 @@ const hasCommunityActivity = posts.length > 0;
                     </div>
                 `}
             </div>
+
+            ${posts.length ? `
+                <div class="community-load-more">
+                    ${this.communityHasMorePosts ? `
+                        <button
+                            class="community-load-more-btn"
+                            type="button"
+                            data-action="load-more-community-posts"
+                            ${this.communityLoadingMore ? 'disabled' : ''}
+                        >
+                            ${this.communityLoadingMore ? 'Cargando...' : 'Cargar más reflexiones'}
+                        </button>
+                    ` : `
+                        <div class="community-load-more-end">Has llegado al inicio de las reflexiones compartidas.</div>
+                    `}
+                </div>
+            ` : ''}
         </div>
     `;
     
@@ -8384,6 +8500,20 @@ if (shareCommunityBtn) {
 
    this.handleRoute().catch(error => {
     console.error('[Route] Error actualizando comunidad:', error);
+    });
+    return;
+}
+
+const loadMoreCommunityBtn = e.target.closest('[data-action="load-more-community-posts"]');
+if (loadMoreCommunityBtn) {
+    this.saveCommunityScrollPosition();
+    loadMoreCommunityBtn.disabled = true;
+    loadMoreCommunityBtn.textContent = 'Cargando...';
+
+    await this.loadMoreCommunityPosts();
+
+    this.renderCommunity({ showSkeleton: false }).catch(error => {
+        console.error('[Community] Error cargando más reflexiones:', error);
     });
     return;
 }
