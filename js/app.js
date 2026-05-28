@@ -1649,6 +1649,7 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
                     title="${item.label}"
                 >
                     <span class="community-reaction-icon">${this.getReactionIcon(item.key)}</span>
+                    <span class="community-reaction-label">${item.label}</span>
                     <span class="community-reaction-count">${state.counts[item.key] || 0}</span>
                 </button>
             `).join('')}
@@ -1660,17 +1661,24 @@ renderReplyBlock: function(post, replies = []) {
     const isOpen = this.openReplyPostId === post.id;
     const draft = this.getReplyDraft(post.id);
     const replyCount = replies.length;
+    const replyCountLabel = replyCount === 1 ? '1 respuesta' : `${replyCount} respuestas`;
 
     return `
         <div class="community-reply-block">
             <div class="community-reply-toolbar">
+                ${replyCount > 0 ? `
+                    <div class="community-reply-count">
+                        ${replyCountLabel}
+                    </div>
+                ` : (isOpen ? '<div class="community-reply-count is-empty">Sin respuestas aún</div>' : '<div></div>')}
+
                 <button
                     class="community-reply-toggle"
                     type="button"
                     data-action="toggle-reply-form"
                     data-post-id="${post.id}"
                 >
-                    💬 ${replyCount > 0 ? `Responder · ${replyCount}` : 'Responder'}
+                    ${isOpen ? 'Cerrar respuesta' : 'Responder'}
                 </button>
             </div>
 
@@ -1714,6 +1722,7 @@ renderReplyBlock: function(post, replies = []) {
 
             ${replies.length ? `
                 <div class="community-reply-list">
+                    <div class="community-reply-list-title">Respuestas</div>
                     ${replies.map(reply => `
                         <div class="community-reply-item">
                             <div class="community-reply-meta">
@@ -7105,17 +7114,49 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     this.getCommunityReactionSummary(posts),
     this.getRepliesSummary(posts)
 ]);
+
+const totalReplies = Object.values(repliesSummary)
+    .reduce((total, replies) => total + (Array.isArray(replies) ? replies.length : 0), 0);
+const totalReactions = Object.values(reactionSummary)
+    .reduce((total, state) => {
+        const counts = state?.counts || {};
+        return total + Object.values(counts)
+            .reduce((countTotal, value) => countTotal + (Number(value) || 0), 0);
+    }, 0);
+const latestActivityLabel = posts.length
+    ? this.formatCommunityDateLabel(posts[0].date)
+    : 'Sin actividad aún';
+const reflectionsText = posts.length === 1 ? 'reflexión' : 'reflexiones';
+const repliesText = totalReplies === 1 ? 'respuesta' : 'respuestas';
+const reactionsText = totalReactions === 1 ? 'gracias' : 'gracias';
+const hasCommunityActivity = posts.length > 0;
     
     // Renderizar el contenido
     this.$content.innerHTML = `
         <div class="community-container">
-            ${this.renderViewHeader(
-                'Comunidad',
-                'Comparte reflexiones edificantes basadas en la lectura del día.'
-            )}
+            <section class="community-hero">
+                <div>
+                    <div class="community-hero-kicker">Su Voz a Diario</div>
+                    <h2>Comunidad</h2>
+                    <p>Reflexiones breves de la lectura de hoy.</p>
+                </div>
+            </section>
 
-            <div class="community-intro-card">
-                <div class="community-intro-title">Antes de compartir</div>
+            <div class="community-composer-card">
+                <div class="community-composer-copy">
+                    <div class="community-composer-question">¿Qué te habló la lectura de hoy?</div>
+                    <div class="community-composer-reference">${this.escapeHtml(todayReference)}</div>
+                </div>
+                <button class="community-composer-btn" type="button" data-action="share-community-reflection">
+                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir reflexión'}
+                </button>
+            </div>
+
+            <details class="community-guidelines">
+                <summary>
+                    <span>Antes de compartir</span>
+                    <span class="community-guidelines-hint">Ver normas</span>
+                </summary>
                 <div class="community-intro-text">
                     Este espacio existe para compartir reflexiones edificantes basadas en la lectura del día.
                     Publica con respeto, claridad y sencillez. Evita discusiones, ataques personales,
@@ -7123,13 +7164,7 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                     <br><br>
                     Lo que publiques aquí podrá ser visible para otros usuarios y moderado por la aplicación.
                 </div>
-            </div>
-
-            <div class="main-action">
-                <button class="btn-primary" data-action="share-community-reflection">
-                   ${this.communityFormOpen ? 'Cerrar formulario' : '📢 Comparte Su voz a otros'}
-                </button>
-            </div>
+            </details>
 
             ${this.communityFormOpen ? `
                 <div class="community-form-card">
@@ -7186,20 +7221,70 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                 </div>
             ` : ''}
 
+            <section class="community-activity-card" aria-label="Actividad de la comunidad">
+                ${hasCommunityActivity ? `
+                    <div class="community-activity-head">
+                        <div class="community-activity-title">Compartiendo hoy</div>
+                        <div class="community-activity-subtitle">Señal: ${this.escapeHtml(latestActivityLabel)}</div>
+                    </div>
+
+                    <div class="community-activity-signals">
+                        <div class="community-activity-signal">
+                            <strong>${posts.length}</strong>
+                            <span>${this.escapeHtml(reflectionsText)}</span>
+                        </div>
+                        <div class="community-activity-signal">
+                            <strong>${totalReplies}</strong>
+                            <span>${this.escapeHtml(repliesText)}</span>
+                        </div>
+                        <div class="community-activity-signal">
+                            <strong>${totalReactions}</strong>
+                            <span>${this.escapeHtml(reactionsText)}</span>
+                        </div>
+                    </div>
+                ` : `
+                    <div class="community-activity-empty">
+                        <div class="community-activity-empty-mark" aria-hidden="true">+</div>
+                        <div>
+                            <div class="community-activity-title">La comunidad espera nuevas reflexiones</div>
+                            <div class="community-activity-subtitle">Tu reflexión puede animar a otros hoy.</div>
+                        </div>
+                    </div>
+                `}
+            </section>
+
+            <div class="community-feed-heading">
+                <div>
+                    <h3>Lo que la comunidad está meditando</h3>
+                </div>
+            </div>
+
             <div class="community-feed">
                 ${posts.length ? posts.map(post => {
                     const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
                     const replies = repliesSummary[post.id] || [];
+                    const authorName = post.name || 'Anónimo';
+                    const authorInitial = (authorName.trim().charAt(0) || 'A').toUpperCase();
 
                     return `
                         <div class="community-card">
-                            <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+                            <div class="community-post-header">
+                                <div class="community-avatar" aria-hidden="true">
+                                    ${this.escapeHtml(authorInitial)}
+                                </div>
 
-                            <div class="community-meta">
-                                ${this.escapeHtml(post.name)} · ${this.escapeHtml(this.formatCommunityDateLabel(post.date))}
+                                <div class="community-post-heading">
+                                    <div class="community-author-row">
+                                        <span class="community-author">${this.escapeHtml(authorName)}</span>
+                                        <span class="community-meta-dot" aria-hidden="true"></span>
+                                        <span class="community-date">${this.escapeHtml(this.formatCommunityDateLabel(post.date))}</span>
+                                    </div>
+
+                                    <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+                                </div>
                             </div>
 
-                           <div class="community-text">“${this.escapeHtml(post.text)}”</div>
+                           <div class="community-text">${this.escapeHtml(post.text)}</div>
 
                                 <div class="community-reaction-row">
                                     ${this.renderCommunityReactionBar(post.id, reactionData)}
@@ -7217,10 +7302,11 @@ const [reactionSummary, repliesSummary] = await Promise.all([
                         </div>
                     `;
                 }).join('') : `
-                    <div class="community-intro-card">
-                        <div class="community-intro-title">Aún no hay publicaciones</div>
-                        <div class="community-intro-text">
-                            Sé la primera persona en compartir una reflexión basada en la lectura del día.
+                    <div class="community-empty-state">
+                        <div class="community-empty-icon" aria-hidden="true">+</div>
+                        <div class="community-empty-title">Aún no hay reflexiones compartidas</div>
+                        <div class="community-empty-text">
+                            Sé la primera persona en compartir lo que Dios habló hoy.
                         </div>
                     </div>
                 `}
