@@ -470,126 +470,126 @@
   },
   {
     "date": "2026-06-13",
-    "reference": "1 Timoteo 1:1-11",
-    "bookId": "1ti",
+    "reference": "II Timoteo 1:1-8",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-14",
-    "reference": "1 Timoteo 1:12-20",
-    "bookId": "1ti",
+    "reference": "II Timoteo 1:9-18",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-15",
-    "reference": "1 Timoteo 2:1-15",
-    "bookId": "1ti",
+    "reference": "II Timoteo 2:1-13",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-16",
-    "reference": "1 Timoteo 3:1-16",
-    "bookId": "1ti",
+    "reference": "II Timoteo 2:14-26",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-17",
-    "reference": "1 Timoteo 4:1-16",
-    "bookId": "1ti",
+    "reference": "II Timoteo 3:1-9",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-18",
-    "reference": "1 Timoteo 5:1-16",
-    "bookId": "1ti",
+    "reference": "II Timoteo 3:10-18",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-19",
-    "reference": "1 Timoteo 5:17-25",
-    "bookId": "1ti",
+    "reference": "II Timoteo 4:1-8",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-20",
-    "reference": "1 Timoteo 6:1-10",
-    "bookId": "1ti",
+    "reference": "II Timoteo 4:9-22",
+    "bookId": "2ti",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-21",
-    "reference": "1 Timoteo 6:11-21",
-    "bookId": "1ti",
+    "reference": "Miqueas 1:1-16",
+    "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
     "date": "2026-06-22",
-    "reference": "Miqueas 1:1-7",
-    "bookId": "mic",
-    "month": "2026-06",
-    "file": "data/readings/2026-06.json"
-  },
-  {
-    "date": "2026-06-23",
-    "reference": "Miqueas 1:8-16",
-    "bookId": "mic",
-    "month": "2026-06",
-    "file": "data/readings/2026-06.json"
-  },
-  {
-    "date": "2026-06-24",
     "reference": "Miqueas 2:1-13",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
-    "date": "2026-06-25",
+    "date": "2026-06-23",
     "reference": "Miqueas 3:1-12",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
-    "date": "2026-06-26",
+    "date": "2026-06-24",
     "reference": "Miqueas 4:1-13",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
-    "date": "2026-06-27",
+    "date": "2026-06-25",
     "reference": "Miqueas 5:1-15",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
-    "date": "2026-06-28",
+    "date": "2026-06-26",
     "reference": "Miqueas 6:1-8",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
-    "date": "2026-06-29",
+    "date": "2026-06-27",
     "reference": "Miqueas 6:9-16",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
   },
   {
+    "date": "2026-06-28",
+    "reference": "Miqueas 7:1-6",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-29",
+    "reference": "Miqueas 7:7-13",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
     "date": "2026-06-30",
-    "reference": "Miqueas 7:1-20",
+    "reference": "Miqueas 7:14-20",
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
