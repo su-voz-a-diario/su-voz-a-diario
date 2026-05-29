@@ -7303,16 +7303,6 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                 </div>
             </section>
 
-            <div class="community-composer-card">
-                <div class="community-composer-copy">
-                    <div class="community-composer-question">¿Qué te habló la lectura de hoy?</div>
-                    <div class="community-composer-reference">${this.escapeHtml(todayReference)}</div>
-                </div>
-                <button class="community-composer-btn" type="button" data-action="share-community-reflection">
-                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir reflexión'}
-                </button>
-            </div>
-
             <details class="community-guidelines">
                 <summary>
                     <span>Antes de compartir</span>
@@ -7327,44 +7317,49 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                 </div>
             </details>
 
+            <div class="community-composer-card">
+                <div class="community-composer-copy">
+                    <div class="community-composer-question">¿Qué te habló la lectura de hoy?</div>
+                    <div class="community-composer-reference">${this.escapeHtml(todayReference)}</div>
+                </div>
+                <button class="community-composer-btn" type="button" data-action="share-community-reflection">
+                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir reflexión'}
+                </button>
+            </div>
+
             ${this.communityFormOpen ? `
                 <div class="community-form-card">
-                    <div class="community-form-title">Compartir reflexión</div>
+                    <div class="community-form-title">Compartir lo meditado</div>
 
-                    <div class="community-form-group">
-                        <label class="community-label">Pasaje</label>
-                        <input 
-                            type="text" 
-                            class="community-input" 
-                            value="${todayReference}" 
-                            readonly
-                        >
-                    </div>
-
-                    <div class="community-form-group">
-                        <label class="community-label">Nombre</label>
-                        <input 
-                            type="text" 
-                            class="community-input" 
-                            id="community-name" 
-                            placeholder="Se publicará como Anónimo"
-                            disabled
-                        >
+                    <div class="community-passage-context">
+                        <span>Lectura de hoy</span>
+                        <strong>${this.escapeHtml(todayReference)}</strong>
                     </div>
 
                     <div class="community-form-group community-check-group">
                         <label class="community-check-label">
                             <input type="checkbox" id="community-anonymous" checked>
-                            Publicar como Anónimo
+                            <span>Publicar como Anónimo</span>
                         </label>
                     </div>
 
+                    <div class="community-form-group community-name-group is-hidden">
+                        <label class="community-label" for="community-name">Nombre</label>
+                        <input
+                            type="text"
+                            class="community-input"
+                            id="community-name"
+                            placeholder="Escribe tu nombre"
+                            disabled
+                        >
+                    </div>
+
                     <div class="community-form-group">
-                        <label class="community-label">Tu reflexión</label>
+                        <label class="community-label" for="community-reflection">Comparte brevemente lo que aprendiste</label>
                         <textarea 
                             class="community-textarea" 
                             id="community-reflection" 
-                            placeholder="Escribe aquí lo que Dios te habló a través de este pasaje..."
+                            placeholder="Escribe una reflexión sencilla que pueda animar a otros..."
                             maxlength="1200"
                         >${this.escapeHtml(communityDraft)}</textarea>
 
@@ -8977,15 +8972,18 @@ if (e.target.id === 'bible-search-input') {
         this.$content.addEventListener('change', (e) => {
     if (e.target.id === 'community-anonymous') {
         const nameInput = document.getElementById('community-name');
+        const nameGroup = nameInput?.closest('.community-name-group');
         if (!nameInput) return;
 
         if (e.target.checked) {
             nameInput.value = '';
             nameInput.disabled = true;
             nameInput.placeholder = 'Se publicará como Anónimo';
+            nameGroup?.classList.add('is-hidden');
         } else {
             nameInput.disabled = false;
             nameInput.placeholder = 'Escribe tu nombre';
+            nameGroup?.classList.remove('is-hidden');
             nameInput.focus();
         }
     }
