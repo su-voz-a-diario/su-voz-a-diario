@@ -2912,9 +2912,10 @@ body.dark-mode .devotional-step-tab.active {
 .community-composer-btn {
     flex: 0 0 auto;
     min-height: 40px;
+    max-width: 13.5rem;
     border: none;
     border-radius: 12px;
-    padding: 0 14px;
+    padding: 8px 14px;
     background: var(--accent);
     color: #fff;
     box-shadow: 0 7px 16px rgba(49, 130, 206, 0.22);
@@ -2922,6 +2923,7 @@ body.dark-mode .devotional-step-tab.active {
     font-family: var(--font-ui);
     font-size: 0.86rem;
     font-weight: 750;
+    line-height: 1.15;
 }
 
 .community-guidelines {
@@ -3073,7 +3075,50 @@ body.dark-mode .devotional-step-tab.active {
     color: var(--text-muted);
     font-size: 0.68rem;
     font-weight: 650;
-    line-height: 1.15;
+    line-height: 1.2;
+    white-space: normal;
+}
+
+.community-featured-echo {
+    display: grid;
+    gap: 7px;
+    padding: 12px 13px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+    border-radius: 16px;
+    background:
+        linear-gradient(135deg, rgba(49, 130, 206, 0.055), transparent 52%),
+        color-mix(in srgb, var(--surface-color) 94%, var(--bg-color));
+}
+
+.community-featured-label {
+    width: fit-content;
+    color: var(--accent);
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.community-featured-text {
+    color: var(--text-main);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+.community-featured-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.community-featured-meta span {
+    min-width: 0;
 }
 
 .community-feed-heading {
@@ -3220,6 +3265,10 @@ body.dark-mode .devotional-step-tab.active {
     transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+.community-voice-card {
+    border-color: color-mix(in srgb, var(--border-color) 88%, rgba(49, 130, 206, 0.2));
+}
+
 .community-card:hover {
     transform: translateY(-1px);
     box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
@@ -3275,6 +3324,15 @@ body.dark-mode .devotional-step-tab.active {
     text-overflow: ellipsis;
     white-space: nowrap;
     color: var(--text-main);
+    font-weight: 750;
+}
+
+.community-author.has-name {
+    font-weight: 850;
+}
+
+.community-author.is-anonymous {
+    color: color-mix(in srgb, var(--text-main) 72%, var(--text-muted));
     font-weight: 750;
 }
 
@@ -3568,6 +3626,12 @@ body.dark-mode .community-activity-card {
         rgba(255, 255, 255, 0.025);
 }
 
+body.dark-mode .community-featured-echo {
+    background:
+        linear-gradient(135deg, rgba(96, 165, 250, 0.055), transparent 52%),
+        rgba(255, 255, 255, 0.026);
+}
+
 body.dark-mode .community-activity-signal {
     background: rgba(255, 255, 255, 0.028);
     border-color: rgba(255, 255, 255, 0.065);
@@ -3633,10 +3697,11 @@ body.dark-mode .community-empty-icon {
     }
 
     .community-composer-btn {
-        min-height: 34px;
-        padding: 0 10px;
-        font-size: 0.78rem;
-        white-space: nowrap;
+        max-width: 9.2rem;
+        min-height: 38px;
+        padding: 7px 10px;
+        font-size: 0.76rem;
+        white-space: normal;
     }
 
     .community-guidelines summary {
@@ -3705,7 +3770,23 @@ body.dark-mode .community-empty-icon {
     }
 
     .community-activity-signal span {
-        font-size: 0.58rem;
+        font-size: 0.57rem;
+        line-height: 1.15;
+    }
+
+    .community-featured-echo {
+        gap: 6px;
+        padding: 10px 11px;
+        border-radius: 14px;
+    }
+
+    .community-featured-text {
+        font-size: 0.84rem;
+        line-height: 1.45;
+    }
+
+    .community-featured-meta {
+        font-size: 0.66rem;
     }
 
     .community-feed-heading {
@@ -3744,7 +3825,7 @@ body.dark-mode .community-empty-icon {
         margin-bottom: 12px;
     }
 
-    .community-avatar {
+.community-avatar {
         width: 36px;
         height: 36px;
         font-size: 0.84rem;
@@ -3770,6 +3851,18 @@ body.dark-mode .community-empty-icon {
     .community-reply-toggle {
         min-height: 36px;
     }
+}
+
+.community-avatar.has-name {
+    color: var(--primary);
+    border-color: rgba(49, 130, 206, 0.24);
+}
+
+.community-avatar.is-anonymous {
+    background:
+        linear-gradient(135deg, rgba(148, 163, 184, 0.13), rgba(49, 130, 206, 0.045)),
+        var(--bg-color);
+    color: color-mix(in srgb, var(--accent) 75%, var(--text-muted));
 }
 
 /* ========================================

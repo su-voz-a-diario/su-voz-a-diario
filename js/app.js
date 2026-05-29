@@ -1781,7 +1781,7 @@ renderCommunityReactionBar: function(postId, reactionData = null) {
     const state = reactionData || this.getEmptyCommunityReactionState();
 
   const reactions = [
-    { key: 'useful', label: 'Me sirve' },
+    { key: 'useful', label: 'Me habló' },
     { key: 'thanks', label: 'Gracias' }
 ];
 
@@ -1810,7 +1810,12 @@ renderReplyBlock: function(post, replies = []) {
     const isOpen = this.openReplyPostId === post.id;
     const draft = this.getReplyDraft(post.id);
     const replyCount = replies.length;
-    const replyCountLabel = replyCount === 1 ? '1 respuesta' : `${replyCount} respuestas`;
+    const replyCountLabel = replyCount === 1
+        ? '1 hermano participó'
+        : `${replyCount} hermanos participaron`;
+    const replyToggleLabel = isOpen
+        ? 'Cerrar conversación'
+        : (replyCount > 0 ? 'Ver conversación' : 'Responder');
 
     return `
         <div class="community-reply-block">
@@ -1819,7 +1824,7 @@ renderReplyBlock: function(post, replies = []) {
                     <div class="community-reply-count">
                         ${replyCountLabel}
                     </div>
-                ` : (isOpen ? '<div class="community-reply-count is-empty">Sin respuestas aún</div>' : '<div></div>')}
+                ` : (isOpen ? '<div class="community-reply-count is-empty">Sé el primero en responder</div>' : '<div></div>')}
 
                 <button
                     class="community-reply-toggle"
@@ -1827,7 +1832,7 @@ renderReplyBlock: function(post, replies = []) {
                     data-action="toggle-reply-form"
                     data-post-id="${post.id}"
                 >
-                    ${isOpen ? 'Cerrar respuesta' : 'Responder'}
+                    ${replyToggleLabel}
                 </button>
             </div>
 
@@ -7285,12 +7290,27 @@ const totalReactions = Object.values(reactionSummary)
 const latestActivityLabel = posts.length
     ? this.formatCommunityDateLabel(posts[0].date)
     : 'Sin actividad aún';
-const reflectionsText = posts.length === 1 ? 'reflexión' : 'reflexiones';
-const repliesText = totalReplies === 1 ? 'respuesta' : 'respuestas';
-const reactionsText = totalReactions === 1 ? 'gracias' : 'gracias';
 const hasCommunityActivity = posts.length > 0;
 const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
 const hasCommunityDraft = Boolean(communityDraft.trim());
+const highlightedPost = posts.length ? posts
+    .map(post => {
+        const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
+        const replies = repliesSummary[post.id] || [];
+        const counts = reactionData.counts || {};
+        const usefulCount = Number(counts.useful) || 0;
+        const thanksCount = Number(counts.thanks) || 0;
+
+        return {
+            post,
+            replies,
+            usefulCount,
+            thanksCount,
+            score: (usefulCount * 2) + thanksCount + (replies.length * 1.5)
+        };
+    })
+    .sort((a, b) => b.score - a.score || Number(b.post.createdAt?.seconds || 0) - Number(a.post.createdAt?.seconds || 0))[0]
+    : null;
     
     // Renderizar el contenido
     this.$content.innerHTML = `
@@ -7299,7 +7319,7 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                 <div>
                     <div class="community-hero-kicker">Su Voz a Diario</div>
                     <h2>Comunidad</h2>
-                    <p>Reflexiones breves de la lectura de hoy.</p>
+                    <p>Un espacio para compartir lo que escuchaste de Dios en la lectura de hoy.</p>
                 </div>
             </section>
 
@@ -7309,8 +7329,8 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                     <span class="community-guidelines-hint">Ver normas</span>
                 </summary>
                 <div class="community-intro-text">
-                    Este espacio existe para compartir reflexiones edificantes basadas en la lectura del día.
-                    Publica con respeto, claridad y sencillez. Evita discusiones, ataques personales,
+                    Este espacio existe para compartir lo que Dios habló a través de la lectura del día.
+                    Comparte con respeto, claridad y sencillez. Evita discusiones, ataques personales,
                     lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
                     <br><br>
                     Lo que publiques aquí podrá ser visible para otros usuarios y moderado por la aplicación.
@@ -7319,17 +7339,17 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
 
             <div class="community-composer-card">
                 <div class="community-composer-copy">
-                    <div class="community-composer-question">¿Qué te habló la lectura de hoy?</div>
+                    <div class="community-composer-question">¿Qué escuchaste de su voz hoy?</div>
                     <div class="community-composer-reference">${this.escapeHtml(todayReference)}</div>
                 </div>
                 <button class="community-composer-btn" type="button" data-action="share-community-reflection">
-                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir reflexión'}
+                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir lo que Dios me habló'}
                 </button>
             </div>
 
             ${this.communityFormOpen ? `
                 <div class="community-form-card">
-                    <div class="community-form-title">Compartir lo meditado</div>
+                    <div class="community-form-title">Compartir lo que Dios me habló</div>
 
                     <div class="community-passage-context">
                         <span>Lectura de hoy</span>
@@ -7355,11 +7375,11 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                     </div>
 
                     <div class="community-form-group">
-                        <label class="community-label" for="community-reflection">Comparte brevemente lo que aprendiste</label>
+                        <label class="community-label" for="community-reflection">¿Qué escuchaste de su voz hoy?</label>
                         <textarea 
                             class="community-textarea" 
                             id="community-reflection" 
-                            placeholder="Escribe una reflexión sencilla que pueda animar a otros..."
+                            placeholder="Escribe con sencillez lo que Dios te mostró en esta lectura..."
                             maxlength="1200"
                         >${this.escapeHtml(communityDraft)}</textarea>
 
@@ -7388,31 +7408,52 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                     <div class="community-activity-signals">
                         <div class="community-activity-signal">
                             <strong>${posts.length}</strong>
-                            <span>${this.escapeHtml(reflectionsText)}</span>
+                            <span>${posts.length === 1 ? 'persona compartió lo que Dios habló' : 'personas compartieron lo que Dios habló'}</span>
                         </div>
                         <div class="community-activity-signal">
                             <strong>${totalReplies}</strong>
-                            <span>${this.escapeHtml(repliesText)}</span>
+                            <span>${totalReplies === 1 ? 'conversación edificó a la comunidad' : 'conversaciones edificaron a la comunidad'}</span>
                         </div>
                         <div class="community-activity-signal">
                             <strong>${totalReactions}</strong>
-                            <span>${this.escapeHtml(reactionsText)}</span>
+                            <span>${totalReactions === 1 ? 'muestra de gratitud' : 'muestras de gratitud'}</span>
                         </div>
                     </div>
                 ` : `
                     <div class="community-activity-empty">
                         <div class="community-activity-empty-mark" aria-hidden="true">+</div>
                         <div>
-                            <div class="community-activity-title">La comunidad espera nuevas reflexiones</div>
-                            <div class="community-activity-subtitle">Tu reflexión puede animar a otros hoy.</div>
+                            <div class="community-activity-title">La comunidad espera escuchar su voz</div>
+                            <div class="community-activity-subtitle">Comparte cómo Dios te habló hoy.</div>
                         </div>
                     </div>
                 `}
             </section>
 
+            ${highlightedPost ? (() => {
+                const post = highlightedPost.post;
+                const authorName = post.name || 'Anónimo';
+                const isAnonymous = !post.name || authorName.trim().toLowerCase() === 'anónimo';
+                const displayName = isAnonymous ? 'Alguien de la comunidad' : authorName;
+                const excerpt = (post.text || '').length > 150 ? `${(post.text || '').slice(0, 150).trim()}...` : (post.text || '');
+                const gratitudeTotal = highlightedPost.usefulCount + highlightedPost.thanksCount;
+
+                return `
+                    <section class="community-featured-echo" aria-label="Eco destacado de hoy">
+                        <div class="community-featured-label">Eco destacado de hoy</div>
+                        <div class="community-featured-text">${this.escapeHtml(excerpt)}</div>
+                        <div class="community-featured-meta">
+                            <span>${this.escapeHtml(displayName)}</span>
+                            <span>${gratitudeTotal} ${gratitudeTotal === 1 ? 'señal de gratitud' : 'señales de gratitud'}</span>
+                            ${highlightedPost.replies.length ? `<span>${highlightedPost.replies.length === 1 ? '1 hermano participó' : `${highlightedPost.replies.length} hermanos participaron`}</span>` : ''}
+                        </div>
+                    </section>
+                `;
+            })() : ''}
+
             <div class="community-feed-heading">
                 <div>
-                    <h3>Lo que la comunidad está meditando</h3>
+                    <h3>Ecos de su voz</h3>
                 </div>
             </div>
 
@@ -7421,23 +7462,25 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                     const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
                     const replies = repliesSummary[post.id] || [];
                     const authorName = post.name || 'Anónimo';
-                    const authorInitial = (authorName.trim().charAt(0) || 'A').toUpperCase();
+                    const isAnonymous = !post.name || authorName.trim().toLowerCase() === 'anónimo';
+                    const displayAuthorName = isAnonymous ? 'Alguien de la comunidad' : authorName;
+                    const authorInitial = (displayAuthorName.trim().charAt(0) || 'S').toUpperCase();
 
                     return `
-                        <div class="community-card">
+                        <div class="community-card community-voice-card">
                             <div class="community-post-header">
-                                <div class="community-avatar" aria-hidden="true">
+                                <div class="community-avatar ${isAnonymous ? 'is-anonymous' : 'has-name'}" aria-hidden="true">
                                     ${this.escapeHtml(authorInitial)}
                                 </div>
 
                                 <div class="community-post-heading">
                                     <div class="community-author-row">
-                                        <span class="community-author">${this.escapeHtml(authorName)}</span>
+                                        <span class="community-author ${isAnonymous ? 'is-anonymous' : 'has-name'}">${this.escapeHtml(displayAuthorName)}</span>
                                         <span class="community-meta-dot" aria-hidden="true"></span>
                                         <span class="community-date">${this.escapeHtml(this.formatCommunityDateLabel(post.date))}</span>
                                     </div>
 
-                                    <div class="community-ref">${this.escapeHtml(post.reference)}</div>
+                                    <div class="community-ref">Escuchó en ${this.escapeHtml(post.reference)}</div>
                                 </div>
                             </div>
 
@@ -7461,9 +7504,9 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                 }).join('') : `
                     <div class="community-empty-state">
                         <div class="community-empty-icon" aria-hidden="true">+</div>
-                        <div class="community-empty-title">Aún no hay reflexiones compartidas</div>
+                        <div class="community-empty-title">Sé la primera persona en compartir lo que Dios te habló hoy.</div>
                         <div class="community-empty-text">
-                            Sé la primera persona en compartir lo que Dios habló hoy.
+                            Comparte cómo escuchaste su voz en la lectura de hoy.
                         </div>
                     </div>
                 `}
@@ -7478,10 +7521,10 @@ const hasCommunityDraft = Boolean(communityDraft.trim());
                             data-action="load-more-community-posts"
                             ${this.communityLoadingMore ? 'disabled' : ''}
                         >
-                            ${this.communityLoadingMore ? 'Cargando...' : 'Cargar más reflexiones'}
+                            ${this.communityLoadingMore ? 'Cargando...' : 'Cargar más ecos'}
                         </button>
                     ` : `
-                        <div class="community-load-more-end">Has llegado al inicio de las reflexiones compartidas.</div>
+                        <div class="community-load-more-end">Has llegado al inicio de los ecos compartidos.</div>
                     `}
                 </div>
             ` : ''}
@@ -8571,7 +8614,7 @@ if (loadMoreCommunityBtn) {
     await this.loadMoreCommunityPosts();
 
     this.renderCommunity({ showSkeleton: false }).catch(error => {
-        console.error('[Community] Error cargando más reflexiones:', error);
+        console.error('[Community] Error cargando más ecos:', error);
     });
     return;
 }
@@ -8599,7 +8642,7 @@ if (publishCommunityBtn) {
     let reflectionText = reflectionInput ? reflectionInput.value.trim() : '';
 
     if (reflectionText.length > 1200) {
-    this.showToast('La reflexión no puede exceder 1200 caracteres');
+    this.showToast('Lo compartido no puede exceder 1200 caracteres');
     if (reflectionInput) reflectionInput.focus();
     return;
 }
@@ -8647,7 +8690,7 @@ if (publishCommunityBtn) {
     const success = await this.addCommunityPost(newPost);
 
     if (!success) {
-        this.showToast('No se pudo publicar la reflexión');
+        this.showToast('No se pudo compartir lo que Dios te habló');
         return;
     }
 
@@ -8670,7 +8713,7 @@ if (publishCommunityBtn) {
         nameInput.placeholder = 'Se publicará como Anónimo';
     }
 
-    this.showToast('Reflexión publicada correctamente');
+    this.showToast('Gracias por compartir lo que Dios te habló');
 
     this.handleRoute().catch(error => {
         console.error('[Route] Error actualizando comunidad:', error);
@@ -8682,11 +8725,11 @@ const deleteCommunityBtn = e.target.closest('[data-action="delete-community-post
 if (deleteCommunityBtn) {
     const postId = deleteCommunityBtn.getAttribute('data-id');
 
-    if (confirm('¿Deseas eliminar esta reflexión?')) {
+    if (confirm('¿Deseas eliminar este eco de la lectura?')) {
         const success = await this.deleteCommunityPost(postId);
 
         if (!success) {
-            this.showToast('No se pudo eliminar la reflexión');
+            this.showToast('No se pudo eliminar este eco');
             return;
         }
 
@@ -8696,7 +8739,7 @@ if (deleteCommunityBtn) {
             navigator.vibrate(20);
         }
 
-        this.showToast('Reflexión eliminada');
+        this.showToast('Eco eliminado');
         this.handleRoute().catch(error => {
             console.error('[Route] Error actualizando comunidad:', error);
         });
