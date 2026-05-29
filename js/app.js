@@ -68,6 +68,7 @@ const addDoc = (...args) => getFirebaseFunction('addDoc')(...args);
 const getDocs = (...args) => getFirebaseFunction('getDocs')(...args);
 const query = (...args) => getFirebaseFunction('query')(...args);
 const orderBy = (...args) => getFirebaseFunction('orderBy')(...args);
+const where = (...args) => getFirebaseFunction('where')(...args);
 const limit = (...args) => getFirebaseFunction('limit')(...args);
 const startAfter = (...args) => getFirebaseFunction('startAfter')(...args);
 const serverTimestamp = (...args) => getFirebaseFunction('serverTimestamp')(...args);
@@ -1506,6 +1507,21 @@ loadMoreCommunityPosts: async function() {
     }
 },
 
+getCommunityPostIdBatches: function(posts, batchSize = 10) {
+    const ids = [...new Set(
+        (posts || [])
+            .map(post => post?.id)
+            .filter(Boolean)
+    )];
+    const batches = [];
+
+    for (let index = 0; index < ids.length; index += batchSize) {
+        batches.push(ids.slice(index, index + batchSize));
+    }
+
+    return batches;
+},
+
 // Invalidar caché (llamar después de publicar/eliminar)
 invalidateCommunityCache: function() {
     this.communityCache = null;
@@ -1630,17 +1646,31 @@ async getRepliesSummary(posts) {
     if (!posts.length) return summary;
 
     try {
-        const q = query(collection(db, "communityReplies"), orderBy("createdAt", "asc"));
-        const snapshot = await getDocs(q);
+        const batches = this.getCommunityPostIdBatches(posts);
+        const snapshots = await Promise.all(
+            batches.map(batch => getDocs(
+                query(collection(db, "communityReplies"), where("postId", "in", batch))
+            ))
+        );
 
-        snapshot.docs.forEach(docSnap => {
-            const reply = {
-                id: docSnap.id,
-                ...docSnap.data()
-            };
+        snapshots.forEach(snapshot => {
+            snapshot.docs.forEach(docSnap => {
+                const reply = {
+                    id: docSnap.id,
+                    ...docSnap.data()
+                };
 
-            if (!summary[reply.postId]) return;
-            summary[reply.postId].push(reply);
+                if (!summary[reply.postId]) return;
+                summary[reply.postId].push(reply);
+            });
+        });
+
+        Object.keys(summary).forEach(postId => {
+            summary[postId].sort((a, b) => {
+                const aValue = a.createdAt?.seconds || 0;
+                const bValue = b.createdAt?.seconds || 0;
+                return aValue - bValue;
+            });
         });
 
         return summary;
@@ -1909,24 +1939,31 @@ getCommunityReactionSummary: async function(posts) {
     if (!posts.length) return summary;
 
     try {
-        const snapshot = await getDocs(collection(db, "communityReactions"));
+        const batches = this.getCommunityPostIdBatches(posts);
+        const snapshots = await Promise.all(
+            batches.map(batch => getDocs(
+                query(collection(db, "communityReactions"), where("postId", "in", batch))
+            ))
+        );
 
-        snapshot.docs.forEach(docSnap => {
-            const data = docSnap.data();
-            const postId = data.postId;
-            const userId = data.userId;
-            const reactions = data.reactions || {};
+        snapshots.forEach(snapshot => {
+            snapshot.docs.forEach(docSnap => {
+                const data = docSnap.data();
+                const postId = data.postId;
+                const userId = data.userId;
+                const reactions = data.reactions || {};
 
-            if (!summary[postId]) return;
+                if (!summary[postId]) return;
 
-            Object.keys(summary[postId].counts).forEach(key => {
-                if (reactions[key] === true) {
-                    summary[postId].counts[key] += 1;
+                Object.keys(summary[postId].counts).forEach(key => {
+                    if (reactions[key] === true) {
+                        summary[postId].counts[key] += 1;
 
-                    if (userId === this.currentUser?.uid) {
-                        summary[postId].userReactions[key] = true;
+                        if (userId === this.currentUser?.uid) {
+                            summary[postId].userReactions[key] = true;
+                        }
                     }
-                }
+                });
             });
         });
 
