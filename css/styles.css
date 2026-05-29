@@ -2988,12 +2988,12 @@ body.dark-mode .devotional-step-tab.active {
 .community-activity-card {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 9px;
-    padding: 12px 13px;
+    gap: 8px;
+    padding: 11px 13px;
     border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
-    border-radius: 16px;
+    border-radius: 14px;
     background:
-        linear-gradient(135deg, rgba(49, 130, 206, 0.045), transparent 46%),
+        linear-gradient(135deg, rgba(49, 130, 206, 0.032), transparent 48%),
         var(--surface-color);
 }
 
@@ -3016,18 +3016,28 @@ body.dark-mode .devotional-step-tab.active {
     line-height: 1.3;
 }
 
-.community-activity-signals {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 7px;
+.community-activity-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 720;
+    line-height: 1.45;
 }
 
-.community-activity-signal {
+.community-activity-line span {
+    display: inline-flex;
+    align-items: center;
     min-width: 0;
-    padding: 8px 8px;
-    border: 1px solid rgba(148, 163, 184, 0.14);
-    border-radius: 12px;
-    background: rgba(148, 163, 184, 0.04);
+    white-space: normal;
+}
+
+.community-activity-line span:not(:last-child)::after {
+    content: "·";
+    margin: 0 8px;
+    color: color-mix(in srgb, var(--text-muted) 54%, transparent);
 }
 
 .community-activity-empty {
@@ -3052,31 +3062,6 @@ body.dark-mode .devotional-step-tab.active {
     width: 28px;
     height: 28px;
     font-size: 1rem;
-}
-
-.community-activity-signal strong,
-.community-activity-signal span {
-    display: block;
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.community-activity-signal strong {
-    color: var(--text-main);
-    font-size: 0.8rem;
-    font-weight: 800;
-    line-height: 1.15;
-}
-
-.community-activity-signal span {
-    margin-top: 2px;
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    font-weight: 650;
-    line-height: 1.2;
-    white-space: normal;
 }
 
 .community-featured-echo {
@@ -3622,7 +3607,7 @@ body.dark-mode .community-guidelines {
 
 body.dark-mode .community-activity-card {
     background:
-        linear-gradient(135deg, rgba(96, 165, 250, 0.055), transparent 48%),
+        linear-gradient(135deg, rgba(96, 165, 250, 0.04), transparent 48%),
         rgba(255, 255, 255, 0.025);
 }
 
@@ -3630,11 +3615,6 @@ body.dark-mode .community-featured-echo {
     background:
         linear-gradient(135deg, rgba(96, 165, 250, 0.055), transparent 52%),
         rgba(255, 255, 255, 0.026);
-}
-
-body.dark-mode .community-activity-signal {
-    background: rgba(255, 255, 255, 0.028);
-    border-color: rgba(255, 255, 255, 0.065);
 }
 
 body.dark-mode .community-empty-state {
@@ -3741,37 +3721,26 @@ body.dark-mode .community-empty-icon {
     }
 
     .community-activity-card {
-        grid-template-columns: minmax(96px, 0.78fr) minmax(0, 1.42fr);
-        align-items: center;
-        gap: 7px;
-        padding: 9px 10px;
-        border-radius: 14px;
+        gap: 6px;
+        padding: 10px 11px;
+        border-radius: 13px;
     }
 
     .community-activity-title {
-        font-size: 0.82rem;
+        font-size: 0.86rem;
     }
 
     .community-activity-subtitle {
-        font-size: 0.68rem;
+        font-size: 0.72rem;
     }
 
-    .community-activity-signals {
-        gap: 6px;
+    .community-activity-line {
+        font-size: 0.72rem;
+        gap: 2px 0;
     }
 
-    .community-activity-signal {
-        padding: 6px 6px;
-        border-radius: 10px;
-    }
-
-    .community-activity-signal strong {
-        font-size: 0.7rem;
-    }
-
-    .community-activity-signal span {
-        font-size: 0.57rem;
-        line-height: 1.15;
+    .community-activity-line span:not(:last-child)::after {
+        margin: 0 6px;
     }
 
     .community-featured-echo {

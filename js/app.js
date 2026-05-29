@@ -7307,9 +7307,6 @@ const totalReactions = Object.values(reactionSummary)
         return total + Object.values(counts)
             .reduce((countTotal, value) => countTotal + (Number(value) || 0), 0);
     }, 0);
-const latestActivityLabel = posts.length
-    ? this.formatCommunityDateLabel(posts[0].date)
-    : 'Sin actividad aún';
 const hasCommunityActivity = posts.length > 0;
 const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
 const hasCommunityDraft = Boolean(communityDraft.trim());
@@ -7418,38 +7415,6 @@ const highlightedPost = posts.length ? posts
                 </div>
             ` : ''}
 
-            <section class="community-activity-card" aria-label="Actividad de la comunidad">
-                ${hasCommunityActivity ? `
-                    <div class="community-activity-head">
-                        <div class="community-activity-title">Compartiendo hoy</div>
-                        <div class="community-activity-subtitle">Señal: ${this.escapeHtml(latestActivityLabel)}</div>
-                    </div>
-
-                    <div class="community-activity-signals">
-                        <div class="community-activity-signal">
-                            <strong>${posts.length}</strong>
-                            <span>${posts.length === 1 ? 'persona compartió lo que Dios habló' : 'personas compartieron lo que Dios habló'}</span>
-                        </div>
-                        <div class="community-activity-signal">
-                            <strong>${totalReplies}</strong>
-                            <span>${totalReplies === 1 ? 'conversación edificó a la comunidad' : 'conversaciones edificaron a la comunidad'}</span>
-                        </div>
-                        <div class="community-activity-signal">
-                            <strong>${totalReactions}</strong>
-                            <span>${totalReactions === 1 ? 'muestra de gratitud' : 'muestras de gratitud'}</span>
-                        </div>
-                    </div>
-                ` : `
-                    <div class="community-activity-empty">
-                        <div class="community-activity-empty-mark" aria-hidden="true">+</div>
-                        <div>
-                            <div class="community-activity-title">La comunidad espera escuchar su voz</div>
-                            <div class="community-activity-subtitle">Comparte cómo Dios te habló hoy.</div>
-                        </div>
-                    </div>
-                `}
-            </section>
-
             ${highlightedPost ? (() => {
                 const post = highlightedPost.post;
                 const authorName = post.name || 'Anónimo';
@@ -7470,6 +7435,29 @@ const highlightedPost = posts.length ? posts
                     </section>
                 `;
             })() : ''}
+
+            <section class="community-activity-card" aria-label="La comunidad escuchó hoy">
+                ${hasCommunityActivity ? `
+                    <div class="community-activity-head">
+                        <div class="community-activity-title">La comunidad escuchó hoy</div>
+                        <div class="community-activity-subtitle">Ecos compartidos desde la lectura del día</div>
+                    </div>
+
+                    <div class="community-activity-line" aria-label="Señales de participación de la comunidad">
+                        <span>${posts.length} ${posts.length === 1 ? 'eco compartido' : 'ecos compartidos'}</span>
+                        <span>${totalReplies} ${totalReplies === 1 ? 'conversación' : 'conversaciones'}</span>
+                        <span>${totalReactions} ${totalReactions === 1 ? 'muestra de gratitud' : 'muestras de gratitud'}</span>
+                    </div>
+                ` : `
+                    <div class="community-activity-empty">
+                        <div class="community-activity-empty-mark" aria-hidden="true">+</div>
+                        <div>
+                            <div class="community-activity-title">Sé la primera persona en compartir lo que Dios te habló hoy.</div>
+                            <div class="community-activity-subtitle">La comunidad aún espera los primeros ecos de la lectura de hoy.</div>
+                        </div>
+                    </div>
+                `}
+            </section>
 
             <div class="community-feed-heading">
                 <div>
