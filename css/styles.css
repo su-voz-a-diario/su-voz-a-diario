@@ -3846,10 +3846,35 @@ body.dark-mode .community-empty-icon {
 
     .community-reply-toolbar {
         align-items: center;
+        gap: 8px;
     }
 
     .community-reply-toggle {
         min-height: 36px;
+        padding: 0 11px;
+        white-space: nowrap;
+    }
+
+    .community-reply-preview {
+        padding: 8px 10px;
+    }
+
+    .community-reply-preview strong {
+        font-size: 0.82rem;
+    }
+
+    .community-reply-form {
+        padding: 11px;
+    }
+
+    .community-reply-form-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .community-reply-form-actions .btn-secondary,
+    .community-reply-form-actions .btn-primary {
+        min-height: 40px;
     }
 }
 
@@ -5119,11 +5144,57 @@ body.dark-mode .community-textarea.error {
     color: var(--text-muted);
     font-size: 0.78rem;
     font-weight: 750;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.25;
+}
+
+.community-reply-count span {
+    color: var(--text-light);
+    font-size: 0.72rem;
+    font-weight: 600;
 }
 
 .community-reply-count.is-empty {
     opacity: 0.72;
     font-weight: 650;
+}
+
+.community-reply-preview {
+    width: 100%;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.045);
+    color: var(--text-main);
+    cursor: pointer;
+    display: grid;
+    gap: 4px;
+    margin: -1px 0 8px;
+    padding: 9px 11px;
+    text-align: left;
+    transition: background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.community-reply-preview:hover {
+    background: rgba(49, 130, 206, 0.06);
+    border-color: rgba(49, 130, 206, 0.2);
+    transform: translateY(-1px);
+}
+
+.community-reply-preview span {
+    color: var(--accent);
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.community-reply-preview strong {
+    color: var(--text-main);
+    font-size: 0.84rem;
+    font-weight: 650;
+    line-height: 1.45;
 }
 
 .community-reply-toggle {
@@ -5156,6 +5227,13 @@ body.dark-mode .community-textarea.error {
 
 body.dark-mode .community-reply-form {
     background: rgba(255, 255, 255, 0.03);
+}
+
+.community-reply-form-title {
+    color: var(--text-main);
+    font-size: 0.84rem;
+    font-weight: 750;
+    margin-bottom: 8px;
 }
 
 .community-reply-textarea {
@@ -5211,9 +5289,9 @@ body.dark-mode .community-reply-form {
     margin-top: 12px;
     display: flex;
     flex-direction: column;
-    gap: 9px;
-    padding-left: 12px;
-    border-left: 2px solid rgba(49, 130, 206, 0.18);
+    gap: 8px;
+    padding-left: 10px;
+    border-left: 1px solid rgba(49, 130, 206, 0.2);
 }
 
 .community-reply-list-title {
@@ -5226,21 +5304,21 @@ body.dark-mode .community-reply-form {
 
 .community-reply-item {
     margin-left: 0;
-    padding: 9px 10px;
+    padding: 9px 10px 9px 12px;
     border-left: none;
-    background: rgba(148, 163, 184, 0.07);
-    border-radius: 12px;
+    background: rgba(148, 163, 184, 0.055);
+    border-radius: 10px;
 }
 
 body.dark-mode .community-reply-item {
-    background: rgba(255, 255, 255, 0.035);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 .community-reply-meta {
     font-size: 0.72rem;
     color: var(--text-muted);
-    font-weight: 600;
-    opacity: 0.7;
+    font-weight: 700;
+    opacity: 0.82;
     margin-bottom: 3px;
 }
 
@@ -5258,6 +5336,16 @@ body.dark-mode .community-reply-toggle {
 body.dark-mode .community-reply-toggle:hover {
     background: rgba(96, 165, 250, 0.12);
     border-color: rgba(96, 165, 250, 0.24);
+}
+
+body.dark-mode .community-reply-preview {
+    background: rgba(255, 255, 255, 0.025);
+    border-color: rgba(255, 255, 255, 0.07);
+}
+
+body.dark-mode .community-reply-preview:hover {
+    background: rgba(96, 165, 250, 0.1);
+    border-color: rgba(96, 165, 250, 0.2);
 }
 
 .community-reply-actions {

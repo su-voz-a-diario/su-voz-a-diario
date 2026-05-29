@@ -1810,12 +1810,17 @@ renderReplyBlock: function(post, replies = []) {
     const isOpen = this.openReplyPostId === post.id;
     const draft = this.getReplyDraft(post.id);
     const replyCount = replies.length;
+    const latestReply = replyCount ? replies[replyCount - 1] : null;
+    const latestReplyText = latestReply?.text || '';
+    const latestReplyPreview = latestReplyText.length > 92
+        ? `${latestReplyText.slice(0, 92).trim()}...`
+        : latestReplyText;
     const replyCountLabel = replyCount === 1
         ? '1 hermano participó'
         : `${replyCount} hermanos participaron`;
     const replyToggleLabel = isOpen
         ? 'Cerrar conversación'
-        : (replyCount > 0 ? 'Ver conversación' : 'Responder');
+        : (replyCount > 0 ? 'Ver conversación' : 'Responder a este eco');
 
     return `
         <div class="community-reply-block">
@@ -1823,6 +1828,7 @@ renderReplyBlock: function(post, replies = []) {
                 ${replyCount > 0 ? `
                     <div class="community-reply-count">
                         ${replyCountLabel}
+                        <span>La comunidad está conversando</span>
                     </div>
                 ` : (isOpen ? '<div class="community-reply-count is-empty">Sé el primero en responder</div>' : '<div></div>')}
 
@@ -1836,13 +1842,27 @@ renderReplyBlock: function(post, replies = []) {
                 </button>
             </div>
 
+            ${replyCount > 0 && !isOpen ? `
+                <button
+                    class="community-reply-preview"
+                    type="button"
+                    data-action="toggle-reply-form"
+                    data-post-id="${post.id}"
+                    aria-label="Ver último eco de la conversación"
+                >
+                    <span>Último eco</span>
+                    <strong>“${this.escapeHtml(latestReplyPreview)}”</strong>
+                </button>
+            ` : ''}
+
             ${isOpen ? `
                 <div class="community-reply-form">
+                    <div class="community-reply-form-title">Comparte cómo este eco te edificó</div>
                     <textarea
                         class="community-reply-textarea"
                         data-action="reply-input"
                         data-post-id="${post.id}"
-                        placeholder="Escribe una respuesta breve y edificante..."
+                        placeholder="Escribe una respuesta breve que anime a la comunidad..."
                         maxlength="${this.replyCharLimit}"
                     >${this.escapeHtml(draft)}</textarea>
 
@@ -1874,9 +1894,9 @@ renderReplyBlock: function(post, replies = []) {
                 </div>
             ` : ''}
 
-            ${replies.length ? `
+            ${isOpen && replies.length ? `
                 <div class="community-reply-list">
-                    <div class="community-reply-list-title">Respuestas</div>
+                    <div class="community-reply-list-title">Conversación edificante</div>
                     ${replies.map(reply => `
                         <div class="community-reply-item">
                             <div class="community-reply-meta">
