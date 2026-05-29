@@ -1736,6 +1736,29 @@ clearReplyDraft(postId) {
     delete this.replyDrafts[postId];
 },
 
+getCommunityDraftKey: function() {
+    return 'su-voz-community-draft';
+},
+
+getCommunityDraft: function() {
+    return this.storage.get(this.getCommunityDraftKey(), '');
+},
+
+saveCommunityDraft: function(value) {
+    const draft = value || '';
+
+    if (!draft.trim()) {
+        this.clearCommunityDraft();
+        return;
+    }
+
+    this.storage.set(this.getCommunityDraftKey(), draft);
+},
+
+clearCommunityDraft: function() {
+    this.storage.remove(this.getCommunityDraftKey());
+},
+
    getEmptyCommunityReactionState: function() {
     return {
         counts: {
@@ -7266,6 +7289,8 @@ const reflectionsText = posts.length === 1 ? 'reflexión' : 'reflexiones';
 const repliesText = totalReplies === 1 ? 'respuesta' : 'respuestas';
 const reactionsText = totalReactions === 1 ? 'gracias' : 'gracias';
 const hasCommunityActivity = posts.length > 0;
+const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
+const hasCommunityDraft = Boolean(communityDraft.trim());
     
     // Renderizar el contenido
     this.$content.innerHTML = `
@@ -7341,9 +7366,10 @@ const hasCommunityActivity = posts.length > 0;
                             id="community-reflection" 
                             placeholder="Escribe aquí lo que Dios te habló a través de este pasaje..."
                             maxlength="1200"
-                        ></textarea>
+                        >${this.escapeHtml(communityDraft)}</textarea>
 
-                        <div class="community-char-counter" id="community-char-counter">0 / 1200</div>
+                        <div class="community-char-counter" id="community-char-counter">${communityDraft.length} / 1200</div>
+                        ${hasCommunityDraft ? '<div class="community-draft-restored">Borrador recuperado</div>' : ''}
                     </div>
 
                     <div class="community-form-actions">
@@ -8639,6 +8665,7 @@ if (publishCommunityBtn) {
     }
 
     this.communityFormOpen = false;
+    this.clearCommunityDraft();
 
     if (reflectionInput) reflectionInput.value = '';
     if (nameInput) nameInput.value = '';
@@ -8911,8 +8938,15 @@ if (navItem) {
     }
 
     if (e.target.id === 'community-reflection') {
+        this.saveCommunityDraft(e.target.value);
+
         const counter = document.getElementById('community-char-counter');
         if (!counter) return;
+        const draftRestoredNotice = document.querySelector('.community-draft-restored');
+
+        if (draftRestoredNotice && !e.target.value.trim()) {
+            draftRestoredNotice.remove();
+        }
 
         const currentLength = e.target.value.length;
         const maxLength = 1200;

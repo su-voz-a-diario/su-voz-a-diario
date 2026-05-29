@@ -3381,6 +3381,13 @@ body.dark-mode .devotional-step-tab.active {
     color: var(--danger);
 }
 
+.community-draft-restored {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 0.76rem;
+    font-weight: 650;
+}
+
 .community-input:focus,
 .community-textarea:focus {
     outline: none;
