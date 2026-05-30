@@ -4069,12 +4069,16 @@ body.dark-mode .community-empty-icon {
 .stats-calendar {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
-    gap: 7px;
+    gap: 8px;
 }
 
 .stats-calendar-layout {
     display: grid;
-    gap: 14px;
+    gap: 18px;
+}
+
+.stats-calendar-board {
+    min-width: 0;
 }
 
 .stats-calendar-weekday {
@@ -4088,11 +4092,15 @@ body.dark-mode .community-empty-icon {
     appearance: none;
     -webkit-appearance: none;
     position: relative;
-    display: grid;
-    place-items: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
     min-width: 0;
     aspect-ratio: 1;
-    border-radius: 12px;
+    padding: 5px 4px;
+    border-radius: 13px;
     color: var(--text-muted);
     background: rgba(248, 250, 252, 0.76);
     border: 1px solid rgba(226, 232, 240, 0.82);
@@ -4101,6 +4109,46 @@ body.dark-mode .community-empty-icon {
     font-weight: 800;
     cursor: pointer;
     transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+.stats-calendar-number {
+    display: block;
+    min-height: 1em;
+    line-height: 1;
+}
+
+.stats-calendar-markers {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    min-height: 7px;
+    width: 100%;
+}
+
+.stats-calendar-markers i {
+    flex: 0 0 auto;
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+}
+
+.stats-calendar-markers .marker-read {
+    width: 14px;
+    background: #2f855a;
+}
+
+.stats-calendar-markers .marker-reflection {
+    background: #3182ce;
+}
+
+.stats-calendar-markers .marker-prayer {
+    background: #b7791f;
+}
+
+.stats-calendar-markers .marker-pending {
+    background: transparent;
+    border: 1px solid #b7791f;
 }
 
 .stats-calendar-day.is-empty {
@@ -4116,44 +4164,14 @@ body.dark-mode .community-empty-icon {
 }
 
 .stats-calendar-day.is-read {
-    color: #ffffff;
-    background: linear-gradient(135deg, #2f855a, #276749);
-    border-color: rgba(47, 133, 90, 0.35);
-}
-
-.stats-calendar-day.has-reflection::after,
-.stats-calendar-day.has-prayer::before,
-.stats-calendar-day.is-pending::after {
-    content: "";
-    position: absolute;
-    border-radius: 999px;
-}
-
-.stats-calendar-day.has-reflection::after {
-    right: 5px;
-    bottom: 5px;
-    width: 6px;
-    height: 6px;
-    background: #3182ce;
-}
-
-.stats-calendar-day.has-prayer::before {
-    left: 5px;
-    bottom: 5px;
-    width: 6px;
-    height: 6px;
-    background: #b7791f;
+    color: #22543d;
+    background: rgba(47, 133, 90, 0.10);
+    border-color: rgba(47, 133, 90, 0.28);
 }
 
 .stats-calendar-day.is-pending {
     background: rgba(183, 121, 31, 0.10);
     border-color: rgba(183, 121, 31, 0.30);
-}
-
-.stats-calendar-day.is-pending::after {
-    width: 5px;
-    height: 5px;
-    background: #b7791f;
 }
 
 .stats-calendar-day.is-today {
@@ -4162,9 +4180,17 @@ body.dark-mode .community-empty-icon {
 }
 
 .stats-calendar-day:hover,
-.stats-calendar-day:focus-visible,
+.stats-calendar-day:focus-visible {
+    border-color: rgba(49, 130, 206, 0.42);
+    box-shadow: 0 8px 18px rgba(49, 130, 206, 0.10);
+}
+
 .stats-calendar-day.is-selected {
-    border-color: rgba(49, 130, 206, 0.58);
+    color: var(--primary);
+    background:
+        linear-gradient(180deg, rgba(49, 130, 206, 0.12), rgba(49, 130, 206, 0.05)),
+        var(--surface-color);
+    border-color: rgba(49, 130, 206, 0.68);
     box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.12);
 }
 
@@ -4175,10 +4201,11 @@ body.dark-mode .community-empty-icon {
 .stats-calendar-legend {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px 14px;
-    margin-top: 14px;
+    align-items: center;
+    gap: 8px 13px;
+    margin-top: 16px;
     color: var(--text-muted);
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 700;
 }
 
@@ -4195,6 +4222,7 @@ body.dark-mode .community-empty-icon {
 }
 
 .legend-read {
+    width: 15px !important;
     background: #2f855a;
 }
 
@@ -4212,11 +4240,12 @@ body.dark-mode .community-empty-icon {
 }
 
 .stats-day-panel {
+    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     min-width: 0;
-    padding: 16px;
+    padding: 18px;
     border-radius: 18px;
     background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.90), rgba(248, 250, 252, 0.82)),
@@ -4229,6 +4258,7 @@ body.dark-mode .community-empty-icon {
     align-items: flex-start;
     justify-content: space-between;
     gap: 12px;
+    min-width: 0;
 }
 
 .stats-day-panel-head span,
@@ -4244,18 +4274,20 @@ body.dark-mode .community-empty-icon {
 .stats-day-panel-head h4 {
     margin-top: 4px;
     color: var(--primary);
-    font-size: 1.1rem;
+    font-size: 1.04rem;
     line-height: 1.18;
     font-weight: 850;
 }
 
 .stats-day-panel-head > strong {
     flex: 0 0 auto;
-    padding: 5px 9px;
+    max-width: 44%;
+    padding: 6px 9px;
     border-radius: 999px;
     font-size: 0.72rem;
     font-weight: 850;
-    white-space: nowrap;
+    line-height: 1.15;
+    text-align: center;
 }
 
 .stats-day-panel-head > strong.is-complete {
@@ -4295,19 +4327,21 @@ body.dark-mode .community-empty-icon {
 }
 
 .stats-day-signals {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
 }
 
 .stats-day-signals span {
-    padding: 6px 9px;
-    border-radius: 999px;
+    min-width: 0;
+    padding: 7px 9px;
+    border-radius: 12px;
     color: var(--text-muted);
     background: rgba(113, 128, 150, 0.10);
     border: 1px solid rgba(113, 128, 150, 0.14);
-    font-size: 0.74rem;
+    font-size: 0.72rem;
     font-weight: 750;
+    line-height: 1.2;
 }
 
 .stats-day-signals span.is-active {
@@ -4317,22 +4351,25 @@ body.dark-mode .community-empty-icon {
 }
 
 .stats-day-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 9px;
+    margin-top: 2px;
 }
 
 .stats-day-action {
     appearance: none;
     -webkit-appearance: none;
     border: 1px solid rgba(49, 130, 206, 0.18);
-    border-radius: 999px;
-    padding: 9px 12px;
+    border-radius: 14px;
+    width: 100%;
+    padding: 11px 14px;
     color: var(--primary);
     background: rgba(49, 130, 206, 0.08);
     font-family: var(--font-ui);
-    font-size: 0.78rem;
+    font-size: 0.8rem;
     font-weight: 850;
+    text-align: center;
     cursor: pointer;
 }
 
@@ -4558,8 +4595,9 @@ body.dark-mode .stats-book-meter {
 }
 
 body.dark-mode .stats-calendar-day.is-read {
-    background: linear-gradient(135deg, #2f855a, #22543d);
-    color: #ffffff;
+    color: #9ae6b4;
+    background: rgba(47, 133, 90, 0.14);
+    border-color: rgba(154, 230, 180, 0.22);
 }
 
 body.dark-mode .stats-day-panel-head > strong.is-complete {
@@ -4584,14 +4622,26 @@ body.dark-mode .stats-memory-card p {
     }
 
     .stats-hero-card,
+    .stats-calendar-section,
     .stats-plan-section,
     .stats-memory-section {
         grid-column: 1 / -1;
     }
 
     .stats-calendar-layout {
-        grid-template-columns: minmax(0, 1fr) minmax(280px, 0.72fr);
+        grid-template-columns: minmax(0, 1.18fr) minmax(300px, 0.82fr);
+        gap: 24px;
         align-items: start;
+    }
+
+    .stats-day-panel::before {
+        content: "";
+        position: absolute;
+        top: 16px;
+        bottom: 16px;
+        left: -13px;
+        width: 1px;
+        background: linear-gradient(180deg, transparent, rgba(113, 128, 150, 0.20), transparent);
     }
 }
 
@@ -4619,13 +4669,55 @@ body.dark-mode .stats-memory-card p {
         border-radius: 20px;
     }
 
+    .stats-calendar-section .stats-section-head {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .stats-calendar-section .stats-section-head > strong {
+        font-size: 1rem;
+    }
+
     .stats-calendar {
-        gap: 5px;
+        gap: 6px;
     }
 
     .stats-calendar-day {
         border-radius: 10px;
+        padding: 4px 3px;
         font-size: 0.7rem;
+        gap: 3px;
+    }
+
+    .stats-calendar-markers {
+        gap: 2px;
+        min-height: 6px;
+    }
+
+    .stats-calendar-markers i {
+        width: 4px;
+        height: 4px;
+    }
+
+    .stats-calendar-markers .marker-read {
+        width: 12px;
+    }
+
+    .stats-day-panel {
+        padding: 16px;
+    }
+
+    .stats-day-panel-head {
+        flex-direction: column;
+    }
+
+    .stats-day-panel-head > strong {
+        max-width: none;
+        width: fit-content;
+    }
+
+    .stats-day-signals {
+        grid-template-columns: 1fr;
     }
 
     .stats-book-row {

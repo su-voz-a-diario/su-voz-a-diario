@@ -7823,7 +7823,7 @@ renderStatsCalendar: function(stats) {
             </div>
 
             <div class="stats-calendar-layout">
-                <div>
+                <div class="stats-calendar-board">
                     <div class="stats-calendar" aria-label="Calendario de constancia">
                         ${weekdayLabels.map(label => `<div class="stats-calendar-weekday">${label}</div>`).join('')}
                         ${month.cells.map(cell => {
@@ -7852,7 +7852,13 @@ renderStatsCalendar: function(stats) {
 
                             return `
                                 <button class="${classes}" type="button" data-action="select-stats-day" data-date="${this.escapeHtml(cell.date)}" aria-label="${this.escapeHtml(label)}" aria-pressed="${isSelected ? 'true' : 'false'}">
-                                    <span>${cell.day}</span>
+                                    <span class="stats-calendar-number">${cell.day}</span>
+                                    <span class="stats-calendar-markers" aria-hidden="true">
+                                        ${cell.isRead ? '<i class="marker-read"></i>' : ''}
+                                        ${cell.hasReflection ? '<i class="marker-reflection"></i>' : ''}
+                                        ${cell.hasPrayer ? '<i class="marker-prayer"></i>' : ''}
+                                        ${cell.isPending ? '<i class="marker-pending"></i>' : ''}
+                                    </span>
                                 </button>
                             `;
                         }).join('')}
