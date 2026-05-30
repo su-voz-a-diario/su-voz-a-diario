@@ -23,6 +23,81 @@ export function calculateCurrentStreak(readDates, startDate = new Date()) {
     return currentStreak;
 }
 
+export function normalizeDateList(dates) {
+    return Array.from(new Set(
+        (Array.isArray(dates) ? dates : [])
+            .map(date => String(date || '').trim())
+            .filter(date => /^\d{4}-\d{2}-\d{2}$/.test(date))
+    )).sort();
+}
+
+export function getDateString(date = new Date()) {
+    const value = date instanceof Date ? date : new Date(date);
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+}
+
+export function getPreviousDateString(dateStr) {
+    const value = new Date(`${dateStr}T12:00:00`);
+    value.setDate(value.getDate() - 1);
+
+    return getDateString(value);
+}
+
+export function isNextCalendarDate(previousDateStr, nextDateStr) {
+    return getPreviousDateString(nextDateStr) === previousDateStr;
+}
+
+export function calculateLongestStreak(validReadDates) {
+    const sortedDates = normalizeDateList(validReadDates);
+    let longest = 0;
+    let current = 0;
+    let previousDate = null;
+
+    sortedDates.forEach(dateStr => {
+        current = previousDate && isNextCalendarDate(previousDate, dateStr)
+            ? current + 1
+            : 1;
+
+        longest = Math.max(longest, current);
+        previousDate = dateStr;
+    });
+
+    return longest;
+}
+
+export function calculateCurrentPlanStreak(validReadDates, planDates, startDate = new Date()) {
+    const readDateSet = new Set(normalizeDateList(validReadDates));
+    const planDateSet = new Set(normalizeDateList(planDates));
+    const today = getDateString(startDate);
+    const yesterday = getPreviousDateString(today);
+    let status = 'restart';
+    let anchorDate = today;
+
+    if (readDateSet.has(today)) {
+        status = 'read_today';
+    } else if (readDateSet.has(yesterday)) {
+        status = 'pending_today';
+        anchorDate = yesterday;
+    }
+
+    let current = 0;
+    let cursor = anchorDate;
+
+    while (planDateSet.has(cursor) && readDateSet.has(cursor)) {
+        current++;
+        cursor = getPreviousDateString(cursor);
+    }
+
+    return {
+        current,
+        status
+    };
+}
+
 export function extractFirstChapterNumber(reference) {
     const match = String(reference || '').match(/(\d+)/);
     return match ? parseInt(match[1]) : 0;
@@ -107,21 +182,49 @@ export function isDateRead(readDates, dateStr) {
 
 export function calculateReadingStats({
     readDates,
-    totalAvailable,
-    longestStreak,
-    totalNotes,
-    totalHighlights,
+    planReadings,
+    reflectionDays = 0,
+    prayerDays = 0,
+    totalHighlights = 0,
+    totalSelectionNotes = 0,
     startDate = new Date()
 }) {
-    const totalRead = readDates.length;
+    const planDates = normalizeDateList(
+        (Array.isArray(planReadings) ? planReadings : [])
+            .map(reading => reading?.date)
+    );
+    const planDateSet = new Set(planDates);
+    const validReadDates = normalizeDateList(readDates)
+        .filter(date => planDateSet.has(date));
+    const today = getDateString(startDate);
+    const currentMonth = today.slice(0, 7);
+    const monthAvailableDates = planDates.filter(date => date.startsWith(`${currentMonth}-`));
+    const monthCompletedDates = validReadDates.filter(date => date.startsWith(`${currentMonth}-`));
+    const currentStreak = calculateCurrentPlanStreak(validReadDates, planDates, startDate);
 
     return {
-        totalRead,
-        totalAvailable,
-        percentage: calculateProgress(totalRead, totalAvailable),
-        currentStreak: calculateCurrentStreak(readDates, startDate),
-        longestStreak,
-        totalNotes,
-        totalHighlights
+        plan: {
+            total: planDates.length,
+            completed: validReadDates.length,
+            percent: calculateProgress(validReadDates.length, planDates.length)
+        },
+        month: {
+            available: monthAvailableDates.length,
+            completed: monthCompletedDates.length,
+            percent: calculateProgress(monthCompletedDates.length, monthAvailableDates.length)
+        },
+        streak: {
+            current: currentStreak.current,
+            longest: calculateLongestStreak(validReadDates),
+            status: currentStreak.status
+        },
+        response: {
+            reflectionDays,
+            prayerDays
+        },
+        memory: {
+            highlights: totalHighlights,
+            selectionNotes: totalSelectionNotes
+        }
     };
 }

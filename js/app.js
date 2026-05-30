@@ -1221,53 +1221,93 @@ checkReminderOnOpen: function() {
     // ========================================
     getStats: function() {
         const readDates = this.getReadDates();
-        const totalAvailable = this.getCalendarReadings().length;
-        
-    // Notas totales
-let totalNotes = 0;
-for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
+        const planReadings = this.getCalendarReadings();
+        const planDateSet = new Set(planReadings.map(reading => reading.date));
+        const validReadDates = readDates.filter(date => planDateSet.has(date));
+        const todayStr = this.getTodayDateStr();
+        const groups = this.getCalendarBookGroups(planReadings);
+        const readDateSet = new Set(validReadDates);
+        let reflectionDays = 0;
+        let prayerDays = 0;
+        let totalHighlights = 0;
+        let totalSelectionNotes = 0;
+        const activityDays = {
+            read: validReadDates,
+            reflection: [],
+            prayer: [],
+            highlight: []
+        };
 
-    if (key && key.startsWith('su-voz-note-')) {
-        const note = this.storage.get(key, null);
-        if (
-            note &&
-            (
-                note.dios?.trim() ||
-                note.aprendizaje?.trim() ||
-                note.respuesta?.trim() ||
-                note.oracion?.trim()
-            )
-        ) {
-            totalNotes++;
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+
+            if (key && key.startsWith('su-voz-note-')) {
+                const date = key.replace('su-voz-note-', '');
+                const note = this.storage.get(key, null);
+
+                if (!planDateSet.has(date) || !note) continue;
+
+                const hasReflection = Boolean(
+                    note.dios?.trim() ||
+                    note.aprendizaje?.trim() ||
+                    note.respuesta?.trim() ||
+                    note.oracion?.trim()
+                );
+                const hasPrayer = Boolean(note.oracion?.trim());
+
+                if (hasReflection) reflectionDays++;
+                if (hasReflection) activityDays.reflection.push(date);
+                if (hasPrayer) {
+                    prayerDays++;
+                    activityDays.prayer.push(date);
+                }
+            }
+
+            if (key && key.startsWith('su-voz-selection-notes-')) {
+                const date = key.replace('su-voz-selection-notes-', '');
+
+                if (!planDateSet.has(date)) continue;
+
+                totalSelectionNotes += this.getSelectionNotes(date).length;
+            }
+
+            if (key && key.startsWith('su-voz-highlights-')) {
+                const date = key.replace('su-voz-highlights-', '');
+
+                if (!planDateSet.has(date)) continue;
+
+                const highlights = this.getHighlights(date);
+                totalHighlights += highlights.length;
+                if (highlights.length > 0) activityDays.highlight.push(date);
+            }
         }
-    }
 
-    if (key && key.startsWith('su-voz-selection-notes-')) {
-        const date = key.replace('su-voz-selection-notes-', '');
-        const selectionNotes = this.getSelectionNotes(date);
-        totalNotes += selectionNotes.length;
-    }
-}
-
-// Resaltados totales
-let totalHighlights = 0;
-for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key && key.startsWith('su-voz-highlights-')) {
-        const date = key.replace('su-voz-highlights-', '');
-        const highlights = this.getHighlights(date);
-        totalHighlights += highlights.length;
-    }
-}
-        
-        return calculateReadingStats({
+        const stats = calculateReadingStats({
             readDates,
-            totalAvailable,
-            longestStreak: this.streak.longest,
-            totalNotes,
-            totalHighlights
+            planReadings,
+            reflectionDays,
+            prayerDays,
+            totalHighlights,
+            totalSelectionNotes
         });
+
+        return {
+            ...stats,
+            activityDays,
+            books: groups.map(group => {
+                const meta = this.getCalendarBookMeta(group, readDateSet, todayStr);
+
+                return {
+                    id: group.id,
+                    name: group.name,
+                    total: meta.total,
+                    completed: meta.completed,
+                    percent: meta.total > 0 ? Math.round((meta.completed / meta.total) * 100) : 0,
+                    state: meta.stateKey,
+                    label: meta.stateLabel
+                };
+            })
+        };
     },
     
     // ========================================
@@ -7547,46 +7587,237 @@ const highlightedPost = posts.length ? posts
     }
 },
 
+getStatsMonthDays: function(stats) {
+    const todayStr = this.getTodayDateStr();
+    const currentMonth = todayStr.slice(0, 7);
+    const [year, month] = currentMonth.split('-').map(Number);
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const firstDay = new Date(year, month - 1, 1).getDay();
+    const planDates = new Set(this.getCalendarReadings()
+        .map(reading => reading.date)
+        .filter(date => date.startsWith(`${currentMonth}-`)));
+    const readDates = new Set(stats.activityDays.read);
+    const reflectionDates = new Set(stats.activityDays.reflection);
+    const prayerDates = new Set(stats.activityDays.prayer);
+    const highlightDates = new Set(stats.activityDays.highlight);
+    const cells = [];
+
+    for (let i = 0; i < firstDay; i++) {
+        cells.push({ empty: true });
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const date = `${currentMonth}-${String(day).padStart(2, '0')}`;
+        const hasReading = planDates.has(date);
+        const isRead = readDates.has(date);
+        const hasReflection = reflectionDates.has(date);
+        const hasPrayer = prayerDates.has(date);
+        const hasHighlight = highlightDates.has(date);
+        const isToday = date === todayStr;
+        const isPending = hasReading && !isRead && date <= todayStr;
+
+        cells.push({
+            date,
+            day,
+            hasReading,
+            isRead,
+            hasReflection,
+            hasPrayer,
+            hasHighlight,
+            isToday,
+            isPending
+        });
+    }
+
+    return {
+        monthLabel: new Date(year, month - 1, 1).toLocaleDateString('es-MX', {
+            month: 'long',
+            year: 'numeric'
+        }),
+        cells
+    };
+},
+
+renderStatsCalendar: function(stats) {
+    const month = this.getStatsMonthDays(stats);
+    const weekdayLabels = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+
+    return `
+        <section class="stats-section stats-calendar-section">
+            <div class="stats-section-head">
+                <div>
+                    <span>Constancia</span>
+                    <h3>Calendario de este mes</h3>
+                </div>
+                <strong>${this.escapeHtml(month.monthLabel)}</strong>
+            </div>
+
+            <div class="stats-calendar" aria-label="Calendario de constancia">
+                ${weekdayLabels.map(label => `<div class="stats-calendar-weekday">${label}</div>`).join('')}
+                ${month.cells.map(cell => {
+                    if (cell.empty) return '<div class="stats-calendar-day is-empty" aria-hidden="true"></div>';
+
+                    const classes = [
+                        'stats-calendar-day',
+                        cell.hasReading ? 'has-reading' : 'no-reading',
+                        cell.isRead ? 'is-read' : '',
+                        cell.hasReflection ? 'has-reflection' : '',
+                        cell.hasPrayer ? 'has-prayer' : '',
+                        cell.hasHighlight ? 'has-highlight' : '',
+                        cell.isPending ? 'is-pending' : '',
+                        cell.isToday ? 'is-today' : ''
+                    ].filter(Boolean).join(' ');
+                    const label = [
+                        cell.date,
+                        cell.isRead ? 'leído' : '',
+                        cell.hasReflection ? 'reflexión' : '',
+                        cell.hasPrayer ? 'oración' : '',
+                        cell.isPending ? 'pendiente' : ''
+                    ].filter(Boolean).join(', ');
+
+                    return `
+                        <div class="${classes}" aria-label="${this.escapeHtml(label)}">
+                            <span>${cell.day}</span>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+
+            <div class="stats-calendar-legend" aria-label="Leyenda del calendario">
+                <span><i class="legend-read"></i> Leído</span>
+                <span><i class="legend-reflection"></i> Reflexión</span>
+                <span><i class="legend-prayer"></i> Oración</span>
+                <span><i class="legend-pending"></i> Pendiente</span>
+            </div>
+        </section>
+    `;
+},
+
+renderStatsBookProgress: function(stats) {
+    const visibleBooks = stats.books
+        .filter(book => book.state === 'current' || book.completed > 0 || book.state === 'pending')
+        .slice(0, 3);
+
+    if (!visibleBooks.length) {
+        return '';
+    }
+
+    return `
+        <div class="stats-book-list">
+            ${visibleBooks.map(book => `
+                <div class="stats-book-row">
+                    <div class="stats-book-info">
+                        <strong>${this.escapeHtml(book.name)}</strong>
+                        <span>${this.escapeHtml(book.label)} · ${book.completed}/${book.total}</span>
+                    </div>
+                    <div class="stats-book-meter" aria-hidden="true">
+                        <span style="width: ${book.percent}%"></span>
+                    </div>
+                    <b>${book.percent}%</b>
+                </div>
+            `).join('')}
+        </div>
+    `;
+},
+
+renderStatsMetric: function(label, value, detail = '') {
+    return `
+        <div class="stats-metric">
+            <span>${this.escapeHtml(label)}</span>
+            <strong>${this.escapeHtml(String(value))}</strong>
+            ${detail ? `<small>${this.escapeHtml(detail)}</small>` : ''}
+        </div>
+    `;
+},
+
 renderStats: function() {
     const stats = this.getStats();
+    const streakStatusLabels = {
+        read_today: 'Lectura de hoy completada',
+        pending_today: 'Aún puedes leer hoy',
+        restart: 'Retoma con calma'
+    };
+    const streakStatus = streakStatusLabels[stats.streak.status] || streakStatusLabels.restart;
+    const monthRatio = `${stats.month.completed}/${stats.month.available}`;
     
     this.$content.innerHTML = `
         
         ${this.renderViewHeader(
-            'Estadísticas',
-            'Observa tu constancia, lecturas, notas y progreso espiritual.'
+            'Tu camino',
+            'Una mirada sobria a tu constancia, tu recorrido bíblico y tu respuesta a la Palabra.'
         )}
 
         <div class="stats-container">
-            <div class="stat-card">
-                <div class="stat-number">${stats.totalRead}</div>
-                <div class="stat-label">Lecturas completadas</div>
-                <div class="stat-progress">
-                    <div class="progress-bar" style="width: ${stats.percentage}%"></div>
-                    <div class="progress-text">${stats.percentage}% del plan</div>
+            <section class="stats-hero-card">
+                <div class="stats-hero-main">
+                    <span class="stats-eyebrow">Constancia actual</span>
+                    <div class="stats-streak-value">
+                        <strong>${stats.streak.current}</strong>
+                        <span>${stats.streak.current === 1 ? 'día' : 'días'}</span>
+                    </div>
+                    <p>${this.escapeHtml(streakStatus)}</p>
                 </div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">🔥 ${stats.currentStreak}</div>
-                <div class="stat-label">Días consecutivos</div>
-                <div class="stat-note">🏆 Récord: ${stats.longestStreak} días</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">📝 ${stats.totalNotes}</div>
-                <div class="stat-label">Reflexiones escritas</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">✨ ${stats.totalHighlights}</div>
-                <div class="stat-label">Versículos resaltados</div>
-            </div>
-            
-            <div class="stat-card">
-                <div class="stat-number">📖 ${stats.totalAvailable}</div>
-                <div class="stat-label">Lecturas disponibles</div>
-            </div>
+                <div class="stats-hero-progress">
+                    <div class="stats-ring" style="--stats-percent: ${stats.month.percent}">
+                        <span>${stats.month.percent}%</span>
+                    </div>
+                    <div>
+                        <span>Este mes</span>
+                        <strong>${monthRatio}</strong>
+                        <small>lecturas completadas</small>
+                    </div>
+                </div>
+            </section>
+
+            <section class="stats-section stats-month-section">
+                <div class="stats-section-head">
+                    <div>
+                        <span>Este mes</span>
+                        <h3>Señales de constancia</h3>
+                    </div>
+                </div>
+                <div class="stats-metric-grid">
+                    ${this.renderStatsMetric('Días leídos', stats.month.completed, `${stats.month.available} disponibles`)}
+                    ${this.renderStatsMetric('Reflexión', stats.response.reflectionDays, 'días escritos')}
+                    ${this.renderStatsMetric('Oración', stats.response.prayerDays, 'días escritos')}
+                    ${this.renderStatsMetric('Avance mensual', `${stats.month.percent}%`, 'del mes')}
+                </div>
+            </section>
+
+            ${this.renderStatsCalendar(stats)}
+
+            <section class="stats-section stats-plan-section">
+                <div class="stats-section-head">
+                    <div>
+                        <span>Recorrido bíblico</span>
+                        <h3>Lo que has recorrido</h3>
+                    </div>
+                    <strong>${stats.plan.percent}%</strong>
+                </div>
+                <div class="stats-plan-summary">
+                    ${this.renderStatsMetric('Lecturas del plan', `${stats.plan.completed}/${stats.plan.total}`, 'completadas')}
+                    ${this.renderStatsMetric('Mejor racha', stats.streak.longest, stats.streak.longest === 1 ? 'día' : 'días')}
+                </div>
+                <div class="stats-plan-meter" aria-hidden="true">
+                    <span style="width: ${stats.plan.percent}%"></span>
+                </div>
+                ${this.renderStatsBookProgress(stats)}
+            </section>
+
+            <section class="stats-section stats-response-section">
+                <div class="stats-section-head">
+                    <div>
+                        <span>Respuesta a la Palabra</span>
+                        <h3>Memoria y oración</h3>
+                    </div>
+                </div>
+                <div class="stats-response-grid">
+                    ${this.renderStatsMetric('Reflexión diaria', stats.response.reflectionDays, 'días con respuesta')}
+                    ${this.renderStatsMetric('Oración escrita', stats.response.prayerDays, 'días')}
+                    ${this.renderStatsMetric('Resaltados', stats.memory.highlights, 'pasajes guardados')}
+                    ${this.renderStatsMetric('Notas personales', stats.memory.selectionNotes, 'sobre selección')}
+                </div>
+            </section>
         </div>
     `;
 },
