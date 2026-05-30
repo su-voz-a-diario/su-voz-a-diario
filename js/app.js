@@ -460,6 +460,7 @@ const App = {
     calendarScrollTop: 0,
     calendarBookOpenState: {},
     calendarActiveFilter: 'all',
+    selectedStatsDate: null,
 
      // ✅ NUEVAS PROPIEDADES PARA OPTIMIZACIÓN
     communityCache: null,           // Para caché de posts
@@ -7593,9 +7594,9 @@ getStatsMonthDays: function(stats) {
     const [year, month] = currentMonth.split('-').map(Number);
     const daysInMonth = new Date(year, month, 0).getDate();
     const firstDay = new Date(year, month - 1, 1).getDay();
-    const planDates = new Set(this.getCalendarReadings()
-        .map(reading => reading.date)
-        .filter(date => date.startsWith(`${currentMonth}-`)));
+    const planReadings = this.getCalendarReadings()
+        .filter(reading => reading.date.startsWith(`${currentMonth}-`));
+    const planByDate = new Map(planReadings.map(reading => [reading.date, reading]));
     const readDates = new Set(stats.activityDays.read);
     const reflectionDates = new Set(stats.activityDays.reflection);
     const prayerDates = new Set(stats.activityDays.prayer);
@@ -7608,7 +7609,8 @@ getStatsMonthDays: function(stats) {
 
     for (let day = 1; day <= daysInMonth; day++) {
         const date = `${currentMonth}-${String(day).padStart(2, '0')}`;
-        const hasReading = planDates.has(date);
+        const reading = planByDate.get(date) || null;
+        const hasReading = Boolean(reading);
         const isRead = readDates.has(date);
         const hasReflection = reflectionDates.has(date);
         const hasPrayer = prayerDates.has(date);
@@ -7620,6 +7622,7 @@ getStatsMonthDays: function(stats) {
             date,
             day,
             hasReading,
+            reference: reading?.reference || '',
             isRead,
             hasReflection,
             hasPrayer,
@@ -7638,9 +7641,113 @@ getStatsMonthDays: function(stats) {
     };
 },
 
+getStatsSelectedDate: function() {
+    const todayStr = this.getTodayDateStr();
+    const currentMonth = todayStr.slice(0, 7);
+
+    if (this.selectedStatsDate && this.selectedStatsDate.startsWith(`${currentMonth}-`)) {
+        return this.selectedStatsDate;
+    }
+
+    this.selectedStatsDate = todayStr;
+    return this.selectedStatsDate;
+},
+
+getStatsDayDetails: function(dateStr, stats) {
+    const reading = this.getReadingMetadataByDate(dateStr);
+    const readDates = new Set(stats.activityDays.read);
+    const note = this.getNote(dateStr);
+    const hasReflection = Boolean(
+        note.dios?.trim() ||
+        note.aprendizaje?.trim() ||
+        note.respuesta?.trim() ||
+        note.oracion?.trim()
+    );
+    const hasPrayer = Boolean(note.oracion?.trim());
+    const highlights = this.getHighlights(dateStr);
+    const selectionNotes = this.getSelectionNotes(dateStr);
+    const hasReading = Boolean(reading);
+    const isRead = readDates.has(dateStr);
+    const status = hasReading
+        ? (isRead ? 'Lectura completada' : 'Pendiente')
+        : 'Sin lectura asignada';
+
+    return {
+        date: dateStr,
+        label: this.formatDateEs(dateStr),
+        reading,
+        hasReading,
+        isRead,
+        status,
+        hasReflection,
+        hasPrayer,
+        highlightCount: highlights.length,
+        selectionNoteCount: selectionNotes.length
+    };
+},
+
+renderStatsDayPanel: function(stats) {
+    const selectedDate = this.getStatsSelectedDate();
+    const detail = this.getStatsDayDetails(selectedDate, stats);
+    const hasMemory = detail.highlightCount > 0 || detail.selectionNoteCount > 0;
+    const hasResponse = detail.hasReflection || detail.hasPrayer;
+
+    return `
+        <aside class="stats-day-panel" aria-live="polite">
+            <div class="stats-day-panel-head">
+                <div>
+                    <span>Día seleccionado</span>
+                    <h4>${this.escapeHtml(detail.label)}</h4>
+                </div>
+                <strong class="${detail.isRead ? 'is-complete' : detail.hasReading ? 'is-pending' : 'is-empty'}">
+                    ${this.escapeHtml(detail.status)}
+                </strong>
+            </div>
+
+            ${detail.hasReading ? `
+                <div class="stats-day-reference">
+                    <span>Lectura asignada</span>
+                    <strong>${this.escapeHtml(detail.reading.reference)}</strong>
+                </div>
+            ` : `
+                <div class="stats-day-reference is-muted">
+                    <span>Lectura asignada</span>
+                    <strong>No hay lectura para este día</strong>
+                </div>
+            `}
+
+            <div class="stats-day-signals">
+                <span class="${detail.hasReflection ? 'is-active' : ''}">${detail.hasReflection ? 'Reflexión escrita' : 'Sin reflexión'}</span>
+                <span class="${detail.hasPrayer ? 'is-active' : ''}">${detail.hasPrayer ? 'Oración escrita' : 'Sin oración'}</span>
+                <span class="${detail.highlightCount > 0 ? 'is-active' : ''}">${detail.highlightCount} resaltados</span>
+                <span class="${detail.selectionNoteCount > 0 ? 'is-active' : ''}">${detail.selectionNoteCount} notas</span>
+            </div>
+
+            <div class="stats-day-actions">
+                ${detail.hasReading ? `
+                    <button class="stats-day-action primary" type="button" data-action="stats-open-reading" data-date="${this.escapeHtml(detail.date)}">
+                        ${detail.isRead ? 'Abrir lectura' : 'Leer ahora'}
+                    </button>
+                ` : ''}
+                ${hasResponse ? `
+                    <button class="stats-day-action" type="button" data-action="stats-open-response" data-date="${this.escapeHtml(detail.date)}">
+                        Ver respuesta
+                    </button>
+                ` : ''}
+                ${hasMemory ? `
+                    <button class="stats-day-action" type="button" data-action="stats-open-memory" data-date="${this.escapeHtml(detail.date)}">
+                        Repasar memoria
+                    </button>
+                ` : ''}
+            </div>
+        </aside>
+    `;
+},
+
 renderStatsCalendar: function(stats) {
     const month = this.getStatsMonthDays(stats);
     const weekdayLabels = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+    const selectedDate = this.getStatsSelectedDate();
 
     return `
         <section class="stats-section stats-calendar-section">
@@ -7652,42 +7759,51 @@ renderStatsCalendar: function(stats) {
                 <strong>${this.escapeHtml(month.monthLabel)}</strong>
             </div>
 
-            <div class="stats-calendar" aria-label="Calendario de constancia">
-                ${weekdayLabels.map(label => `<div class="stats-calendar-weekday">${label}</div>`).join('')}
-                ${month.cells.map(cell => {
-                    if (cell.empty) return '<div class="stats-calendar-day is-empty" aria-hidden="true"></div>';
+            <div class="stats-calendar-layout">
+                <div>
+                    <div class="stats-calendar" aria-label="Calendario de constancia">
+                        ${weekdayLabels.map(label => `<div class="stats-calendar-weekday">${label}</div>`).join('')}
+                        ${month.cells.map(cell => {
+                            if (cell.empty) return '<div class="stats-calendar-day is-empty" aria-hidden="true"></div>';
 
-                    const classes = [
-                        'stats-calendar-day',
-                        cell.hasReading ? 'has-reading' : 'no-reading',
-                        cell.isRead ? 'is-read' : '',
-                        cell.hasReflection ? 'has-reflection' : '',
-                        cell.hasPrayer ? 'has-prayer' : '',
-                        cell.hasHighlight ? 'has-highlight' : '',
-                        cell.isPending ? 'is-pending' : '',
-                        cell.isToday ? 'is-today' : ''
-                    ].filter(Boolean).join(' ');
-                    const label = [
-                        cell.date,
-                        cell.isRead ? 'leído' : '',
-                        cell.hasReflection ? 'reflexión' : '',
-                        cell.hasPrayer ? 'oración' : '',
-                        cell.isPending ? 'pendiente' : ''
-                    ].filter(Boolean).join(', ');
+                            const isSelected = cell.date === selectedDate;
+                            const classes = [
+                                'stats-calendar-day',
+                                cell.hasReading ? 'has-reading' : 'no-reading',
+                                cell.isRead ? 'is-read' : '',
+                                cell.hasReflection ? 'has-reflection' : '',
+                                cell.hasPrayer ? 'has-prayer' : '',
+                                cell.hasHighlight ? 'has-highlight' : '',
+                                cell.isPending ? 'is-pending' : '',
+                                cell.isToday ? 'is-today' : '',
+                                isSelected ? 'is-selected' : ''
+                            ].filter(Boolean).join(' ');
+                            const label = [
+                                cell.date,
+                                cell.reference,
+                                cell.isRead ? 'leído' : '',
+                                cell.hasReflection ? 'reflexión' : '',
+                                cell.hasPrayer ? 'oración' : '',
+                                cell.isPending ? 'pendiente' : ''
+                            ].filter(Boolean).join(', ');
 
-                    return `
-                        <div class="${classes}" aria-label="${this.escapeHtml(label)}">
-                            <span>${cell.day}</span>
-                        </div>
-                    `;
-                }).join('')}
-            </div>
+                            return `
+                                <button class="${classes}" type="button" data-action="select-stats-day" data-date="${this.escapeHtml(cell.date)}" aria-label="${this.escapeHtml(label)}" aria-pressed="${isSelected ? 'true' : 'false'}">
+                                    <span>${cell.day}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
 
-            <div class="stats-calendar-legend" aria-label="Leyenda del calendario">
-                <span><i class="legend-read"></i> Leído</span>
-                <span><i class="legend-reflection"></i> Reflexión</span>
-                <span><i class="legend-prayer"></i> Oración</span>
-                <span><i class="legend-pending"></i> Pendiente</span>
+                    <div class="stats-calendar-legend" aria-label="Leyenda del calendario">
+                        <span><i class="legend-read"></i> Leído</span>
+                        <span><i class="legend-reflection"></i> Reflexión</span>
+                        <span><i class="legend-prayer"></i> Oración</span>
+                        <span><i class="legend-pending"></i> Pendiente</span>
+                    </div>
+                </div>
+
+                ${this.renderStatsDayPanel(stats)}
             </div>
         </section>
     `;
@@ -8827,6 +8943,50 @@ const donateBtn = e.target.closest('[data-action="donate"]');
 if (donateBtn) {
     window.open('https://paypal.me/suvozadiario', '_blank');
     this.showToast('Serás redirigido a PayPal');
+    return;
+}
+
+const selectStatsDayBtn = e.target.closest('[data-action="select-stats-day"]');
+if (selectStatsDayBtn) {
+    const date = selectStatsDayBtn.getAttribute('data-date');
+
+    if (date) {
+        this.selectedStatsDate = date;
+        this.renderStats();
+    }
+    return;
+}
+
+const statsOpenReadingBtn = e.target.closest('[data-action="stats-open-reading"]');
+if (statsOpenReadingBtn) {
+    const date = statsOpenReadingBtn.getAttribute('data-date');
+
+    if (date) {
+        this.navigate('reading', date);
+    }
+    return;
+}
+
+const statsOpenResponseBtn = e.target.closest('[data-action="stats-open-response"]');
+if (statsOpenResponseBtn) {
+    const date = statsOpenResponseBtn.getAttribute('data-date');
+
+    if (date) {
+        const note = this.getNote(date);
+        this.openNoteDate = date;
+        this.activeNoteField = note.oracion?.trim() ? 'oracion' : null;
+        this.navigate('reading', date);
+    }
+    return;
+}
+
+const statsOpenMemoryBtn = e.target.closest('[data-action="stats-open-memory"]');
+if (statsOpenMemoryBtn) {
+    const date = statsOpenMemoryBtn.getAttribute('data-date');
+
+    if (date) {
+        this.navigate('reading', date);
+    }
     return;
 }
 
