@@ -7925,11 +7925,12 @@ getStatsMomentFragment: function(text, maxLength = 132) {
 
 renderStatsMomentCard: function(moment) {
     const isReflection = moment.type === 'Reflexión';
+    const title = moment.reference || this.formatDateEs(moment.date);
 
     return `
         <article class="stats-memory-card">
             <div class="stats-memory-type">${this.escapeHtml(moment.type)}</div>
-            <h4>${this.escapeHtml(moment.reference)}</h4>
+            <h4>${this.escapeHtml(title)}</h4>
             <p>"${this.escapeHtml(this.getStatsMomentFragment(moment.fragment))}"</p>
             <div class="stats-memory-footer">
                 <span>${this.escapeHtml(this.formatDateEs(moment.date))}</span>
@@ -7945,12 +7946,38 @@ renderStatsMomentCard: function(moment) {
     `;
 },
 
+renderStatsMomentGroup: function(title, moments) {
+    if (!moments.length) return '';
+
+    return `
+        <div class="stats-memory-group">
+            <div class="stats-memory-group-head">
+                <span>${this.escapeHtml(title)}</span>
+                <small>${moments.length}</small>
+            </div>
+            <div class="stats-memory-stack">
+                ${moments.map(moment => this.renderStatsMomentCard(moment)).join('')}
+            </div>
+        </div>
+    `;
+},
+
 renderStatsMoments: function(stats) {
-    const moments = [
-        ...(stats.moments?.selectionNotes || []),
-        ...(stats.moments?.highlights || []),
-        ...(stats.moments?.reflections || [])
-    ].sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order);
+    const groups = [
+        {
+            title: 'Notas recientes',
+            moments: stats.moments?.selectionNotes || []
+        },
+        {
+            title: 'Resaltados recientes',
+            moments: stats.moments?.highlights || []
+        },
+        {
+            title: 'Reflexiones recientes',
+            moments: stats.moments?.reflections || []
+        }
+    ];
+    const hasMoments = groups.some(group => group.moments.length > 0);
 
     return `
         <section class="stats-section stats-memory-section">
@@ -7962,13 +7989,13 @@ renderStatsMoments: function(stats) {
                 </div>
             </div>
 
-            ${moments.length > 0 ? `
-                <div class="stats-memory-list">
-                    ${moments.map(moment => this.renderStatsMomentCard(moment)).join('')}
+            ${hasMoments ? `
+                <div class="stats-memory-grid">
+                    ${groups.map(group => this.renderStatsMomentGroup(group.title, group.moments)).join('')}
                 </div>
             ` : `
                 <div class="stats-memory-empty">
-                    Cuando guardes una nota, un resaltado o una reflexión, aparecerá aquí para volver a meditarlo.
+                    Cuando guardes una nota, un resaltado o una reflexión, aparecerán aquí para ayudarte a volver a ellos.
                 </div>
             `}
         </section>
