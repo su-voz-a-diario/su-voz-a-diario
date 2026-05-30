@@ -1224,6 +1224,7 @@ checkReminderOnOpen: function() {
         const readDates = this.getReadDates();
         const planReadings = this.getCalendarReadings();
         const planDateSet = new Set(planReadings.map(reading => reading.date));
+        const planReadingMap = new Map(planReadings.map(reading => [reading.date, reading]));
         const validReadDates = readDates.filter(date => planDateSet.has(date));
         const todayStr = this.getTodayDateStr();
         const groups = this.getCalendarBookGroups(planReadings);
@@ -1237,6 +1238,20 @@ checkReminderOnOpen: function() {
             reflection: [],
             prayer: [],
             highlight: []
+        };
+        const moments = {
+            selectionNotes: [],
+            highlights: [],
+            reflections: []
+        };
+        let momentOrder = 0;
+        const getReadingMomentMeta = (date) => {
+            const reading = planReadingMap.get(date);
+
+            return {
+                date,
+                reference: reading?.reference || 'Lectura del día'
+            };
         };
 
         for (let i = 0; i < localStorage.length; i++) {
@@ -1257,7 +1272,24 @@ checkReminderOnOpen: function() {
                 const hasPrayer = Boolean(note.oracion?.trim());
 
                 if (hasReflection) reflectionDays++;
-                if (hasReflection) activityDays.reflection.push(date);
+                if (hasReflection) {
+                    activityDays.reflection.push(date);
+                    const fragment = [
+                        note.dios,
+                        note.aprendizaje,
+                        note.respuesta,
+                        note.oracion
+                    ].find(value => String(value || '').trim());
+
+                    if (fragment) {
+                        moments.reflections.push({
+                            ...getReadingMomentMeta(date),
+                            type: 'Reflexión',
+                            fragment: String(fragment).trim(),
+                            order: momentOrder++
+                        });
+                    }
+                }
                 if (hasPrayer) {
                     prayerDays++;
                     activityDays.prayer.push(date);
@@ -1269,7 +1301,16 @@ checkReminderOnOpen: function() {
 
                 if (!planDateSet.has(date)) continue;
 
-                totalSelectionNotes += this.getSelectionNotes(date).length;
+                const selectionNotes = this.getSelectionNotes(date);
+                totalSelectionNotes += selectionNotes.length;
+                selectionNotes.slice().reverse().forEach(item => {
+                    moments.selectionNotes.push({
+                        ...getReadingMomentMeta(date),
+                        type: 'Nota',
+                        fragment: item.note || item.text || '',
+                        order: momentOrder++
+                    });
+                });
             }
 
             if (key && key.startsWith('su-voz-highlights-')) {
@@ -1280,6 +1321,14 @@ checkReminderOnOpen: function() {
                 const highlights = this.getHighlights(date);
                 totalHighlights += highlights.length;
                 if (highlights.length > 0) activityDays.highlight.push(date);
+                highlights.slice().reverse().forEach(item => {
+                    moments.highlights.push({
+                        ...getReadingMomentMeta(date),
+                        type: 'Resaltado',
+                        fragment: item.text || '',
+                        order: momentOrder++
+                    });
+                });
             }
         }
 
@@ -1295,6 +1344,20 @@ checkReminderOnOpen: function() {
         return {
             ...stats,
             activityDays,
+            moments: {
+                selectionNotes: moments.selectionNotes
+                    .filter(item => item.fragment)
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order)
+                    .slice(0, 3),
+                highlights: moments.highlights
+                    .filter(item => item.fragment)
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order)
+                    .slice(0, 3),
+                reflections: moments.reflections
+                    .filter(item => item.fragment)
+                    .sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order)
+                    .slice(0, 3)
+            },
             books: groups.map(group => {
                 const meta = this.getCalendarBookMeta(group, readDateSet, todayStr);
 
@@ -7846,6 +7909,66 @@ renderStatsMetric: function(label, value, detail = '') {
     `;
 },
 
+getStatsMomentFragment: function(text, maxLength = 132) {
+    const cleanText = String(text || '').replace(/\s+/g, ' ').trim();
+
+    if (cleanText.length <= maxLength) return cleanText;
+
+    return `${cleanText.slice(0, maxLength - 1).trim()}...`;
+},
+
+renderStatsMomentCard: function(moment) {
+    const isReflection = moment.type === 'Reflexión';
+
+    return `
+        <article class="stats-memory-card">
+            <div class="stats-memory-type">${this.escapeHtml(moment.type)}</div>
+            <h4>${this.escapeHtml(moment.reference)}</h4>
+            <p>"${this.escapeHtml(this.getStatsMomentFragment(moment.fragment))}"</p>
+            <div class="stats-memory-footer">
+                <span>${this.escapeHtml(this.formatDateEs(moment.date))}</span>
+                <button
+                    type="button"
+                    data-action="stats-open-moment"
+                    data-date="${this.escapeHtml(moment.date)}"
+                    data-kind="${this.escapeHtml(moment.type)}">
+                    ${isReflection ? 'Ver lectura' : 'Abrir pasaje'}
+                </button>
+            </div>
+        </article>
+    `;
+},
+
+renderStatsMoments: function(stats) {
+    const moments = [
+        ...(stats.moments?.selectionNotes || []),
+        ...(stats.moments?.highlights || []),
+        ...(stats.moments?.reflections || [])
+    ].sort((a, b) => b.date.localeCompare(a.date) || b.order - a.order);
+
+    return `
+        <section class="stats-section stats-memory-section">
+            <div class="stats-section-head stats-memory-head">
+                <div>
+                    <span>Memoria</span>
+                    <h3>Momentos para recordar</h3>
+                    <p>Pasajes y pensamientos que has guardado durante tu recorrido.</p>
+                </div>
+            </div>
+
+            ${moments.length > 0 ? `
+                <div class="stats-memory-list">
+                    ${moments.map(moment => this.renderStatsMomentCard(moment)).join('')}
+                </div>
+            ` : `
+                <div class="stats-memory-empty">
+                    Cuando guardes una nota, un resaltado o una reflexión, aparecerá aquí para volver a meditarlo.
+                </div>
+            `}
+        </section>
+    `;
+},
+
 renderStats: function() {
     const stats = this.getStats();
     const streakStatusLabels = {
@@ -7934,6 +8057,8 @@ renderStats: function() {
                     ${this.renderStatsMetric('Notas personales', stats.memory.selectionNotes, 'sobre selección')}
                 </div>
             </section>
+
+            ${this.renderStatsMoments(stats)}
         </div>
     `;
 },
@@ -8985,6 +9110,20 @@ if (statsOpenMemoryBtn) {
     const date = statsOpenMemoryBtn.getAttribute('data-date');
 
     if (date) {
+        this.navigate('reading', date);
+    }
+    return;
+}
+
+const statsOpenMomentBtn = e.target.closest('[data-action="stats-open-moment"]');
+if (statsOpenMomentBtn) {
+    const date = statsOpenMomentBtn.getAttribute('data-date');
+    const kind = statsOpenMomentBtn.getAttribute('data-kind');
+
+    if (date) {
+        if (kind === 'Reflexión') {
+            this.openNoteDate = date;
+        }
         this.navigate('reading', date);
     }
     return;
