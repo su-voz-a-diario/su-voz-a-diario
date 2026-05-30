@@ -1360,6 +1360,9 @@ checkReminderOnOpen: function() {
             },
             books: groups.map(group => {
                 const meta = this.getCalendarBookMeta(group, readDateSet, todayStr);
+                const firstPending = group.items.find(item => !readDateSet.has(item.date));
+                const completedItems = group.items.filter(item => readDateSet.has(item.date));
+                const lastCompleted = completedItems[completedItems.length - 1];
 
                 return {
                     id: group.id,
@@ -1368,7 +1371,11 @@ checkReminderOnOpen: function() {
                     completed: meta.completed,
                     percent: meta.total > 0 ? Math.round((meta.completed / meta.total) * 100) : 0,
                     state: meta.stateKey,
-                    label: meta.stateLabel
+                    label: meta.stateLabel,
+                    firstDate: meta.firstDate,
+                    lastDate: meta.lastDate,
+                    continueDate: firstPending?.date || group.items[0]?.date || '',
+                    reviewDate: lastCompleted?.date || group.items[group.items.length - 1]?.date || ''
                 };
             })
         };
@@ -7879,8 +7886,20 @@ renderStatsCalendar: function(stats) {
 },
 
 renderStatsBookProgress: function(stats) {
-    const visibleBooks = stats.books
-        .filter(book => book.state === 'current' || book.completed > 0 || book.state === 'pending')
+    const currentIndex = stats.books.findIndex(book => book.state === 'current' || book.state === 'pending');
+    const completedBooks = stats.books
+        .map((book, index) => ({ ...book, index }))
+        .filter(book => book.state === 'completed');
+    const currentBook = currentIndex >= 0 ? { ...stats.books[currentIndex], index: currentIndex } : null;
+    const previousCompleted = completedBooks
+        .filter(book => !currentBook || book.index < currentBook.index)
+        .pop() || completedBooks[completedBooks.length - 1] || null;
+    const nextBook = stats.books
+        .map((book, index) => ({ ...book, index }))
+        .find(book => book.state === 'upcoming' || (currentBook && book.index > currentBook.index && book.state !== 'completed'));
+    const visibleBooks = [previousCompleted, currentBook, nextBook]
+        .filter(Boolean)
+        .filter((book, index, list) => list.findIndex(item => item.id === book.id) === index)
         .slice(0, 3);
 
     if (!visibleBooks.length) {
@@ -7888,20 +7907,65 @@ renderStatsBookProgress: function(stats) {
     }
 
     return `
-        <div class="stats-book-list">
-            ${visibleBooks.map(book => `
-                <div class="stats-book-row">
-                    <div class="stats-book-info">
-                        <strong>${this.escapeHtml(book.name)}</strong>
-                        <span>${this.escapeHtml(book.label)} · ${book.completed}/${book.total}</span>
-                    </div>
-                    <div class="stats-book-meter" aria-hidden="true">
-                        <span style="width: ${book.percent}%"></span>
-                    </div>
-                    <b>${book.percent}%</b>
-                </div>
-            `).join('')}
+        <div class="stats-book-journey">
+            ${visibleBooks.map(book => {
+                const isCompleted = book.state === 'completed';
+                const isUpcoming = book.state === 'upcoming';
+                const actionDate = isCompleted ? book.reviewDate : book.continueDate;
+                const actionLabel = isCompleted ? 'Repasar' : 'Continuar';
+
+                return `
+                    <article class="stats-book-card is-${this.escapeHtml(book.state)}">
+                        <div class="stats-book-card-head">
+                            <span>${this.escapeHtml(book.label)}</span>
+                            <b>${book.percent}%</b>
+                        </div>
+                        <h4>${this.escapeHtml(book.name)}</h4>
+                        <p>${book.completed} de ${book.total} lecturas</p>
+                        <div class="stats-book-meter" aria-hidden="true">
+                            <span style="width: ${book.percent}%"></span>
+                        </div>
+                        <div class="stats-book-card-foot">
+                            <small>${this.escapeHtml(this.formatDateEs(book.firstDate))} - ${this.escapeHtml(this.formatDateEs(book.lastDate))}</small>
+                            ${!isUpcoming && actionDate ? `
+                                <button type="button" data-action="stats-open-book" data-date="${this.escapeHtml(actionDate)}">
+                                    ${actionLabel}
+                                </button>
+                            ` : `
+                                <span>Próximo</span>
+                            `}
+                        </div>
+                    </article>
+                `;
+            }).join('')}
         </div>
+    `;
+},
+
+renderStatsPlan: function(stats) {
+    const currentBook = stats.books.find(book => book.state === 'current' || book.state === 'pending')
+        || stats.books.find(book => book.state === 'upcoming')
+        || stats.books[stats.books.length - 1];
+
+    return `
+        <section class="stats-section stats-plan-section">
+            <div class="stats-section-head stats-plan-head">
+                <div>
+                    <span>Recorrido bíblico</span>
+                    <h3>Lo que has recorrido</h3>
+                    ${currentBook ? `<p>Ahora en ${this.escapeHtml(currentBook.name)}: ${currentBook.completed} de ${currentBook.total} lecturas.</p>` : ''}
+                </div>
+                <strong>${stats.plan.percent}%</strong>
+            </div>
+            <div class="stats-plan-summary">
+                ${this.renderStatsMetric('Lecturas del plan', `${stats.plan.completed}/${stats.plan.total}`, 'completadas')}
+                ${this.renderStatsMetric('Mejor racha', stats.streak.longest, stats.streak.longest === 1 ? 'día' : 'días')}
+            </div>
+            <div class="stats-plan-meter" aria-hidden="true">
+                <span style="width: ${stats.plan.percent}%"></span>
+            </div>
+            ${this.renderStatsBookProgress(stats)}
+        </section>
     `;
 },
 
@@ -8058,23 +8122,7 @@ renderStats: function() {
 
             ${this.renderStatsCalendar(stats)}
 
-            <section class="stats-section stats-plan-section">
-                <div class="stats-section-head">
-                    <div>
-                        <span>Recorrido bíblico</span>
-                        <h3>Lo que has recorrido</h3>
-                    </div>
-                    <strong>${stats.plan.percent}%</strong>
-                </div>
-                <div class="stats-plan-summary">
-                    ${this.renderStatsMetric('Lecturas del plan', `${stats.plan.completed}/${stats.plan.total}`, 'completadas')}
-                    ${this.renderStatsMetric('Mejor racha', stats.streak.longest, stats.streak.longest === 1 ? 'día' : 'días')}
-                </div>
-                <div class="stats-plan-meter" aria-hidden="true">
-                    <span style="width: ${stats.plan.percent}%"></span>
-                </div>
-                ${this.renderStatsBookProgress(stats)}
-            </section>
+            ${this.renderStatsPlan(stats)}
 
             <section class="stats-section stats-response-section">
                 <div class="stats-section-head">
@@ -9141,6 +9189,16 @@ if (statsOpenResponseBtn) {
 const statsOpenMemoryBtn = e.target.closest('[data-action="stats-open-memory"]');
 if (statsOpenMemoryBtn) {
     const date = statsOpenMemoryBtn.getAttribute('data-date');
+
+    if (date) {
+        this.navigate('reading', date);
+    }
+    return;
+}
+
+const statsOpenBookBtn = e.target.closest('[data-action="stats-open-book"]');
+if (statsOpenBookBtn) {
+    const date = statsOpenBookBtn.getAttribute('data-date');
 
     if (date) {
         this.navigate('reading', date);
