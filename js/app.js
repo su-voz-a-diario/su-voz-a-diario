@@ -82,6 +82,8 @@ const db = null;
 const auth = null;
 
 const LOCAL_BIBLE_PATH = './data/rv1909.json';
+const STRONG_HEBREW_PATH = './data/strong-hebrew-clean.json';
+const STRONG_GREEK_PATH = './data/strong-greek-dictionary.json';
 
 let rv1909BibleCache = null;
 
@@ -411,6 +413,17 @@ const App = {
     currentBibleChapterData: null,
     strongHebrew: {},
     strongHebrewReady: false,
+    strongGreek: {},
+    strongGreekReady: false,
+    strongDictionaryEntries: [],
+    strongDictionaryReady: false,
+    strongDictionaryLoading: false,
+    strongDictionaryLoadPromise: null,
+    strongDictionaryQuery: '',
+    strongDictionaryFilter: 'all',
+    strongDictionaryResults: [],
+    strongDictionarySelectedId: null,
+    pendingStrongContext: null,
     strongVerseData: {},
     strongVerseDataReady: false,
 
@@ -527,8 +540,6 @@ this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
 await this.loadData();
-await this.loadStrongHebrew();
-await this.loadStrongVerseData();
 
 await this.handleRoute();
 this.updateStreakUI();
@@ -4726,6 +4737,8 @@ this.updateNavUI();
     }
 } else if (view === 'bible-search') {
     this.$content.innerHTML = this.renderBibleSearch();
+} else if (view === 'strong-dictionary') {
+    await this.renderStrongDictionaryView();
 } else if (view === 'bible-reading') {
     await this.renderBibleReading();
 } else if (view === 'calendar') {
@@ -4757,7 +4770,7 @@ this.updateNavUI();
 updateNavUI: function() {
     const navBtns = [
         { btn: this.$navHome, views: ['home', 'reading'] },
-        { btn: this.$navBible, views: ['bible', 'bible-reading', 'bible-search'] },
+        { btn: this.$navBible, views: ['bible', 'bible-reading', 'bible-search', 'strong-dictionary'] },
         { btn: this.$navCalendar, views: ['calendar'] },
         { btn: this.$navCommunity, views: ['community'] },
         { btn: this.$navStats, views: ['stats'] }
@@ -6842,6 +6855,14 @@ renderBible: function() {
                         🔍 Buscar
                     </button>
 
+                    <button
+                        class="bible-library-action-btn"
+                        type="button"
+                        data-action="open-strong-dictionary"
+                    >
+                        Diccionario Strong
+                    </button>
+
                     ${book ? `
                         <button
                             class="bible-library-action-btn"
@@ -8701,66 +8722,516 @@ savePushToken: async function(token) {
     console.log('[App] ✅ Listeners Push configurados');
 },
 
-openVerseStudy: function({ bookId, chapter, verse, verseText }) {
-    if (!this.strongHebrewReady) {
-        this.showToast('El diccionario Strong todavía no está disponible.');
-        return;
+openVerseStudy: function({ strongNumber = '', bookId = '', chapter = '', verse = '' } = {}) {
+    this.openStrongDictionaryFromBible({ strongNumber, bookId, chapter, verse });
+},
+
+openStrongDictionaryFromBible: function({ strongNumber = '', bookId = '', chapter = '', verse = '' } = {}) {
+    this.pendingStrongContext = { bookId, chapter, verse };
+
+    if (strongNumber) {
+        this.strongDictionaryQuery = strongNumber;
+        this.strongDictionarySelectedId = this.normalizeStrongLookupId(strongNumber) || null;
     }
 
-    const sample = this.strongHebrew.H1;
-
-    if (!sample) {
-        this.showToast('No se encontró la entrada Strong de prueba.');
-        return;
-    }
-
-    alert(
-        `Estudio de ${bookId.toUpperCase()} ${chapter}:${verse}\n\n` +
-        `Texto: ${verseText}\n\n` +
-        `Strong: H1\n` +
-        `Hebreo: ${sample.lemma}\n` +
-        `Transliteración: ${sample.xlit}\n` +
-        `Pronunciación: ${sample.pronunciation}\n\n` +
-        `Definición:\n${sample.definition.slice(0, 3).join('\n')}`
-    );
+    this.navigate('strong-dictionary');
 },
 
 loadStrongHebrew: async function() {
-    try {
-        const response = await fetch('./data/strong-hebrew-clean.json');
+    if (this.strongHebrewReady) return this.strongHebrew;
 
-        if (!response.ok) {
-            throw new Error('No se pudo cargar el diccionario Strong hebreo.');
+    const response = await fetch(STRONG_HEBREW_PATH);
+
+    if (!response.ok) {
+        throw new Error('No se pudo cargar el diccionario Strong hebreo.');
+    }
+
+    this.strongHebrew = await response.json();
+    this.strongHebrewReady = true;
+
+    return this.strongHebrew;
+},
+
+loadStrongGreek: async function() {
+    if (this.strongGreekReady) return this.strongGreek;
+
+    const response = await fetch(STRONG_GREEK_PATH);
+
+    if (!response.ok) {
+        throw new Error('No se pudo cargar el diccionario Strong griego.');
+    }
+
+    this.strongGreek = await response.json();
+    this.strongGreekReady = true;
+
+    return this.strongGreek;
+},
+
+ensureStrongDictionaryLoaded: async function() {
+    if (this.strongDictionaryReady) return this.strongDictionaryEntries;
+    if (this.strongDictionaryLoadPromise) return this.strongDictionaryLoadPromise;
+
+    this.strongDictionaryLoading = true;
+
+    this.strongDictionaryLoadPromise = Promise.all([
+        this.loadStrongHebrew(),
+        this.loadStrongGreek()
+    ]).then(([hebrew, greek]) => {
+        const hebrewEntries = Object.entries(hebrew || {}).map(([id, entry]) =>
+            this.createStrongDictionaryEntry(id, 'hebrew', entry)
+        );
+
+        const greekEntries = Object.entries(greek || {}).map(([id, entry]) =>
+            this.createStrongDictionaryEntry(id, 'greek', entry)
+        );
+
+        this.strongDictionaryEntries = [...hebrewEntries, ...greekEntries].sort((a, b) => {
+            if (a.language !== b.language) return a.language === 'hebrew' ? -1 : 1;
+            return a.numberValue - b.numberValue;
+        });
+
+        this.strongDictionaryReady = true;
+        this.strongDictionaryLoading = false;
+        this.updateStrongDictionaryResults();
+
+        return this.strongDictionaryEntries;
+    }).catch(error => {
+        this.strongDictionaryLoading = false;
+        this.strongDictionaryLoadPromise = null;
+        throw error;
+    });
+
+    return this.strongDictionaryLoadPromise;
+},
+
+createStrongDictionaryEntry: function(id, language, entry = {}) {
+    const definitionParts = Array.isArray(entry.definition)
+        ? entry.definition
+        : [entry.strongs_def || entry.definition || ''];
+
+    const definition = definitionParts
+        .filter(Boolean)
+        .map(part => String(part).trim())
+        .filter(Boolean)
+        .join('\n');
+
+    const translation = entry.translation || entry.kjv_def || '';
+    const transliteration = entry.xlit || entry.translit || '';
+    const pronunciation = entry.pronunciation || entry.pron || '';
+    const derivation = entry.derivation || '';
+    const searchableText = [
+        id,
+        id.replace(/^[HG]/, ''),
+        language === 'hebrew' ? 'hebreo' : 'griego',
+        entry.lemma,
+        transliteration,
+        pronunciation,
+        definition,
+        translation,
+        derivation
+    ].filter(Boolean).join(' ');
+
+    return {
+        id,
+        numberValue: Number(String(id).replace(/^[HG]/, '')) || 0,
+        language,
+        languageLabel: language === 'hebrew' ? 'Hebreo' : 'Griego',
+        lemma: entry.lemma || '',
+        transliteration,
+        pronunciation,
+        definition,
+        translation,
+        derivation,
+        searchText: this.normalizeStrongSearchText(searchableText),
+        internalRefs: this.extractStrongInternalRefs([definition, translation, derivation].join(' '))
+    };
+},
+
+normalizeStrongSearchText: function(value) {
+    return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[ʼʾʿʻ‘’`´]/g, '')
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+},
+
+getStrongQueryTerms: function(query) {
+    const normalized = this.normalizeStrongSearchText(query);
+    if (!normalized) return [];
+
+    const terms = normalized.split(' ').filter(Boolean);
+    const aliases = {
+        amor: ['love', 'charity', 'affection', 'benevolence'],
+        principio: ['beginning', 'first', 'chief'],
+        fe: ['faith'],
+        gracia: ['grace', 'favor'],
+        paz: ['peace']
+    };
+
+    return [...new Set(terms.flatMap(term => [term, ...(aliases[term] || [])]))];
+},
+
+normalizeStrongLookupId: function(value, preferredLanguage = this.strongDictionaryFilter) {
+    const raw = String(value || '').trim().toUpperCase();
+    const match = raw.match(/^([HG])?0*(\d{1,5})$/);
+
+    if (!match) return null;
+
+    const prefix = match[1] || (preferredLanguage === 'greek' ? 'G' : 'H');
+    return `${prefix}${Number(match[2])}`;
+},
+
+extractStrongInternalRefs: function(text) {
+    const refs = new Set();
+    const source = String(text || '');
+
+    source.replace(/\b([HG])0*(\d{1,5})\b/g, (_, prefix, number) => {
+        refs.add(`${prefix}${Number(number)}`);
+        return '';
+    });
+
+    return [...refs].sort((a, b) => {
+        if (a[0] !== b[0]) return a[0].localeCompare(b[0]);
+        return Number(a.slice(1)) - Number(b.slice(1));
+    });
+},
+
+getStrongEntryById: function(id) {
+    return this.strongDictionaryEntries.find(entry => entry.id === id) || null;
+},
+
+entryMatchesStrongFilter: function(entry, filter = this.strongDictionaryFilter) {
+    if (filter === 'all') return true;
+    return entry.language === filter;
+},
+
+searchStrongDictionary: function(query = this.strongDictionaryQuery, filter = this.strongDictionaryFilter) {
+    if (!this.strongDictionaryReady) return [];
+
+    const trimmed = String(query || '').trim();
+    const baseEntries = this.strongDictionaryEntries.filter(entry => this.entryMatchesStrongFilter(entry, filter));
+
+    if (!trimmed) {
+        return baseEntries.slice(0, 30);
+    }
+
+    const lookupMatch = trimmed.toUpperCase().match(/^([HG])?0*(\d{1,5})$/);
+
+    if (lookupMatch) {
+        const number = Number(lookupMatch[2]);
+        const explicitPrefix = lookupMatch[1] || null;
+
+        return baseEntries
+            .filter(entry => {
+                if (entry.numberValue !== number) return false;
+                return !explicitPrefix || entry.id.startsWith(explicitPrefix);
+            })
+            .sort((a, b) => {
+                if (a.id[0] !== b.id[0]) return a.id[0] === 'H' ? -1 : 1;
+                return a.numberValue - b.numberValue;
+            });
+    }
+
+    const terms = this.getStrongQueryTerms(trimmed);
+
+    if (!terms.length) return [];
+
+    return baseEntries
+        .map(entry => {
+            let score = 0;
+
+            for (const term of terms) {
+                if (!entry.searchText.includes(term)) continue;
+
+                score += 1;
+
+                if (this.normalizeStrongSearchText(entry.lemma).includes(term)) score += 5;
+                if (this.normalizeStrongSearchText(entry.transliteration).includes(term)) score += 4;
+                if (this.normalizeStrongSearchText(entry.translation).includes(term)) score += 3;
+                if (this.normalizeStrongSearchText(entry.definition).includes(term)) score += 2;
+            }
+
+            return { entry, score };
+        })
+        .filter(item => item.score > 0)
+        .sort((a, b) => b.score - a.score || a.entry.numberValue - b.entry.numberValue)
+        .slice(0, 80)
+        .map(item => item.entry);
+},
+
+updateStrongDictionaryResults: function() {
+    this.strongDictionaryResults = this.searchStrongDictionary();
+
+    if (this.strongDictionarySelectedId) {
+        const selected = this.getStrongEntryById(this.strongDictionarySelectedId);
+
+        if (!selected || !this.entryMatchesStrongFilter(selected)) {
+            this.strongDictionarySelectedId = this.strongDictionaryResults[0]?.id || null;
         }
-
-        this.strongHebrew = await response.json();
-        this.strongHebrewReady = true;
-
-        console.log('[Strong] Diccionario hebreo cargado');
-    } catch (error) {
-        console.error('[Strong] Error cargando diccionario hebreo:', error);
-        this.strongHebrew = {};
-        this.strongHebrewReady = false;
+    } else if (this.strongDictionaryResults.length) {
+        this.strongDictionarySelectedId = this.strongDictionaryResults[0].id;
     }
 },
 
-loadStrongVerseData: async function() {
+renderStrongDictionaryView: async function() {
+    this.$content.innerHTML = this.renderStrongDictionaryShell({ loading: true });
+
     try {
-        const response = await fetch('./data/rv1909_strong_map.json');
-
-        if (!response.ok) {
-            throw new Error('No se pudo cargar el mapa Strong por versículo.');
-        }
-
-        this.strongVerseData = await response.json();
-        this.strongVerseDataReady = true;
-
-        console.log('[Strong] Mapa Strong por versículo cargado');
+        await this.ensureStrongDictionaryLoaded();
+        this.updateStrongDictionaryResults();
+        this.$content.innerHTML = this.renderStrongDictionaryShell();
+        requestAnimationFrame(() => {
+            document.getElementById('strong-dictionary-input')?.focus({ preventScroll: true });
+        });
     } catch (error) {
-        console.warn('[Strong] No se cargó el mapa Strong por versículo:', error);
-        this.strongVerseData = {};
-        this.strongVerseDataReady = false;
+        console.error('[Strong] Error cargando Diccionario Strong:', error);
+        this.$content.innerHTML = this.renderStrongDictionaryShell({ error });
     }
+},
+
+renderStrongDictionaryShell: function({ loading = false, error = null } = {}) {
+    const query = this.escapeHtml(this.strongDictionaryQuery);
+    const count = this.strongDictionaryResults.length;
+    const selected = this.getStrongEntryById(this.strongDictionarySelectedId) || this.strongDictionaryResults[0] || null;
+
+    let bodyHtml = '';
+
+    if (loading) {
+        bodyHtml = `
+            <div class="strong-dictionary-state">
+                <div class="spinner"></div>
+                <p>Cargando Diccionario Strong...</p>
+            </div>
+        `;
+    } else if (error) {
+        bodyHtml = `
+            <div class="strong-dictionary-state">
+                <h3>No se pudo cargar el diccionario</h3>
+                <p>${this.escapeHtml(error.message || 'Intenta nuevamente.')}</p>
+            </div>
+        `;
+    } else {
+        bodyHtml = `
+            <div class="strong-dictionary-results-bar">
+                <span>${count} resultado${count === 1 ? '' : 's'}</span>
+                <small>Diccionario, no concordancia</small>
+            </div>
+
+            <div class="strong-dictionary-layout">
+                <div class="strong-dictionary-results">
+                    ${count ? this.strongDictionaryResults.map(entry => this.renderStrongDictionaryResult(entry)).join('') : `
+                        <div class="strong-dictionary-empty">
+                            <h3>Sin resultados</h3>
+                            <p>Prueba con un número Strong, lema, transliteración o una palabra de la definición.</p>
+                        </div>
+                    `}
+                </div>
+
+                <aside class="strong-dictionary-detail" aria-live="polite">
+                    ${selected ? this.renderStrongDictionaryDetail(selected) : `
+                        <div class="strong-detail-placeholder">Selecciona una entrada para ver el detalle.</div>
+                    `}
+                </aside>
+            </div>
+        `;
+    }
+
+    return `
+        <div class="strong-dictionary-view">
+            <div class="strong-dictionary-hero">
+                <div class="strong-dictionary-topline">
+                    <button class="bible-search-back" type="button" data-action="back-to-bible-books">← Biblia</button>
+                    <span>Fase 1</span>
+                </div>
+
+                <h2>Diccionario Strong</h2>
+                <p>Busca entradas hebreas y griegas por número, lema, transliteración, definición o glosa.</p>
+            </div>
+
+            <section class="strong-dictionary-panel">
+                <div class="strong-dictionary-input-wrap">
+                    <span class="strong-dictionary-input-icon">⌕</span>
+                    <input
+                        id="strong-dictionary-input"
+                        class="strong-dictionary-input"
+                        type="search"
+                        placeholder="H7225, G26, amor, principio..."
+                        value="${query}"
+                        autocomplete="off"
+                        inputmode="search"
+                    />
+
+                    ${this.strongDictionaryQuery ? `
+                        <button class="strong-dictionary-clear" type="button" data-action="clear-strong-dictionary" aria-label="Limpiar búsqueda">×</button>
+                    ` : ''}
+                </div>
+
+                <div class="strong-dictionary-filters" role="group" aria-label="Filtrar idioma">
+                    ${[
+                        ['all', 'Todo'],
+                        ['hebrew', 'Hebreo'],
+                        ['greek', 'Griego']
+                    ].map(([id, label]) => `
+                        <button
+                            class="strong-filter-btn ${this.strongDictionaryFilter === id ? 'active' : ''}"
+                            type="button"
+                            data-action="set-strong-filter"
+                            data-filter="${id}"
+                        >
+                            ${label}
+                        </button>
+                    `).join('')}
+                </div>
+            </section>
+
+            ${bodyHtml}
+        </div>
+    `;
+},
+
+renderStrongDictionaryResult: function(entry) {
+    const definition = this.getStrongBriefDefinition(entry);
+
+    return `
+        <button
+            class="strong-result-card ${this.strongDictionarySelectedId === entry.id ? 'is-active' : ''}"
+            type="button"
+            data-action="select-strong-entry"
+            data-strong-id="${this.escapeHtml(entry.id)}"
+            aria-pressed="${this.strongDictionarySelectedId === entry.id ? 'true' : 'false'}"
+        >
+            <span class="strong-result-head">
+                <strong>${this.escapeHtml(entry.id)}</strong>
+                <em>${this.escapeHtml(entry.languageLabel)}</em>
+            </span>
+            <span class="strong-result-lemma">${this.escapeHtml(entry.lemma || 'Sin lema')}</span>
+            <span class="strong-result-meta">${this.escapeHtml([entry.transliteration, entry.pronunciation].filter(Boolean).join(' · '))}</span>
+            <span class="strong-result-definition">${this.escapeHtml(definition)}</span>
+            ${entry.translation ? `<span class="strong-result-translation">${this.escapeHtml(entry.translation)}</span>` : ''}
+        </button>
+    `;
+},
+
+renderStrongDictionaryDetail: function(entry) {
+    const fullDefinition = entry.definition || 'Sin definición disponible.';
+    const refs = entry.internalRefs.filter(ref => this.getStrongEntryById(ref));
+
+    return `
+        <div class="strong-detail-card">
+            <div class="strong-detail-head">
+                <div>
+                    <span>${this.escapeHtml(entry.languageLabel)}</span>
+                    <h3>${this.escapeHtml(entry.id)}</h3>
+                </div>
+                <button class="strong-detail-copy" type="button" data-action="copy-strong-entry" data-strong-id="${this.escapeHtml(entry.id)}">Copiar</button>
+            </div>
+
+            <dl class="strong-detail-list">
+                <div>
+                    <dt>Lema</dt>
+                    <dd class="strong-detail-lemma">${this.escapeHtml(entry.lemma || 'No disponible')}</dd>
+                </div>
+                <div>
+                    <dt>Transliteración</dt>
+                    <dd>${this.escapeHtml(entry.transliteration || 'No disponible')}</dd>
+                </div>
+                <div>
+                    <dt>Pronunciación</dt>
+                    <dd>${this.escapeHtml(entry.pronunciation || 'No disponible')}</dd>
+                </div>
+                <div>
+                    <dt>Definición completa</dt>
+                    <dd>${this.escapeHtml(fullDefinition).replace(/\n/g, '<br>')}</dd>
+                </div>
+                ${entry.translation ? `
+                    <div>
+                        <dt>Traducción / glosa</dt>
+                        <dd>${this.escapeHtml(entry.translation)}</dd>
+                    </div>
+                ` : ''}
+                ${entry.derivation ? `
+                    <div>
+                        <dt>Derivación</dt>
+                        <dd>${this.escapeHtml(entry.derivation)}</dd>
+                    </div>
+                ` : ''}
+            </dl>
+
+            <div class="strong-detail-refs">
+                <h4>Referencias internas</h4>
+                ${refs.length ? `
+                    <div class="strong-ref-list">
+                        ${refs.map(ref => `
+                            <button type="button" data-action="select-strong-entry" data-strong-id="${this.escapeHtml(ref)}">${this.escapeHtml(ref)}</button>
+                        `).join('')}
+                    </div>
+                ` : '<p>No se detectaron referencias internas disponibles en esta entrada.</p>'}
+            </div>
+        </div>
+    `;
+},
+
+getStrongBriefDefinition: function(entry) {
+    const firstLine = String(entry.definition || '').split('\n').find(Boolean) || '';
+    const clean = firstLine.replace(/^\d+[a-z]?\)\s*/, '').trim();
+
+    if (clean.length <= 150) return clean;
+    return `${clean.slice(0, 147).trim()}...`;
+},
+
+setStrongDictionaryFilter: function(filter) {
+    if (!['all', 'hebrew', 'greek'].includes(filter)) return;
+
+    this.strongDictionaryFilter = filter;
+    this.updateStrongDictionaryResults();
+    this.$content.innerHTML = this.renderStrongDictionaryShell();
+},
+
+setStrongDictionaryQuery: function(query) {
+    this.strongDictionaryQuery = query;
+    this.strongDictionarySelectedId = null;
+    this.updateStrongDictionaryResults();
+    this.$content.innerHTML = this.renderStrongDictionaryShell();
+    const input = document.getElementById('strong-dictionary-input');
+    if (input) {
+        input.focus({ preventScroll: true });
+        const end = input.value.length;
+        input.setSelectionRange(end, end);
+    }
+},
+
+selectStrongDictionaryEntry: function(id) {
+    if (!id || !this.getStrongEntryById(id)) return;
+
+    this.strongDictionarySelectedId = id;
+    this.$content.innerHTML = this.renderStrongDictionaryShell();
+    document.querySelector('.strong-dictionary-detail')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+},
+
+copyStrongDictionaryEntry: function(id) {
+    const entry = this.getStrongEntryById(id);
+    if (!entry) return;
+
+    const text = [
+        `${entry.id} · ${entry.languageLabel}`,
+        entry.lemma,
+        entry.transliteration ? `Transliteración: ${entry.transliteration}` : '',
+        entry.pronunciation ? `Pronunciación: ${entry.pronunciation}` : '',
+        entry.definition,
+        entry.translation ? `Glosa: ${entry.translation}` : ''
+    ].filter(Boolean).join('\n');
+
+    navigator.clipboard?.writeText(text);
+    this.showToast('Entrada Strong copiada');
+},
+
+loadStrongVerseData: async function() {
+    this.strongVerseData = {};
+    this.strongVerseDataReady = false;
+    return this.strongVerseData;
 },
 
 getVerseStrongTokens: function(bookId, chapter, verse) {
@@ -8947,6 +9418,12 @@ if (openBibleBookBtn) {
 }
 
 // Abrir búsqueda
+const openStrongDictionaryBtn = e.target.closest('[data-action="open-strong-dictionary"]');
+if (openStrongDictionaryBtn) {
+    this.navigate('strong-dictionary');
+    return;
+}
+
 const openSearchBtn = e.target.closest('[data-action="open-bible-search"]');
 if (openSearchBtn) {
     this.bibleSearchFilter = 'all';
@@ -8998,6 +9475,30 @@ if (navigateToVerseBtn) {
     const chapter = parseInt(navigateToVerseBtn.getAttribute('data-chapter'));
     const verse = parseInt(navigateToVerseBtn.getAttribute('data-verse'));
     this.navigateToVerse(bookId, chapter, verse);
+    return;
+}
+
+const selectStrongEntryBtn = e.target.closest('[data-action="select-strong-entry"]');
+if (selectStrongEntryBtn) {
+    this.selectStrongDictionaryEntry(selectStrongEntryBtn.getAttribute('data-strong-id'));
+    return;
+}
+
+const copyStrongEntryBtn = e.target.closest('[data-action="copy-strong-entry"]');
+if (copyStrongEntryBtn) {
+    this.copyStrongDictionaryEntry(copyStrongEntryBtn.getAttribute('data-strong-id'));
+    return;
+}
+
+const clearStrongDictionaryBtn = e.target.closest('[data-action="clear-strong-dictionary"]');
+if (clearStrongDictionaryBtn) {
+    this.setStrongDictionaryQuery('');
+    return;
+}
+
+const strongFilterBtn = e.target.closest('[data-action="set-strong-filter"]');
+if (strongFilterBtn) {
+    this.setStrongDictionaryFilter(strongFilterBtn.getAttribute('data-filter'));
     return;
 }
 
@@ -9686,6 +10187,11 @@ if (navItem) {
         
         // Auto-guardado de notas
        this.$content.addEventListener('input', (e) => {
+    const strongDictionaryInput = e.target.closest('#strong-dictionary-input');
+    if (strongDictionaryInput) {
+        this.setStrongDictionaryQuery(strongDictionaryInput.value);
+        return;
+    }
         if (e.target.matches('.community-reply-textarea')) {
     const postId = e.target.getAttribute('data-post-id');
     if (postId) {

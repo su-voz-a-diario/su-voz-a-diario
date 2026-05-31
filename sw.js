@@ -1,4 +1,4 @@
-const APP_VERSION = 'v71';
+const APP_VERSION = 'v73';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=71',
-  './css/styles.css?v=71',
-  './js/app.js?v=71',
+  './manifest.json?v=73',
+  './css/styles.css?v=73',
+  './js/app.js?v=73',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -24,8 +24,6 @@ const STATIC_ASSETS = [
   './data/readings/2026-05.json',
   './data/readings/2026-06.json',
   './data/rv1909.json',
-  './data/rv1909_strong_map.json',
-  './data/strong-hebrew-clean.json',
   './icons/icon-48.png',
   './icons/icon-180.png',
   './icons/icon-192.png',
