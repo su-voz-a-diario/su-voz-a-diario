@@ -4717,7 +4717,13 @@ this.updateNavUI();
     }
     await this.renderHome();
 } else if (view === 'bible') {
-    this.renderBible();
+    if (this.restoreBibleLastLocation()) {
+        this.currentView = 'bible-reading';
+        this.updateNavUI();
+        await this.renderBibleReading();
+    } else {
+        this.renderBible();
+    }
 } else if (view === 'bible-search') {
     this.$content.innerHTML = this.renderBibleSearch();
 } else if (view === 'bible-reading') {
@@ -6682,6 +6688,7 @@ navigateToVerse: function(apiBookId, chapter, verse) {
     this.selectedBibleBook = ourBookId;
     this.selectedBibleChapter = parseInt(chapter);
     this.targetVerse = parseInt(verse);
+    this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
     
     // Navegar directamente a bible-reading
     this.navigate('bible-reading');
@@ -6701,6 +6708,76 @@ scrollToTargetVerse: function() {
         }
         this.targetVerse = null;
     }, 300);
+},
+
+getBibleLastLocation: function() {
+    try {
+        const saved = sessionStorage.getItem('su-voz-bible-last-location');
+        if (!saved) return null;
+
+        const location = JSON.parse(saved);
+
+        if (location?.mode === 'books') {
+            return { mode: 'books', bookId: null, chapter: null };
+        }
+
+        const bookId = location?.bookId;
+        const chapter = Number(location?.chapter);
+        const book = this.bibleBooks.find(item => item.id === bookId);
+
+        if (!book || !Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) {
+            sessionStorage.removeItem('su-voz-bible-last-location');
+            return null;
+        }
+
+        return { mode: 'chapter', bookId, chapter };
+    } catch (error) {
+        sessionStorage.removeItem('su-voz-bible-last-location');
+        return null;
+    }
+},
+
+saveBibleLastLocation: function(bookId, chapter) {
+    const book = this.bibleBooks.find(item => item.id === bookId);
+    const chapterNumber = Number(chapter);
+
+    if (!book || !Number.isInteger(chapterNumber) || chapterNumber < 1 || chapterNumber > book.chapters) {
+        return false;
+    }
+
+    sessionStorage.setItem('su-voz-bible-last-location', JSON.stringify({
+        mode: 'chapter',
+        bookId,
+        chapter: chapterNumber
+    }));
+
+    return true;
+},
+
+saveBibleBooksMode: function() {
+    sessionStorage.setItem('su-voz-bible-last-location', JSON.stringify({
+        mode: 'books',
+        bookId: null,
+        chapter: null
+    }));
+},
+
+restoreBibleLastLocation: function() {
+    if (this.selectedBibleBook && this.selectedBibleChapter) {
+        return this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
+    }
+
+    const location = this.getBibleLastLocation();
+
+    if (!location || location.mode === 'books') {
+        this.selectedBibleBook = null;
+        this.selectedBibleChapter = null;
+        return false;
+    }
+
+    this.selectedBibleBook = location.bookId;
+    this.selectedBibleChapter = location.chapter;
+    return true;
 },
 
 renderBible: function() {
@@ -6832,6 +6909,8 @@ renderBibleReading: async function() {
         this.navigate('bible');
         return;
     }
+
+    this.saveBibleLastLocation(requestedBookId, requestedChapter);
 
     const previousDisabled = requestedChapter <= 1;
     const nextDisabled = requestedChapter >= requestedBook.chapters;
@@ -8744,8 +8823,6 @@ document.addEventListener('click', (e) => {
 
 if (this.$navBible) {
     this.$navBible.addEventListener('click', () => {
-        this.selectedBibleBook = null;
-        this.selectedBibleChapter = null;
         this.navigate('bible');
     });
 }
@@ -8929,6 +9006,7 @@ if (backToBibleBooksBtn) {
     this.stopBibleChapterVoice(true);
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
+    this.saveBibleBooksMode();
     this.navigate('bible');
     return;
 }
@@ -8937,6 +9015,7 @@ const clearBibleBookBtn = e.target.closest('[data-action="clear-bible-book"]');
 if (clearBibleBookBtn) {
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
+    this.saveBibleBooksMode();
     this.navigate('bible');
     return;
 }
@@ -8948,6 +9027,7 @@ if (openBibleChapterBtn) {
 
     this.selectedBibleBook = bookId;
     this.selectedBibleChapter = chapter;
+    this.saveBibleLastLocation(bookId, chapter);
 
     this.navigate('bible-reading');
     return;
@@ -8958,6 +9038,7 @@ if (prevChapterBtn) {
     if (this.selectedBibleChapter > 1) {
         this.stopBibleChapterVoice(true);
         this.selectedBibleChapter -= 1;
+        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
         this.navigate('bible-reading');
     }
     return;
@@ -8970,6 +9051,7 @@ if (nextChapterBtn) {
     if (currentBook && this.selectedBibleChapter < currentBook.chapters) {
         this.stopBibleChapterVoice(true);
         this.selectedBibleChapter += 1;
+        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
         this.navigate('bible-reading');
     }
     return;
