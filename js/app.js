@@ -854,8 +854,13 @@ showAprilMessageIfNeeded: function() {
     updateStreakUI: function() {
         if (this.$streakIndicator && this.$streakCount) {
             if (this.streak.current > 0) {
+                const streakLabel = this.streak.current === 1 ? 'día' : 'días';
                 this.$streakIndicator.style.display = 'flex';
-                this.$streakCount.textContent = this.streak.current;
+                this.$streakCount.textContent = `${this.streak.current} ${streakLabel}`;
+                this.$streakIndicator.setAttribute(
+                    'aria-label',
+                    `Ver tu camino de lectura. Racha actual: ${this.streak.current} ${streakLabel}`
+                );
             } else {
                 this.$streakIndicator.style.display = 'none';
             }
@@ -8778,6 +8783,15 @@ if (this.$headerSettingsBtn) {
         
 // Controles de fuente y versión
 document.addEventListener('click', (e) => {
+    const openStatsFromStreakBtn = e.target.closest('[data-action="open-stats-from-streak"]');
+
+    if (openStatsFromStreakBtn) {
+        e.preventDefault();
+        this.$headerControlsDropdown?.classList.remove('show');
+        this.navigate('stats');
+        return;
+    }
+
     const verseStudyBtn = e.target.closest('[data-action="open-verse-study"]');
 
     if (verseStudyBtn) {
