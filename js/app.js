@@ -7913,11 +7913,23 @@ renderStatsBookProgress: function(stats) {
                 const isUpcoming = book.state === 'upcoming';
                 const actionDate = isCompleted ? book.reviewDate : book.continueDate;
                 const actionLabel = isCompleted ? 'Repasar' : 'Continuar';
+                const displayLabel = isCompleted
+                    ? 'Completado'
+                    : isUpcoming
+                        ? 'Próximo'
+                        : book.completed === 0
+                            ? 'Sin iniciar'
+                            : 'En curso';
+                const progressClass = book.percent === 0
+                    ? 'is-empty-progress'
+                    : book.percent === 100
+                        ? 'is-full-progress'
+                        : 'is-partial-progress';
 
                 return `
-                    <article class="stats-book-card is-${this.escapeHtml(book.state)}">
+                    <article class="stats-book-card is-${this.escapeHtml(book.state)} ${progressClass}">
                         <div class="stats-book-card-head">
-                            <span>${this.escapeHtml(book.label)}</span>
+                            <span>${this.escapeHtml(displayLabel)}</span>
                             <b>${book.percent}%</b>
                         </div>
                         <h4>${this.escapeHtml(book.name)}</h4>
