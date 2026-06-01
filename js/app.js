@@ -8462,15 +8462,6 @@ const [reactionSummary, repliesSummary] = await Promise.all([
     this.getRepliesSummary(posts)
 ]);
 
-const totalReplies = Object.values(repliesSummary)
-    .reduce((total, replies) => total + (Array.isArray(replies) ? replies.length : 0), 0);
-const totalReactions = Object.values(reactionSummary)
-    .reduce((total, state) => {
-        const counts = state?.counts || {};
-        return total + Object.values(counts)
-            .reduce((countTotal, value) => countTotal + (Number(value) || 0), 0);
-    }, 0);
-const hasCommunityActivity = posts.length > 0;
 const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
 const hasCommunityDraft = Boolean(communityDraft.trim());
 const highlightedPost = posts.length ? posts
@@ -8499,7 +8490,7 @@ const highlightedPost = posts.length ? posts
                 <div>
                     <div class="community-hero-kicker">Su Voz a Diario</div>
                     <h2>Comunidad</h2>
-                    <p>Un espacio para compartir lo que escuchaste de Dios en la lectura de hoy.</p>
+                    <p>Un espacio para compartir lo que escuchaste de Dios en esta lectura.</p>
                 </div>
             </section>
 
@@ -8509,7 +8500,7 @@ const highlightedPost = posts.length ? posts
                     <span class="community-guidelines-hint">Ver normas</span>
                 </summary>
                 <div class="community-intro-text">
-                    Este espacio existe para compartir lo que Dios habló a través de la lectura del día.
+                    Este espacio existe para compartir lo que Dios habló a través de esta lectura.
                     Comparte con respeto, claridad y sencillez. Evita discusiones, ataques personales,
                     lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
                     <br><br>
@@ -8587,8 +8578,8 @@ const highlightedPost = posts.length ? posts
                 const gratitudeTotal = highlightedPost.usefulCount + highlightedPost.thanksCount;
 
                 return `
-                    <section class="community-featured-echo" aria-label="Eco destacado de hoy">
-                        <div class="community-featured-label">Eco destacado de hoy</div>
+                    <section class="community-featured-echo" aria-label="Eco destacado de la comunidad">
+                        <div class="community-featured-label">Eco destacado de la comunidad</div>
                         <div class="community-featured-text">${this.escapeHtml(excerpt)}</div>
                         <div class="community-featured-meta">
                             <span>${this.escapeHtml(displayName)}</span>
@@ -8598,29 +8589,6 @@ const highlightedPost = posts.length ? posts
                     </section>
                 `;
             })() : ''}
-
-            <section class="community-activity-card" aria-label="La comunidad escuchó hoy">
-                ${hasCommunityActivity ? `
-                    <div class="community-activity-head">
-                        <div class="community-activity-title">La comunidad escuchó hoy</div>
-                        <div class="community-activity-subtitle">Ecos compartidos desde la lectura del día</div>
-                    </div>
-
-                    <div class="community-activity-line" aria-label="Señales de participación de la comunidad">
-                        <span>${posts.length} ${posts.length === 1 ? 'eco compartido' : 'ecos compartidos'}</span>
-                        <span>${totalReplies} ${totalReplies === 1 ? 'conversación' : 'conversaciones'}</span>
-                        <span>${totalReactions} ${totalReactions === 1 ? 'muestra de gratitud' : 'muestras de gratitud'}</span>
-                    </div>
-                ` : `
-                    <div class="community-activity-empty">
-                        <div class="community-activity-empty-mark" aria-hidden="true">+</div>
-                        <div>
-                            <div class="community-activity-title">Sé la primera persona en compartir lo que Dios te habló hoy.</div>
-                            <div class="community-activity-subtitle">La comunidad aún espera los primeros ecos de la lectura de hoy.</div>
-                        </div>
-                    </div>
-                `}
-            </section>
 
             <div class="community-feed-heading">
                 <div>
@@ -8675,9 +8643,9 @@ const highlightedPost = posts.length ? posts
                 }).join('') : `
                     <div class="community-empty-state">
                         <div class="community-empty-icon" aria-hidden="true">+</div>
-                        <div class="community-empty-title">Sé la primera persona en compartir lo que Dios te habló hoy.</div>
+                        <div class="community-empty-title">Sé la primera persona en compartir lo que Dios te habló en esta lectura.</div>
                         <div class="community-empty-text">
-                            Comparte cómo escuchaste su voz en la lectura de hoy.
+                            Comparte cómo escuchaste su voz en esta lectura.
                         </div>
                     </div>
                 `}

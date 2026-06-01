@@ -3120,69 +3120,6 @@ body.dark-mode .devotional-step-tab.active {
     padding: 0 14px 14px;
 }
 
-.community-activity-card {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    padding: 11px 13px;
-    border: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
-    border-radius: 14px;
-    background:
-        linear-gradient(135deg, rgba(49, 130, 206, 0.032), transparent 48%),
-        var(--surface-color);
-}
-
-.community-activity-head {
-    min-width: 0;
-}
-
-.community-activity-title {
-    color: var(--text-main);
-    font-size: 0.9rem;
-    font-weight: 800;
-    line-height: 1.25;
-}
-
-.community-activity-subtitle {
-    margin-top: 2px;
-    color: var(--text-muted);
-    font-size: 0.76rem;
-    font-weight: 650;
-    line-height: 1.3;
-}
-
-.community-activity-line {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 0;
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 720;
-    line-height: 1.45;
-}
-
-.community-activity-line span {
-    display: inline-flex;
-    align-items: center;
-    min-width: 0;
-    white-space: normal;
-}
-
-.community-activity-line span:not(:last-child)::after {
-    content: "·";
-    margin: 0 8px;
-    color: color-mix(in srgb, var(--text-muted) 54%, transparent);
-}
-
-.community-activity-empty {
-    display: grid;
-    grid-template-columns: 28px 1fr;
-    align-items: center;
-    gap: 10px;
-}
-
-.community-activity-empty-mark,
 .community-empty-icon {
     display: inline-flex;
     align-items: center;
@@ -3191,12 +3128,6 @@ body.dark-mode .devotional-step-tab.active {
     background: rgba(49, 130, 206, 0.1);
     color: var(--accent);
     font-weight: 800;
-}
-
-.community-activity-empty-mark {
-    width: 28px;
-    height: 28px;
-    font-size: 1rem;
 }
 
 .community-featured-echo {
@@ -3740,12 +3671,6 @@ body.dark-mode .community-guidelines {
     background: rgba(255, 255, 255, 0.025);
 }
 
-body.dark-mode .community-activity-card {
-    background:
-        linear-gradient(135deg, rgba(96, 165, 250, 0.04), transparent 48%),
-        rgba(255, 255, 255, 0.025);
-}
-
 body.dark-mode .community-featured-echo {
     background:
         linear-gradient(135deg, rgba(96, 165, 250, 0.055), transparent 52%),
@@ -3766,7 +3691,6 @@ body.dark-mode .community-load-more-btn:hover:not(:disabled) {
     border-color: rgba(96, 165, 250, 0.24);
 }
 
-body.dark-mode .community-activity-empty-mark,
 body.dark-mode .community-empty-icon {
     background: rgba(96, 165, 250, 0.12);
 }
@@ -3853,29 +3777,6 @@ body.dark-mode .community-empty-icon {
 
     .community-form-actions {
         gap: 8px;
-    }
-
-    .community-activity-card {
-        gap: 6px;
-        padding: 10px 11px;
-        border-radius: 13px;
-    }
-
-    .community-activity-title {
-        font-size: 0.86rem;
-    }
-
-    .community-activity-subtitle {
-        font-size: 0.72rem;
-    }
-
-    .community-activity-line {
-        font-size: 0.72rem;
-        gap: 2px 0;
-    }
-
-    .community-activity-line span:not(:last-child)::after {
-        margin: 0 6px;
     }
 
     .community-featured-echo {
