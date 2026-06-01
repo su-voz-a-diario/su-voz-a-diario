@@ -212,6 +212,11 @@ body.dark-mode .header-settings-btn:hover {
     margin-bottom: 0;
 }
 
+.dropdown-section-secondary {
+    padding-top: 8px;
+    border-top: 1px solid var(--border-color);
+}
+
 .dropdown-btn {
     background: var(--bg-color);
     border: 1px solid var(--border-color);
@@ -236,6 +241,11 @@ body.dark-mode .header-settings-btn:hover {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
+}
+
+.dropdown-btn-secondary {
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 .dropdown-streak {
@@ -9648,7 +9658,7 @@ body.light-mode .verse-study-btn:hover {
 
 .selection-actions-row-pro {
     display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, 1fr);
     gap: 10px;
 }
 

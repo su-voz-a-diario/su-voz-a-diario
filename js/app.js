@@ -1204,6 +1204,20 @@ bindHeaderControlsToggle: function() {
         this.$headerControlsDropdown.classList.toggle('show');
     });
 
+    this.$headerControlsDropdown?.addEventListener('click', (e) => {
+        const strongBetaBtn = e.target.closest('[data-action="open-strong-dictionary"]');
+
+        if (!strongBetaBtn) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        this.$headerControlsDropdown.classList.remove('show');
+        // Acceso secundario temporal: Strong se conserva en beta sin interferir con la lectura.
+        this.strongDictionaryBibleContext = null;
+        this.strongDictionaryConsultedWord = '';
+        this.navigate('strong-dictionary');
+    });
+
     // Cerrar al hacer clic fuera del dropdown
     document.addEventListener('click', (e) => {
         if (
@@ -3510,6 +3524,7 @@ extractStrongVerseKeywords: function(text) {
 },
 
 openStrongDictionaryFromSelectedVerse: function() {
+    // Conservado para una futura Biblia de Estudio Strong con datos palabra a Strong.
     if (this.getSelectedTextSource() !== 'bible') {
         this.showToast('Strong está disponible desde los versículos de Biblia');
         return;
@@ -6953,14 +6968,6 @@ renderBible: function() {
                         🔍 Buscar
                     </button>
 
-                    <button
-                        class="bible-library-action-btn"
-                        type="button"
-                        data-action="open-strong-dictionary"
-                    >
-                        Diccionario Strong
-                    </button>
-
                     ${book ? `
                         <button
                             class="bible-library-action-btn"
@@ -9687,6 +9694,8 @@ if (openBibleBookBtn) {
 // Abrir búsqueda
 const openStrongDictionaryBtn = e.target.closest('[data-action="open-strong-dictionary"]');
 if (openStrongDictionaryBtn) {
+    this.$headerControlsDropdown?.classList.remove('show');
+    // Acceso secundario temporal: Strong se conserva en beta sin interferir con la lectura.
     this.strongDictionaryBibleContext = null;
     this.strongDictionaryConsultedWord = '';
     this.navigate('strong-dictionary');
