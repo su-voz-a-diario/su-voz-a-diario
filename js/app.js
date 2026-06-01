@@ -411,6 +411,7 @@ const App = {
     selectedBibleBook: null,
     selectedBibleChapter: null,
     bibleChapterPickerMode: false,
+    bibleLibraryTestament: 'old',
     currentBibleChapterData: null,
     strongHebrew: {},
     strongHebrewReady: false,
@@ -6981,6 +6982,8 @@ renderBible: function() {
 
     const oldBooks = this.bibleBooks.filter(item => oldTestamentIds.has(item.id));
     const newBooks = this.bibleBooks.filter(item => !oldTestamentIds.has(item.id));
+    const activeTestament = this.bibleLibraryTestament === 'new' ? 'new' : 'old';
+    const visibleBooks = activeTestament === 'old' ? oldBooks : newBooks;
 
     const renderBookCard = (item) => `
         <button
@@ -6994,14 +6997,13 @@ renderBible: function() {
         </button>
     `;
 
-    const renderBookSection = (title, subtitle, books) => `
+    const renderBookSection = (title, books) => `
         <section class="bible-library-section">
             <div class="bible-library-section-header">
                 <div>
                     <h3>${title}</h3>
-                    <p>${subtitle}</p>
                 </div>
-                <span>${books.length}</span>
+                <span>${books.length} libros</span>
             </div>
 
             <div class="bible-library-grid">
@@ -7019,7 +7021,7 @@ renderBible: function() {
             <div class="bible-library-hero">
                 <div class="bible-library-kicker">Reina-Valera 1909</div>
                 <h2>Biblia</h2>
-                <p>Lee, busca y navega por las Escrituras de forma sencilla.</p>
+                <p>Lee, busca y navega por las Escrituras.</p>
 
                 <div class="bible-library-actions">
                     <button
@@ -7079,8 +7081,29 @@ renderBible: function() {
                     </div>
                 </section>
             ` : `
-                ${renderBookSection('Antiguo Testamento', 'Ley, historia, poesía y profetas', oldBooks)}
-                ${renderBookSection('Nuevo Testamento', 'Evangelios, cartas y Apocalipsis', newBooks)}
+                <div class="bible-testament-tabs" role="tablist" aria-label="Testamento">
+                    <button
+                        class="bible-testament-tab ${activeTestament === 'old' ? 'active' : ''}"
+                        type="button"
+                        data-action="set-bible-testament"
+                        data-testament="old"
+                        role="tab"
+                        aria-selected="${activeTestament === 'old' ? 'true' : 'false'}"
+                    >
+                        Antiguo
+                    </button>
+                    <button
+                        class="bible-testament-tab ${activeTestament === 'new' ? 'active' : ''}"
+                        type="button"
+                        data-action="set-bible-testament"
+                        data-testament="new"
+                        role="tab"
+                        aria-selected="${activeTestament === 'new' ? 'true' : 'false'}"
+                    >
+                        Nuevo
+                    </button>
+                </div>
+                ${renderBookSection(activeTestament === 'old' ? 'Antiguo Testamento' : 'Nuevo Testamento', visibleBooks)}
             `}
         </div>
     `;
@@ -9812,6 +9835,16 @@ if (openBibleBookBtn) {
     const bookId = openBibleBookBtn.getAttribute('data-book-id');
     this.selectedBibleBook = bookId;
     this.renderBible();
+    return;
+}
+
+const bibleTestamentTab = e.target.closest('[data-action="set-bible-testament"]');
+if (bibleTestamentTab) {
+    const testament = bibleTestamentTab.getAttribute('data-testament');
+    if (testament === 'old' || testament === 'new') {
+        this.bibleLibraryTestament = testament;
+        this.renderBible();
+    }
     return;
 }
 
