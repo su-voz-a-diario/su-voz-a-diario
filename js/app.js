@@ -339,7 +339,8 @@ const App = {
         'JUD': 'jud', 'REV': 'rev'
     },
     getBibleBookById: function(apiBookId) {
-        const ourId = this.bibleApiIdMap[apiBookId.toUpperCase()] || apiBookId.toLowerCase();
+        const rawId = String(apiBookId || '');
+        const ourId = this.bibleApiIdMap[rawId.toUpperCase()] || rawId.toLowerCase();
         return this.bibleBooks.find(b => b.id === ourId);
     },
 
@@ -347,13 +348,86 @@ const App = {
         const book = this.getBibleBookById(bookId);
         if (!book) return 'unknown';
 
-        const oldTestamentIds = new Set([
+        const oldTestamentIds = this.getOldTestamentIds();
+
+        return oldTestamentIds.has(book.id) ? 'old' : 'new';
+    },
+
+    getOldTestamentIds: function() {
+        return new Set([
             'gen','exo','lev','num','deu','jos','jdg','rut','1sa','2sa','1ki','2ki','1ch','2ch','ezr','neh','est',
             'job','psa','pro','ecc','sng','isa','jer','lam','ezk','dan','hos','jol','amo','oba','jon','mic','nam',
             'hab','zep','hag','zec','mal'
         ]);
+    },
 
-        return oldTestamentIds.has(book.id) ? 'old' : 'new';
+    getBibleBooksByTestament: function(testament = 'old') {
+        const oldTestamentIds = this.getOldTestamentIds();
+        const target = testament === 'new' ? 'new' : 'old';
+
+        return this.bibleBooks.filter(book => {
+            const isOld = oldTestamentIds.has(book.id);
+            return target === 'old' ? isOld : !isOld;
+        });
+    },
+
+    getBibleBookAliases: function(book) {
+        const aliases = [book.name];
+        const lowerName = String(book.name || '').toLowerCase();
+
+        if (lowerName === 'salmos') aliases.push('Salmo');
+        if (lowerName === 'cantares') aliases.push('Cantar de los Cantares');
+        if (lowerName === 'apocalipsis') aliases.push('Revelación');
+
+        return aliases;
+    },
+
+    parseBibleReferenceQuery: function(query) {
+        const normalizedQuery = this.normalizeBibleWord(query);
+
+        if (!normalizedQuery) return null;
+
+        const candidates = this.bibleBooks
+            .flatMap(book => this.getBibleBookAliases(book).map(alias => ({
+                book,
+                alias: this.normalizeBibleWord(alias)
+            })))
+            .filter(item => item.alias)
+            .sort((a, b) => b.alias.length - a.alias.length);
+
+        for (const item of candidates) {
+            if (
+                normalizedQuery !== item.alias &&
+                !normalizedQuery.startsWith(`${item.alias} `)
+            ) {
+                continue;
+            }
+
+            const remainder = normalizedQuery.slice(item.alias.length).trim();
+            const match = remainder.match(/^(\d{1,3})(?:\s*[: ]\s*(\d{1,3}))?$/);
+
+            if (!match) continue;
+
+            const chapter = Number(match[1]);
+            const verse = match[2] ? Number(match[2]) : null;
+
+            if (!Number.isInteger(chapter) || chapter < 1 || chapter > item.book.chapters) {
+                return null;
+            }
+
+            if (verse !== null && (!Number.isInteger(verse) || verse < 1)) {
+                return null;
+            }
+
+            return {
+                bookId: item.book.id,
+                bookName: item.book.name,
+                chapter,
+                verse
+            };
+        }
+
+        return null;
     },
 
     tokenizeVerseText: function(text, tokens = []) {
@@ -446,6 +520,16 @@ const App = {
     searchTimeout: null,
     targetVerse: null,
     bibleSearchFilter: 'all', // 'all', 'old', 'new'
+    bibleReaderPickerOpen: false,
+    bibleReaderPickerTestament: 'old',
+    bibleReaderPickerBook: null,
+    bibleReadingSettingsOpen: false,
+    bibleReadingSettings: {
+        textSize: 'normal',
+        spacing: 'comfortable',
+        focusMode: false
+    },
+    bibleMemoryFilter: 'all',
     openNoteDate: null,
     activeNoteField: null,
     homeViewingDate: null,
@@ -529,6 +613,7 @@ _selectionPanelEventsBound: false,
     this.loadSettings();
     this.loadStreak();
     this.loadFontSize();
+    this.loadBibleReadingSettings();
     this.loadCommunityLastSeen();
     localStorage.removeItem('su-voz-last-reminder-date');
        
@@ -1120,6 +1205,55 @@ getPlatformLabel: function() {
             document.documentElement.style.setProperty('--reading-size', this.settings.fontSize + 'rem');
         }
     },
+
+loadBibleReadingSettings: function() {
+    const saved = this.storage.get('su-voz-bible-reading-settings', {});
+    const textSize = ['small', 'normal', 'large'].includes(saved.textSize) ? saved.textSize : 'normal';
+    const spacing = ['compact', 'comfortable'].includes(saved.spacing) ? saved.spacing : 'comfortable';
+
+    this.bibleReadingSettings = {
+        textSize,
+        spacing,
+        focusMode: !!saved.focusMode
+    };
+},
+
+saveBibleReadingSettings: function() {
+    this.storage.set('su-voz-bible-reading-settings', this.bibleReadingSettings);
+},
+
+getBibleReaderClassNames: function() {
+    const settings = this.bibleReadingSettings || {};
+    const textSize = ['small', 'normal', 'large'].includes(settings.textSize) ? settings.textSize : 'normal';
+    const spacing = ['compact', 'comfortable'].includes(settings.spacing) ? settings.spacing : 'comfortable';
+
+    return [
+        'bible-reader-view',
+        `bible-reader-text-${textSize}`,
+        `bible-reader-spacing-${spacing}`,
+        settings.focusMode ? 'bible-reader-focus-mode' : ''
+    ].filter(Boolean).join(' ');
+},
+
+applyBibleReadingSettingsToDOM: function() {
+    const readerView = this.$content?.querySelector('.bible-reader-view');
+
+    if (!readerView) return;
+
+    readerView.classList.remove(
+        'bible-reader-text-small',
+        'bible-reader-text-normal',
+        'bible-reader-text-large',
+        'bible-reader-spacing-compact',
+        'bible-reader-spacing-comfortable',
+        'bible-reader-focus-mode'
+    );
+
+    this.getBibleReaderClassNames()
+        .split(' ')
+        .filter(className => className !== 'bible-reader-view')
+        .forEach(className => readerView.classList.add(className));
+},
 
 openStrongForWord: function(strongWord) {
     const word = strongWord.dataset.word || strongWord.textContent.trim();
@@ -4803,6 +4937,8 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
 
     if (oldView === 'bible-reading' && view !== 'bible-reading') {
         this.stopBibleChapterVoice(true);
+        this.bibleReaderPickerOpen = false;
+        this.bibleReadingSettingsOpen = false;
     }
 
     // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
@@ -4840,15 +4976,15 @@ this.updateNavUI();
     }
     await this.renderHome();
 } else if (view === 'bible') {
-    if (!this.bibleChapterPickerMode && this.restoreBibleLastLocation()) {
-        this.currentView = 'bible-reading';
-        this.updateNavUI();
-        await this.renderBibleReading();
-    } else {
-        this.renderBible();
-    }
+    this.renderBible();
 } else if (view === 'bible-search') {
     this.$content.innerHTML = this.renderBibleSearch();
+    requestAnimationFrame(() => {
+        const searchInput = document.getElementById('bible-search-input');
+        searchInput?.focus();
+    });
+} else if (view === 'bible-memory') {
+    this.$content.innerHTML = this.renderBibleMemoryView();
 } else if (view === 'strong-dictionary') {
     await this.renderStrongDictionaryView();
 } else if (view === 'bible-reading') {
@@ -4882,7 +5018,7 @@ this.updateNavUI();
 updateNavUI: function() {
     const navBtns = [
         { btn: this.$navHome, views: ['home', 'reading'] },
-        { btn: this.$navBible, views: ['bible', 'bible-reading', 'bible-search', 'strong-dictionary'] },
+        { btn: this.$navBible, views: ['bible', 'bible-reading', 'bible-search', 'bible-memory', 'strong-dictionary'] },
         { btn: this.$navCalendar, views: ['calendar'] },
         { btn: this.$navCommunity, views: ['community'] },
         { btn: this.$navStats, views: ['stats'] }
@@ -5203,6 +5339,7 @@ updateBibleChapterVoiceUI: function() {
     }
 
     this.updateBibleChapterMiniPlayer();
+    this.updateBibleReaderContextBarUI();
 },
 
 renderBibleChapterMiniPlayer: function() {
@@ -6253,18 +6390,20 @@ renderBibleSearch: function() {
 
     if (isLoading) {
         resultsHtml = `
-            <div class="bible-search-loading">
+            <div class="bible-search-loading" id="bible-search-results-container">
                 <div class="spinner"></div>
                 <p>Buscando en la Biblia...</p>
             </div>
         `;
     } else if (hasResults) {
         resultsHtml = `
-            <div class="bible-search-stats">
-                ${this.bibleSearchTotal} resultado${this.bibleSearchTotal === 1 ? '' : 's'} para “${this.escapeHtml(this.bibleSearchQuery)}”
+            <div class="bible-search-results-head" id="bible-search-results-container">
+                <div class="bible-search-stats">
+                    ${this.bibleSearchTotal} resultado${this.bibleSearchTotal === 1 ? '' : 's'} para “${this.escapeHtml(this.bibleSearchQuery)}”
+                </div>
             </div>
 
-            <div class="bible-search-results">
+            <div class="bible-search-results" aria-live="polite">
                 ${this.bibleSearchResults.map(result => {
                     const book = this.getBibleBookById(result.bookId);
                     const bookName = book ? book.name : (result.bookName || result.bookId);
@@ -6289,7 +6428,7 @@ renderBibleSearch: function() {
                             </span>
 
                             <span class="bible-search-result-open">
-                                Abrir →
+                                Abrir pasaje
                             </span>
                         </button>
                     `;
@@ -6300,24 +6439,24 @@ renderBibleSearch: function() {
         `;
     } else if (hasQuery) {
         resultsHtml = `
-            <div class="bible-search-placeholder">
+            <div class="bible-search-placeholder bible-search-empty" id="bible-search-results-container">
                 <div class="bible-search-icon">⌕</div>
-                <h3>No se encontraron resultados</h3>
-                <p>Intenta con otra palabra exacta o cambia el filtro de testamento.</p>
+                <h3>No encontramos resultados</h3>
+                <p>No encontramos resultados. Prueba con otra palabra o referencia.</p>
             </div>
         `;
     } else {
         resultsHtml = `
-            <div class="bible-search-placeholder">
+            <div class="bible-search-placeholder bible-search-start" id="bible-search-results-container">
                 <div class="bible-search-icon">⌕</div>
-                <h3>Busca una palabra o frase</h3>
-                <p>Encuentra pasajes por palabra clave en la Reina-Valera 1909.</p>
+                <h3>Empieza con una referencia o tema</h3>
+                <p>Busca por cita, palabra clave o tema bíblico en la Reina-Valera 1909.</p>
 
                 <div class="bible-search-suggestions">
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion">Jesús</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion">amor</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion">fe</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion">gracia</button>
+                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Juan 3:16">Juan 3:16</button>
+                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Salmo 23">Salmo 23</button>
+                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="gracia">gracia</button>
+                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="pacto">pacto</button>
                 </div>
             </div>
         `;
@@ -6339,7 +6478,7 @@ renderBibleSearch: function() {
                 </div>
 
                 <h2>Buscar en la Biblia</h2>
-                <p>Busca palabras, temas o frases y abre el versículo directamente.</p>
+                <p>Encuentra pasajes por referencia, palabra o tema y abre el versículo directamente.</p>
             </div>
 
             <div class="bible-search-panel">
@@ -6350,7 +6489,7 @@ renderBibleSearch: function() {
                         type="search"
                         class="bible-search-input"
                         id="bible-search-input"
-                        placeholder="Buscar: amor, gracia, fe..."
+                        placeholder="Buscar Juan 3:16, gracia, pacto…"
                         value="${this.escapeHtml(this.bibleSearchQuery)}"
                         autocomplete="off"
                         inputmode="search"
@@ -6771,7 +6910,11 @@ performBibleSearch: async function(query, resetPage = true) {
     try {
         await this.loadLocalBibleSearchData();
 
-        const allMatches = this.searchLocalBible(normalizedQuery, this.bibleSearchFilter);
+        const referenceQuery = this.parseBibleReferenceQuery(normalizedQuery);
+        const allMatches = referenceQuery
+            ? this.searchBibleReference(referenceQuery, this.bibleSearchFilter)
+            : this.searchLocalBible(normalizedQuery, this.bibleSearchFilter);
+
         this.applyBibleSearchPagination(allMatches);
     } catch (error) {
         console.error('Error en búsqueda bíblica local:', error);
@@ -6783,6 +6926,30 @@ performBibleSearch: async function(query, resetPage = true) {
         this.bibleSearchLoading = false;
         this.updateBibleSearchResults();
     }
+},
+
+searchBibleReference: function(reference, filter = this.bibleSearchFilter) {
+    if (!reference?.bookId || !reference.chapter) return [];
+
+    const book = this.bibleBooks.find(item => item.id === reference.bookId);
+
+    if (!book) return [];
+
+    const testament = this.getTestamentFromBookId(book.id);
+
+    if (filter !== 'all' && filter !== testament) {
+        return [];
+    }
+
+    const chapterPrefix = `${book.id}.${Number(reference.chapter)}.`;
+
+    return Array.from(this.bibleSearchVerseMap.values())
+        .filter(verse => {
+            if (!String(verse.id || '').startsWith(chapterPrefix)) return false;
+            if (reference.verse) return Number(verse.verse) === Number(reference.verse);
+            return true;
+        })
+        .sort((a, b) => Number(a.verse) - Number(b.verse));
 },
 
 goToBibleSearchPage: function(page) {
@@ -6970,20 +7137,22 @@ restoreBibleLastLocation: function() {
 },
 
 renderBible: function() {
-    const oldTestamentIds = new Set([
-        'gen','exo','lev','num','deu','jos','jdg','rut','1sa','2sa','1ki','2ki','1ch','2ch','ezr','neh','est',
-        'job','psa','pro','ecc','sng','isa','jer','lam','ezk','dan','hos','jol','amo','oba','jon','mic','nam',
-        'hab','zep','hag','zec','mal'
-    ]);
-
     const book = this.selectedBibleBook
         ? this.bibleBooks.find(item => item.id === this.selectedBibleBook)
         : null;
 
-    const oldBooks = this.bibleBooks.filter(item => oldTestamentIds.has(item.id));
-    const newBooks = this.bibleBooks.filter(item => !oldTestamentIds.has(item.id));
     const activeTestament = this.bibleLibraryTestament === 'new' ? 'new' : 'old';
-    const visibleBooks = activeTestament === 'old' ? oldBooks : newBooks;
+    const visibleBooks = this.getBibleBooksByTestament(activeTestament);
+    const lastLocation = this.getBibleLastLocation();
+    const continueBook = lastLocation?.mode === 'chapter'
+        ? this.bibleBooks.find(item => item.id === lastLocation.bookId)
+        : null;
+    const continueLabel = continueBook
+        ? `${continueBook.name} ${lastLocation.chapter}`
+        : 'Génesis 1';
+    const todayStr = this.getTodayDateStr();
+    const todayReading = this.getReadingMetadataByDate(todayStr);
+    const todayLabel = todayReading?.reference || 'Lectura del día';
 
     const renderBookCard = (item) => `
         <button
@@ -7021,34 +7190,53 @@ renderBible: function() {
             <div class="bible-library-hero">
                 <div class="bible-library-kicker">Reina-Valera 1909</div>
                 <h2>Biblia</h2>
-                <p>Lee, busca y navega por las Escrituras.</p>
+                <p>Lee, busca y profundiza en la Palabra.</p>
 
                 <div class="bible-library-actions">
                     <button
                         class="bible-library-action-btn primary"
                         type="button"
-                        data-action="open-bible-search"
+                        data-action="open-bible-continue"
                     >
-                        🔍 Buscar
+                        <span>Continuar leyendo</span>
+                        <small>${this.escapeHtml(continueLabel)}</small>
                     </button>
 
-                    ${book ? `
-                        <button
-                            class="bible-library-action-btn"
-                            type="button"
-                            data-action="clear-bible-book"
-                        >
-                            Cambiar libro
-                        </button>
-                    ` : ''}
+                    <button
+                        class="bible-library-action-btn"
+                        type="button"
+                        data-action="open-today-reading"
+                    >
+                        <span>Lectura de hoy</span>
+                        <small>${this.escapeHtml(todayLabel)}</small>
+                    </button>
                 </div>
             </div>
 
+            <section class="bible-quick-actions" aria-label="Acciones rápidas de Biblia">
+                <button class="bible-quick-action" type="button" data-action="open-bible-search">
+                    <span class="bible-quick-action-icon" aria-hidden="true">⌕</span>
+                    <span>Buscar en la Biblia</span>
+                </button>
+                <button class="bible-quick-action" type="button" data-action="focus-bible-explore">
+                    <span class="bible-quick-action-icon" aria-hidden="true">☰</span>
+                    <span>Explorar libros</span>
+                </button>
+                <button class="bible-quick-action" type="button" data-action="open-bible-memory" data-memory="notes">
+                    <span class="bible-quick-action-icon" aria-hidden="true">✎</span>
+                    <span>Notas</span>
+                </button>
+                <button class="bible-quick-action" type="button" data-action="open-bible-memory" data-memory="highlights">
+                    <span class="bible-quick-action-icon" aria-hidden="true">▧</span>
+                    <span>Resaltados</span>
+                </button>
+            </section>
+
             ${book ? `
-                <section class="bible-chapter-panel">
+                <section class="bible-chapter-panel" id="bible-explore">
                     <div class="bible-chapter-panel-header">
                         <div>
-                            <span>Libro seleccionado</span>
+                            <span>Explorar la Biblia</span>
                             <h3>${this.escapeHtml(book.name)}</h3>
                         </div>
 
@@ -7081,11 +7269,287 @@ renderBible: function() {
                     </div>
                 </section>
             ` : `
-                <div class="bible-testament-tabs" role="tablist" aria-label="Testamento">
+                <section class="bible-explore-shell" id="bible-explore">
+                    <div class="bible-explore-head">
+                        <div>
+                            <span>Explorar</span>
+                            <h3>Explorar la Biblia</h3>
+                        </div>
+                        <div class="bible-testament-tabs" role="tablist" aria-label="Testamento">
+                            <button
+                                class="bible-testament-tab ${activeTestament === 'old' ? 'active' : ''}"
+                                type="button"
+                                data-action="set-bible-testament"
+                                data-testament="old"
+                                role="tab"
+                                aria-selected="${activeTestament === 'old' ? 'true' : 'false'}"
+                            >
+                                Antiguo
+                            </button>
+                            <button
+                                class="bible-testament-tab ${activeTestament === 'new' ? 'active' : ''}"
+                                type="button"
+                                data-action="set-bible-testament"
+                                data-testament="new"
+                                role="tab"
+                                aria-selected="${activeTestament === 'new' ? 'true' : 'false'}"
+                            >
+                                Nuevo
+                            </button>
+                        </div>
+                    </div>
+                    ${renderBookSection(activeTestament === 'old' ? 'Antiguo Testamento' : 'Nuevo Testamento', visibleBooks)}
+                </section>
+            `}
+        </div>
+    `;
+},
+
+parseBibleMemoryDate: function(dateStr) {
+    const match = String(dateStr || '').match(/^bible-(.+)-(\d+)$/);
+
+    if (!match) return null;
+
+    const bookId = match[1];
+    const chapter = Number(match[2]);
+    const book = this.bibleBooks.find(item => item.id === bookId);
+
+    if (!book || !Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) {
+        return null;
+    }
+
+    return {
+        date: dateStr,
+        bookId,
+        chapter,
+        bookName: book.name,
+        reference: `${book.name} ${chapter}`
+    };
+},
+
+getBibleMemoryItems: function() {
+    const memoryMap = new Map();
+    let order = 0;
+
+    const addItem = (dateStr, text, data = {}) => {
+        const meta = this.parseBibleMemoryDate(dateStr);
+        const cleanText = String(text || '').replace(/\s+/g, ' ').trim();
+
+        if (!meta || cleanText.length < 3) return;
+
+        const key = `${dateStr}::${cleanText.toLowerCase()}`;
+        const existing = memoryMap.get(key) || {
+            id: key,
+            order: order++,
+            date: dateStr,
+            bookId: meta.bookId,
+            chapter: meta.chapter,
+            reference: meta.reference,
+            text: cleanText,
+            note: '',
+            colors: [],
+            hasNote: false,
+            hasHighlight: false
+        };
+
+        if (data.note) {
+            existing.note = String(data.note).trim();
+            existing.hasNote = true;
+        }
+
+        if (data.color) {
+            existing.hasHighlight = true;
+            if (!existing.colors.includes(data.color)) {
+                existing.colors.push(data.color);
+            }
+        }
+
+        memoryMap.set(key, existing);
+    };
+
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+
+        if (!key) continue;
+
+        if (key.startsWith('su-voz-selection-notes-bible-')) {
+            const date = key.replace('su-voz-selection-notes-', '');
+            this.getSelectionNotes(date).forEach(item => {
+                addItem(date, item.text, { note: item.note });
+            });
+        }
+
+        if (key.startsWith('su-voz-highlights-bible-')) {
+            const date = key.replace('su-voz-highlights-', '');
+            this.getHighlights(date).forEach(item => {
+                addItem(date, item.text, { color: item.color || 'yellow' });
+            });
+        }
+    }
+
+    return Array.from(memoryMap.values())
+        .filter(item => item.hasNote || item.hasHighlight)
+        .sort((a, b) => {
+            if (a.date !== b.date) return b.date.localeCompare(a.date);
+            return b.order - a.order;
+        });
+},
+
+renderBibleMemoryCard: function(item) {
+    const colorLabels = item.colors
+        .map(color => this.getHighlightColorLabel(color))
+        .join(', ');
+    const colorDots = item.colors.map(color => `
+        <span class="bible-memory-color-dot bible-memory-color-${this.escapeHtml(color)}" title="${this.escapeHtml(this.getHighlightColorLabel(color))}"></span>
+    `).join('');
+
+    return `
+        <article class="bible-memory-card">
+            <div class="bible-memory-card-head">
+                <div>
+                    <span class="bible-memory-reference">${this.escapeHtml(item.reference)}</span>
+                    <div class="bible-memory-badges">
+                        ${item.hasNote ? '<span>Nota</span>' : ''}
+                        ${item.hasHighlight ? `<span>Resaltado${item.colors.length > 1 ? 's' : ''}</span>` : ''}
+                    </div>
+                </div>
+                ${item.hasHighlight ? `<div class="bible-memory-colors" aria-label="Colores de resaltado">${colorDots}</div>` : ''}
+            </div>
+
+            <p class="bible-memory-fragment">${this.escapeHtml(item.text)}</p>
+
+            ${item.note ? `
+                <div class="bible-memory-note">
+                    <span>Nota</span>
+                    <p>${this.escapeHtml(item.note)}</p>
+                </div>
+            ` : ''}
+
+            ${colorLabels ? `<div class="bible-memory-color-label">Color: ${this.escapeHtml(colorLabels)}</div>` : ''}
+
+            <button
+                class="bible-memory-open"
+                type="button"
+                data-action="open-bible-memory-passage"
+                data-book-id="${this.escapeHtml(item.bookId)}"
+                data-chapter="${item.chapter}"
+            >
+                Abrir pasaje
+            </button>
+        </article>
+    `;
+},
+
+renderBibleMemoryView: function() {
+    const filter = ['all', 'notes', 'highlights'].includes(this.bibleMemoryFilter)
+        ? this.bibleMemoryFilter
+        : 'all';
+    const allItems = this.getBibleMemoryItems();
+    const items = allItems.filter(item => {
+        if (filter === 'notes') return item.hasNote;
+        if (filter === 'highlights') return item.hasHighlight;
+        return true;
+    });
+
+    return `
+        <div class="bible-memory-view">
+            <section class="bible-memory-hero">
+                <div class="bible-search-topline">
+                    <button class="bible-search-back" type="button" data-action="back-to-bible-books">
+                        ← Biblia
+                    </button>
+                    <span>Memoria bíblica</span>
+                </div>
+                <h2>Notas y resaltados</h2>
+                <p>Vuelve a los pasajes que marcaste mientras leías la Biblia.</p>
+            </section>
+
+            <nav class="bible-memory-filters" aria-label="Filtrar memoria bíblica">
+                <button
+                    class="bible-memory-filter ${filter === 'all' ? 'active' : ''}"
+                    type="button"
+                    data-action="set-bible-memory-filter"
+                    data-filter="all"
+                >
+                    Todos
+                </button>
+                <button
+                    class="bible-memory-filter ${filter === 'notes' ? 'active' : ''}"
+                    type="button"
+                    data-action="set-bible-memory-filter"
+                    data-filter="notes"
+                >
+                    Notas
+                </button>
+                <button
+                    class="bible-memory-filter ${filter === 'highlights' ? 'active' : ''}"
+                    type="button"
+                    data-action="set-bible-memory-filter"
+                    data-filter="highlights"
+                >
+                    Resaltados
+                </button>
+            </nav>
+
+            ${items.length ? `
+                <div class="bible-memory-summary">
+                    ${items.length} elemento${items.length === 1 ? '' : 's'} bíblico${items.length === 1 ? '' : 's'}
+                </div>
+                <div class="bible-memory-list">
+                    ${items.map(item => this.renderBibleMemoryCard(item)).join('')}
+                </div>
+            ` : `
+                <div class="bible-memory-empty">
+                    <div class="bible-search-icon">✎</div>
+                    <h3>Aún no tienes notas o resaltados bíblicos</h3>
+                    <p>Aún no tienes notas o resaltados bíblicos. Marca un versículo mientras lees para encontrarlo aquí.</p>
+                </div>
+            `}
+        </div>
+    `;
+},
+
+renderBibleReaderPicker: function() {
+    if (!this.bibleReaderPickerOpen) return '';
+
+    const selectedBookId = this.bibleReaderPickerBook || this.selectedBibleBook;
+    const selectedBook = this.bibleBooks.find(item => item.id === selectedBookId)
+        || this.bibleBooks.find(item => item.id === this.selectedBibleBook)
+        || this.bibleBooks[0];
+    const selectedChapter = Number(this.selectedBibleChapter) || 1;
+    const activeTestament = this.bibleReaderPickerTestament === 'new'
+        ? 'new'
+        : this.getTestamentFromBookId(selectedBook?.id || this.selectedBibleBook);
+    const books = this.getBibleBooksByTestament(activeTestament);
+    const chapters = selectedBook
+        ? Array.from({ length: selectedBook.chapters }, (_, i) => i + 1)
+        : [];
+
+    return `
+        <div class="bible-picker-sheet" role="dialog" aria-modal="true" aria-label="Seleccionar libro y capítulo">
+            <button class="bible-picker-backdrop" type="button" data-action="close-bible-reader-picker" aria-label="Cerrar selector"></button>
+            <section class="bible-picker-panel">
+                <div class="bible-picker-handle" aria-hidden="true"></div>
+                <div class="bible-picker-head">
+                    <div>
+                        <span>Elegir pasaje</span>
+                        <h3>${this.escapeHtml(selectedBook?.name || 'Biblia')} ${selectedChapter}</h3>
+                    </div>
                     <button
-                        class="bible-testament-tab ${activeTestament === 'old' ? 'active' : ''}"
+                        class="bible-picker-close"
                         type="button"
-                        data-action="set-bible-testament"
+                        data-action="close-bible-reader-picker"
+                        aria-label="Cerrar selector"
+                    >
+                        ×
+                    </button>
+                </div>
+
+                <div class="bible-picker-tabs" role="tablist" aria-label="Testamento">
+                    <button
+                        class="bible-picker-tab ${activeTestament === 'old' ? 'active' : ''}"
+                        type="button"
+                        data-action="set-reader-picker-testament"
                         data-testament="old"
                         role="tab"
                         aria-selected="${activeTestament === 'old' ? 'true' : 'false'}"
@@ -7093,9 +7557,9 @@ renderBible: function() {
                         Antiguo
                     </button>
                     <button
-                        class="bible-testament-tab ${activeTestament === 'new' ? 'active' : ''}"
+                        class="bible-picker-tab ${activeTestament === 'new' ? 'active' : ''}"
                         type="button"
-                        data-action="set-bible-testament"
+                        data-action="set-reader-picker-testament"
                         data-testament="new"
                         role="tab"
                         aria-selected="${activeTestament === 'new' ? 'true' : 'false'}"
@@ -7103,10 +7567,263 @@ renderBible: function() {
                         Nuevo
                     </button>
                 </div>
-                ${renderBookSection(activeTestament === 'old' ? 'Antiguo Testamento' : 'Nuevo Testamento', visibleBooks)}
-            `}
+
+                <div class="bible-picker-layout">
+                    <div class="bible-picker-books" aria-label="Libros">
+                        ${books.map(book => `
+                            <button
+                                class="bible-picker-book ${book.id === selectedBook?.id ? 'is-active' : ''}"
+                                type="button"
+                                data-action="select-reader-picker-book"
+                                data-book-id="${book.id}"
+                            >
+                                <span>${this.escapeHtml(book.name)}</span>
+                                <small>${book.chapters} cap.</small>
+                            </button>
+                        `).join('')}
+                    </div>
+
+                    <div class="bible-picker-chapters" aria-label="Capítulos">
+                        ${chapters.map(chapter => {
+                            const isActive = selectedBook?.id === this.selectedBibleBook && chapter === selectedChapter;
+
+                            return `
+                                <button
+                                    class="bible-picker-chapter ${isActive ? 'is-active' : ''}"
+                                    type="button"
+                                    data-action="open-reader-picker-chapter"
+                                    data-book-id="${selectedBook.id}"
+                                    data-chapter="${chapter}"
+                                >
+                                    ${chapter}
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            </section>
         </div>
     `;
+},
+
+mountBibleReaderPicker: function() {
+    if (!this.$content) return;
+
+    const existing = this.$content.querySelector('.bible-picker-sheet');
+
+    if (existing) {
+        existing.remove();
+    }
+
+    if (!this.bibleReaderPickerOpen) return;
+
+    const readerView = this.$content.querySelector('.bible-reader-view');
+
+    if (readerView) {
+        readerView.insertAdjacentHTML('beforeend', this.renderBibleReaderPicker());
+        requestAnimationFrame(() => {
+            const activeBook = this.$content?.querySelector('.bible-picker-book.is-active');
+            activeBook?.scrollIntoView({ block: 'nearest', inline: 'center' });
+        });
+    }
+},
+
+openBibleReaderPicker: function() {
+    const currentBook = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+
+    this.bibleReaderPickerOpen = true;
+    this.bibleReaderPickerBook = currentBook?.id || this.selectedBibleBook || 'gen';
+    this.bibleReaderPickerTestament = this.getTestamentFromBookId(this.bibleReaderPickerBook) === 'new' ? 'new' : 'old';
+    this.mountBibleReaderPicker();
+},
+
+closeBibleReaderPicker: function() {
+    this.bibleReaderPickerOpen = false;
+    this.mountBibleReaderPicker();
+},
+
+renderBibleReaderContextBar: function(bookName, chapterNumber) {
+    const key = `${bookName}-${chapterNumber}`;
+    const isSameChapter = this.bibleChapterVoice.key === key;
+    const isReading = isSameChapter && this.bibleChapterVoice.status === 'speaking';
+    const isPaused = isSameChapter && this.bibleChapterVoice.status === 'paused';
+    const audioLabel = isReading ? 'Pausar' : (isPaused ? 'Continuar' : 'Audio');
+
+    return `
+        <div class="bible-reader-context-bar" role="toolbar" aria-label="Accesos rápidos del lector bíblico">
+            <button
+                class="bible-reader-tool ${isReading ? 'is-active' : ''}"
+                type="button"
+                data-action="reader-context-audio"
+                aria-label="${isReading ? 'Pausar audio del capítulo' : 'Escuchar capítulo'}"
+            >
+                <span class="bible-reader-tool-icon" aria-hidden="true">${isReading ? 'Ⅱ' : '▶'}</span>
+                <span>${audioLabel}</span>
+            </button>
+            <button
+                class="bible-reader-tool"
+                type="button"
+                data-action="open-bible-search"
+                aria-label="Buscar en la Biblia"
+            >
+                <span class="bible-reader-tool-icon" aria-hidden="true">⌕</span>
+                <span>Buscar</span>
+            </button>
+            <button
+                class="bible-reader-tool"
+                type="button"
+                data-action="open-bible-reader-picker"
+                aria-label="Abrir selector de capítulos"
+            >
+                <span class="bible-reader-tool-icon" aria-hidden="true">☰</span>
+                <span>Capítulos</span>
+            </button>
+            <button
+                class="bible-reader-tool ${this.bibleReadingSettingsOpen ? 'is-active' : ''}"
+                type="button"
+                data-action="toggle-bible-reading-settings"
+                aria-label="Abrir ajustes de lectura"
+                aria-expanded="${this.bibleReadingSettingsOpen ? 'true' : 'false'}"
+            >
+                <span class="bible-reader-tool-icon" aria-hidden="true">Aa</span>
+                <span>Ajustes</span>
+            </button>
+        </div>
+    `;
+},
+
+renderBibleReadingSettingsPanel: function() {
+    if (!this.bibleReadingSettingsOpen) return '';
+
+    const settings = this.bibleReadingSettings || {};
+    const textSize = settings.textSize || 'normal';
+    const spacing = settings.spacing || 'comfortable';
+    const focusMode = !!settings.focusMode;
+
+    const renderOption = (group, value, label, activeValue) => `
+        <button
+            class="bible-reading-setting-option ${activeValue === value ? 'is-active' : ''}"
+            type="button"
+            data-action="set-bible-reading-setting"
+            data-setting="${group}"
+            data-value="${value}"
+            aria-pressed="${activeValue === value ? 'true' : 'false'}"
+        >
+            ${label}
+        </button>
+    `;
+
+    return `
+        <div class="bible-reading-settings-panel" role="dialog" aria-label="Ajustes de lectura bíblica">
+            <div class="bible-reading-settings-head">
+                <div>
+                    <span>Lectura</span>
+                    <h3>Ajustes</h3>
+                </div>
+                <button
+                    class="bible-reading-settings-close"
+                    type="button"
+                    data-action="close-bible-reading-settings"
+                    aria-label="Cerrar ajustes de lectura"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="bible-reading-setting-group">
+                <span>Tamaño de texto</span>
+                <div class="bible-reading-setting-options">
+                    ${renderOption('textSize', 'small', 'Pequeño', textSize)}
+                    ${renderOption('textSize', 'normal', 'Normal', textSize)}
+                    ${renderOption('textSize', 'large', 'Grande', textSize)}
+                </div>
+            </div>
+
+            <div class="bible-reading-setting-group">
+                <span>Espaciado</span>
+                <div class="bible-reading-setting-options two">
+                    ${renderOption('spacing', 'compact', 'Compacto', spacing)}
+                    ${renderOption('spacing', 'comfortable', 'Cómodo', spacing)}
+                </div>
+            </div>
+
+            <button
+                class="bible-reading-focus-toggle ${focusMode ? 'is-active' : ''}"
+                type="button"
+                data-action="toggle-bible-focus-mode"
+                aria-pressed="${focusMode ? 'true' : 'false'}"
+            >
+                <span>Modo enfoque</span>
+                <strong>${focusMode ? 'Activo' : 'Inactivo'}</strong>
+            </button>
+        </div>
+    `;
+},
+
+mountBibleReadingSettingsPanel: function() {
+    if (!this.$content) return;
+
+    const existing = this.$content.querySelector('.bible-reading-settings-panel');
+    existing?.remove();
+
+    if (!this.bibleReadingSettingsOpen) return;
+
+    const readerView = this.$content.querySelector('.bible-reader-view');
+    readerView?.insertAdjacentHTML('beforeend', this.renderBibleReadingSettingsPanel());
+},
+
+updateBibleReaderContextBarUI: function() {
+    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+    const chapter = Number(this.selectedBibleChapter);
+    const bar = this.$content?.querySelector('.bible-reader-context-bar');
+
+    if (!bar || !book || !chapter) return;
+
+    const nextBar = document.createRange().createContextualFragment(
+        this.renderBibleReaderContextBar(book.name, chapter)
+    ).firstElementChild;
+
+    if (nextBar) {
+        bar.replaceWith(nextBar);
+    }
+},
+
+setBibleReadingSetting: function(setting, value) {
+    if (setting === 'textSize' && ['small', 'normal', 'large'].includes(value)) {
+        this.bibleReadingSettings.textSize = value;
+    } else if (setting === 'spacing' && ['compact', 'comfortable'].includes(value)) {
+        this.bibleReadingSettings.spacing = value;
+    } else {
+        return;
+    }
+
+    this.saveBibleReadingSettings();
+    this.applyBibleReadingSettingsToDOM();
+    this.mountBibleReadingSettingsPanel();
+    this.updateBibleReaderContextBarUI();
+},
+
+toggleBibleReadingFocusMode: function() {
+    this.bibleReadingSettings.focusMode = !this.bibleReadingSettings.focusMode;
+    this.saveBibleReadingSettings();
+    this.applyBibleReadingSettingsToDOM();
+    this.mountBibleReadingSettingsPanel();
+    this.updateBibleReaderContextBarUI();
+},
+
+toggleBibleChapterVoiceFromContext: function() {
+    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+    const chapter = Number(this.selectedBibleChapter);
+
+    if (!book || !chapter || !this.currentBibleChapterData) {
+        this.showToast('El capítulo aún se está cargando');
+        return;
+    }
+
+    const key = `${book.name}-${chapter}`;
+    const text = this.getCleanBibleChapterVoiceText(this.currentBibleChapterData, book.name, chapter);
+
+    this.pauseOrResumeBibleChapterVoice(key, text, `${book.name} ${chapter}`);
 },
 
 renderBibleReading: async function() {
@@ -7127,7 +7844,7 @@ renderBibleReading: async function() {
     const nextDisabled = requestedChapter >= requestedBook.chapters;
 
     const renderReaderShell = (bodyHtml) => `
-        <div class="bible-reader-view">
+        <div class="${this.getBibleReaderClassNames()}">
             <div class="bible-reader-topbar">
                 <button
                     class="bible-reader-icon-btn"
@@ -7143,8 +7860,8 @@ renderBibleReading: async function() {
                     <button
                         class="bible-reader-title-btn bible-reader-book-btn"
                         type="button"
-                        data-action="back-to-bible-books"
-                        aria-label="Cambiar libro"
+                        data-action="open-bible-reader-picker"
+                        aria-label="Cambiar libro o capítulo"
                     >
                         <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
                     </button>
@@ -7152,8 +7869,8 @@ renderBibleReading: async function() {
                     <button
                         class="bible-reader-title-btn bible-reader-chapter-btn"
                         type="button"
-                        data-action="open-bible-chapters"
-                        aria-label="Abrir capítulos de ${this.escapeHtml(requestedBook.name)}"
+                        data-action="open-bible-reader-picker"
+                        aria-label="Abrir selector de ${this.escapeHtml(requestedBook.name)} ${requestedChapter}"
                     >
                         <span class="bible-reader-chapter">Cap. ${requestedChapter} ▼</span>
                     </button>
@@ -7197,6 +7914,9 @@ renderBibleReading: async function() {
             </div>
 
             ${bodyHtml}
+            ${this.renderBibleReaderContextBar(requestedBook.name, requestedChapter)}
+            ${this.renderBibleReadingSettingsPanel()}
+            ${this.renderBibleReaderPicker()}
         </div>
     `;
 
@@ -9848,6 +10568,50 @@ if (bibleTestamentTab) {
     return;
 }
 
+const openBibleContinueBtn = e.target.closest('[data-action="open-bible-continue"]');
+if (openBibleContinueBtn) {
+    const location = this.getBibleLastLocation();
+
+    if (location?.mode === 'chapter') {
+        this.selectedBibleBook = location.bookId;
+        this.selectedBibleChapter = location.chapter;
+    } else {
+        this.selectedBibleBook = 'gen';
+        this.selectedBibleChapter = 1;
+        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
+    }
+
+    this.bibleChapterPickerMode = false;
+    this.navigate('bible-reading');
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+    return;
+}
+
+const openTodayReadingBtn = e.target.closest('[data-action="open-today-reading"]');
+if (openTodayReadingBtn) {
+    const todayStr = this.getTodayDateStr();
+    this.homeViewingDate = todayStr;
+    this.navigate('reading', todayStr);
+    return;
+}
+
+const focusBibleExploreBtn = e.target.closest('[data-action="focus-bible-explore"]');
+if (focusBibleExploreBtn) {
+    const exploreSection = this.$content.querySelector('#bible-explore');
+    if (exploreSection) {
+        exploreSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    return;
+}
+
+const openBibleMemoryBtn = e.target.closest('[data-action="open-bible-memory"]');
+if (openBibleMemoryBtn) {
+    const memory = openBibleMemoryBtn.getAttribute('data-memory');
+    this.bibleMemoryFilter = memory === 'highlights' ? 'highlights' : 'notes';
+    this.navigate('bible-memory');
+    return;
+}
+
 // Abrir búsqueda
 const openStrongDictionaryBtn = e.target.closest('[data-action="open-strong-dictionary"]');
 if (openStrongDictionaryBtn) {
@@ -9875,7 +10639,7 @@ if (openSearchBtn) {
 // Sugerencia de búsqueda
 const suggestionTag = e.target.closest('[data-action="search-suggestion"]');
 if (suggestionTag) {
-    const query = suggestionTag.textContent.trim();
+    const query = suggestionTag.getAttribute('data-query') || suggestionTag.textContent.trim();
     this.performBibleSearch(query, true);
     return;
 }
@@ -9910,6 +10674,71 @@ if (navigateToVerseBtn) {
     const chapter = parseInt(navigateToVerseBtn.getAttribute('data-chapter'));
     const verse = parseInt(navigateToVerseBtn.getAttribute('data-verse'));
     this.navigateToVerse(bookId, chapter, verse);
+    return;
+}
+
+const bibleMemoryFilterBtn = e.target.closest('[data-action="set-bible-memory-filter"]');
+if (bibleMemoryFilterBtn) {
+    const filter = bibleMemoryFilterBtn.getAttribute('data-filter');
+
+    if (['all', 'notes', 'highlights'].includes(filter)) {
+        this.bibleMemoryFilter = filter;
+        this.$content.innerHTML = this.renderBibleMemoryView();
+    }
+    return;
+}
+
+const bibleMemoryPassageBtn = e.target.closest('[data-action="open-bible-memory-passage"]');
+if (bibleMemoryPassageBtn) {
+    const bookId = bibleMemoryPassageBtn.getAttribute('data-book-id');
+    const chapter = Number(bibleMemoryPassageBtn.getAttribute('data-chapter'));
+    const book = this.bibleBooks.find(item => item.id === bookId);
+
+    if (book && Number.isInteger(chapter) && chapter >= 1 && chapter <= book.chapters) {
+        this.selectedBibleBook = book.id;
+        this.selectedBibleChapter = chapter;
+        this.bibleChapterPickerMode = false;
+        this.saveBibleLastLocation(book.id, chapter);
+        this.navigate('bible-reading');
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+    }
+    return;
+}
+
+const readerContextAudioBtn = e.target.closest('[data-action="reader-context-audio"]');
+if (readerContextAudioBtn) {
+    this.toggleBibleChapterVoiceFromContext();
+    return;
+}
+
+const toggleBibleReadingSettingsBtn = e.target.closest('[data-action="toggle-bible-reading-settings"]');
+if (toggleBibleReadingSettingsBtn) {
+    this.bibleReadingSettingsOpen = !this.bibleReadingSettingsOpen;
+    this.mountBibleReadingSettingsPanel();
+    this.updateBibleReaderContextBarUI();
+    return;
+}
+
+const closeBibleReadingSettingsBtn = e.target.closest('[data-action="close-bible-reading-settings"]');
+if (closeBibleReadingSettingsBtn) {
+    this.bibleReadingSettingsOpen = false;
+    this.mountBibleReadingSettingsPanel();
+    this.updateBibleReaderContextBarUI();
+    return;
+}
+
+const bibleReadingSettingBtn = e.target.closest('[data-action="set-bible-reading-setting"]');
+if (bibleReadingSettingBtn) {
+    this.setBibleReadingSetting(
+        bibleReadingSettingBtn.getAttribute('data-setting'),
+        bibleReadingSettingBtn.getAttribute('data-value')
+    );
+    return;
+}
+
+const bibleFocusModeBtn = e.target.closest('[data-action="toggle-bible-focus-mode"]');
+if (bibleFocusModeBtn) {
+    this.toggleBibleReadingFocusMode();
     return;
 }
 
@@ -9952,6 +10781,7 @@ if (strongFilterBtn) {
 const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
 if (backToBibleBooksBtn) {
     this.stopBibleChapterVoice(true);
+    this.bibleReaderPickerOpen = false;
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
     this.bibleChapterPickerMode = false;
@@ -9960,8 +10790,71 @@ if (backToBibleBooksBtn) {
     return;
 }
 
+const openBibleReaderPickerBtn = e.target.closest('[data-action="open-bible-reader-picker"]');
+if (openBibleReaderPickerBtn) {
+    this.openBibleReaderPicker();
+    return;
+}
+
+const closeBibleReaderPickerBtn = e.target.closest('[data-action="close-bible-reader-picker"]');
+if (closeBibleReaderPickerBtn || e.target.classList?.contains('bible-picker-sheet')) {
+    this.closeBibleReaderPicker();
+    return;
+}
+
+const readerPickerTestamentBtn = e.target.closest('[data-action="set-reader-picker-testament"]');
+if (readerPickerTestamentBtn) {
+    const testament = readerPickerTestamentBtn.getAttribute('data-testament');
+
+    if (testament === 'old' || testament === 'new') {
+        const books = this.getBibleBooksByTestament(testament);
+
+        this.bibleReaderPickerTestament = testament;
+        this.bibleReaderPickerBook = books[0]?.id || this.bibleReaderPickerBook;
+        this.mountBibleReaderPicker();
+    }
+    return;
+}
+
+const readerPickerBookBtn = e.target.closest('[data-action="select-reader-picker-book"]');
+if (readerPickerBookBtn) {
+    const bookId = readerPickerBookBtn.getAttribute('data-book-id');
+    const book = this.bibleBooks.find(item => item.id === bookId);
+
+    if (book) {
+        this.bibleReaderPickerBook = book.id;
+        this.bibleReaderPickerTestament = this.getTestamentFromBookId(book.id) === 'new' ? 'new' : 'old';
+        this.mountBibleReaderPicker();
+    }
+    return;
+}
+
+const readerPickerChapterBtn = e.target.closest('[data-action="open-reader-picker-chapter"]');
+if (readerPickerChapterBtn) {
+    const bookId = readerPickerChapterBtn.getAttribute('data-book-id');
+    const chapter = Number(readerPickerChapterBtn.getAttribute('data-chapter'));
+    const book = this.bibleBooks.find(item => item.id === bookId);
+
+    if (book && Number.isInteger(chapter) && chapter >= 1 && chapter <= book.chapters) {
+        this.stopBibleChapterVoice(true);
+        this.selectedBibleBook = book.id;
+        this.selectedBibleChapter = chapter;
+        this.bibleChapterPickerMode = false;
+        this.bibleReaderPickerOpen = false;
+        this.saveBibleLastLocation(book.id, chapter);
+        this.navigate('bible-reading');
+        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+    }
+    return;
+}
+
 const openBibleChaptersBtn = e.target.closest('[data-action="open-bible-chapters"]');
 if (openBibleChaptersBtn) {
+    if (this.currentView === 'bible-reading') {
+        this.openBibleReaderPicker();
+        return;
+    }
+
     this.stopBibleChapterVoice(true);
     this.selectedBibleChapter = null;
     this.bibleChapterPickerMode = true;
