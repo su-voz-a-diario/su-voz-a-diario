@@ -410,6 +410,7 @@ const App = {
 
     selectedBibleBook: null,
     selectedBibleChapter: null,
+    bibleChapterPickerMode: false,
     currentBibleChapterData: null,
     strongHebrew: {},
     strongHebrewReady: false,
@@ -4837,7 +4838,7 @@ this.updateNavUI();
     }
     await this.renderHome();
 } else if (view === 'bible') {
-    if (this.restoreBibleLastLocation()) {
+    if (!this.bibleChapterPickerMode && this.restoreBibleLastLocation()) {
         this.currentView = 'bible-reading';
         this.updateNavUI();
         await this.renderBibleReading();
@@ -7054,15 +7055,25 @@ renderBibleReading: async function() {
                     ☰
                 </button>
 
-                <button
-                    class="bible-reader-title-btn"
-                    type="button"
-                    data-action="back-to-bible-books"
-                    aria-label="Cambiar libro o capítulo"
-                >
-                    <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
-                    <span class="bible-reader-chapter">Capítulo ${requestedChapter}</span>
-                </button>
+                <div class="bible-reader-title-split" aria-label="Navegación del capítulo">
+                    <button
+                        class="bible-reader-title-btn bible-reader-book-btn"
+                        type="button"
+                        data-action="back-to-bible-books"
+                        aria-label="Cambiar libro"
+                    >
+                        <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
+                    </button>
+
+                    <button
+                        class="bible-reader-title-btn bible-reader-chapter-btn"
+                        type="button"
+                        data-action="open-bible-chapters"
+                        aria-label="Abrir capítulos de ${this.escapeHtml(requestedBook.name)}"
+                    >
+                        <span class="bible-reader-chapter">Cap. ${requestedChapter} ▼</span>
+                    </button>
+                </div>
 
                 <button
                     class="bible-reader-icon-btn"
@@ -7133,6 +7144,33 @@ renderBibleReading: async function() {
                         ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
                     </div>
                 </div>
+                <nav class="bible-reader-bottom-nav" aria-label="Navegación de capítulos">
+                    <button
+                        class="bible-reader-bottom-btn"
+                        type="button"
+                        data-action="bible-prev-chapter"
+                        ${previousDisabled ? 'disabled' : ''}
+                    >
+                        ${previousDisabled ? 'Anterior' : `← ${this.escapeHtml(requestedBook.name)} ${requestedChapter - 1}`}
+                    </button>
+
+                    <button
+                        class="bible-reader-bottom-btn primary"
+                        type="button"
+                        data-action="open-bible-chapters"
+                    >
+                        Capítulos
+                    </button>
+
+                    <button
+                        class="bible-reader-bottom-btn"
+                        type="button"
+                        data-action="bible-next-chapter"
+                        ${nextDisabled ? 'disabled' : ''}
+                    >
+                        ${nextDisabled ? 'Siguiente' : `${this.escapeHtml(requestedBook.name)} ${requestedChapter + 1} →`}
+                    </button>
+                </nav>
             </div>
         `);
 
@@ -9797,8 +9835,19 @@ if (backToBibleBooksBtn) {
     this.stopBibleChapterVoice(true);
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
+    this.bibleChapterPickerMode = false;
     this.saveBibleBooksMode();
     this.navigate('bible');
+    return;
+}
+
+const openBibleChaptersBtn = e.target.closest('[data-action="open-bible-chapters"]');
+if (openBibleChaptersBtn) {
+    this.stopBibleChapterVoice(true);
+    this.selectedBibleChapter = null;
+    this.bibleChapterPickerMode = true;
+    this.navigate('bible');
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
     return;
 }
 
@@ -9806,6 +9855,7 @@ const clearBibleBookBtn = e.target.closest('[data-action="clear-bible-book"]');
 if (clearBibleBookBtn) {
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
+    this.bibleChapterPickerMode = false;
     this.saveBibleBooksMode();
     this.navigate('bible');
     return;
@@ -9818,9 +9868,11 @@ if (openBibleChapterBtn) {
 
     this.selectedBibleBook = bookId;
     this.selectedBibleChapter = chapter;
+    this.bibleChapterPickerMode = false;
     this.saveBibleLastLocation(bookId, chapter);
 
     this.navigate('bible-reading');
+    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
     return;
 }
 

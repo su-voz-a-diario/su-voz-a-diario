@@ -8357,6 +8357,21 @@ body.dark-mode .view-hero {
         inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 
+.bible-reader-title-split {
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+}
+
+.bible-reader-title-split .bible-reader-title-btn {
+    width: 100%;
+}
+
+.bible-reader-chapter-btn {
+    padding: 0 12px;
+}
+
 .bible-reader-book {
     max-width: 100%;
     overflow: hidden;
@@ -8450,6 +8465,42 @@ body.dark-mode .view-hero {
     margin-top: 2px;
 }
 
+.bible-reader-bottom-nav {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    margin: 14px 0 2px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    background: var(--surface-color);
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+}
+
+.bible-reader-bottom-btn {
+    min-height: 42px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-color);
+    color: var(--text-main);
+    font-size: 0.86rem;
+    font-weight: 800;
+    cursor: pointer;
+    padding: 8px 10px;
+}
+
+.bible-reader-bottom-btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.bible-reader-bottom-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
 .bible-reader-content .reading-text {
     background: var(--surface-color);
     border: 1px solid var(--border-color);
@@ -8537,6 +8588,17 @@ body.dark-mode .bible-reader-title-btn {
         inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+body.dark-mode .bible-reader-bottom-nav {
+    background: rgba(15, 17, 21, 0.98);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+}
+
+body.dark-mode .bible-reader-bottom-btn {
+    background: #111827;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
 body.dark-mode .bible-reader-content .reading-text {
     background: rgba(15, 17, 21, 0.98);
     border-color: rgba(255, 255, 255, 0.08);
@@ -8570,6 +8632,14 @@ body.dark-mode .bible-reader-content .verse-number {
         border-radius: 16px;
     }
 
+    .bible-reader-title-split {
+        gap: 5px;
+    }
+
+    .bible-reader-chapter-btn {
+        padding: 0 9px;
+    }
+
     .bible-reader-book {
         font-size: 0.94rem;
     }
@@ -8597,6 +8667,12 @@ body.dark-mode .bible-reader-content .verse-number {
     .bible-reader-content .reading-text {
         padding: 20px 15px;
         border-radius: 22px;
+    }
+
+    .bible-reader-bottom-nav {
+        grid-template-columns: 1fr;
+        gap: 7px;
+        padding: 9px;
     }
 
     .bible-reader-content .verse-item {
