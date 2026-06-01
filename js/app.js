@@ -423,6 +423,8 @@ const App = {
     strongDictionaryFilter: 'all',
     strongDictionaryResults: [],
     strongDictionarySelectedId: null,
+    strongDictionaryBibleContext: null,
+    strongDictionaryConsultedWord: '',
     pendingStrongContext: null,
     strongVerseData: {},
     strongVerseDataReady: false,
@@ -611,6 +613,7 @@ cacheDOM: function() {
     this.$selectionNote = document.getElementById('selectionNote');
     this.$selectionCopyBtn = document.getElementById('copyBtn');
     this.$selectionShareImageBtn = document.getElementById('shareImageBtn');
+    this.$selectionStrongBtn = document.getElementById('strongSearchBtn');
     this.$selectionClearBtn = document.getElementById('clearBtn');
     this.$selectionCloseBtn = document.getElementById('closePanel');
     this.$selectionSaveNoteBtn = document.getElementById('saveNoteBtn');
@@ -3458,6 +3461,88 @@ getBibleSelectionReferenceLabel: function() {
     return `${bookName} ${chapter}:${verseLabel}`;
 },
 
+cleanStrongVerseText: function(text) {
+    return String(text || '')
+        .replace(/^\s*\d+\s+/, ' ')
+        .replace(/[.,;:!?¡¿()[\]{}"“”'‘’`´…]/g, ' ')
+        .replace(/[—–-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+},
+
+normalizeStrongVerseWord: function(word) {
+    return String(word || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+},
+
+extractStrongVerseKeywords: function(text) {
+    const stopWords = new Set([
+        'a', 'al', 'ante', 'aquel', 'aquella', 'aquellas', 'aquellos', 'asi', 'aun', 'cada', 'como', 'con', 'contra',
+        'cual', 'cuando', 'de', 'del', 'desde', 'donde', 'e', 'el', 'ella',
+        'ellas', 'ellos', 'en', 'entre', 'era', 'es', 'esa', 'esas', 'ese',
+        'esos', 'esta', 'estas', 'este', 'estos', 'fue', 'ha', 'han', 'hasta',
+        'hay', 'la', 'las', 'lo', 'los', 'manera', 'mas', 'me', 'mi', 'mis', 'ni', 'no',
+        'o', 'os', 'para', 'pero', 'por', 'porque', 'que', 'se', 'ser', 'si', 'sin',
+        'sobre', 'su', 'sus', 'tal', 'te', 'todo', 'tu', 'tus', 'un', 'una',
+        'unas', 'uno', 'unos', 'y', 'ya'
+    ]);
+
+    const seen = new Set();
+
+    return this.cleanStrongVerseText(text)
+        .split(/\s+/)
+        .map(word => word.trim())
+        .filter(Boolean)
+        .filter(word => {
+            const normalized = this.normalizeStrongVerseWord(word);
+
+            if (!normalized || normalized.length < 3 || stopWords.has(normalized) || seen.has(normalized)) {
+                return false;
+            }
+
+            seen.add(normalized);
+            return true;
+        })
+        .slice(0, 16);
+},
+
+openStrongDictionaryFromSelectedVerse: function() {
+    if (this.getSelectedTextSource() !== 'bible') {
+        this.showToast('Strong está disponible desde los versículos de Biblia');
+        return;
+    }
+
+    const verseText = this.currentSelectedText || '';
+    const reference = this.getBibleSelectionReferenceLabel();
+    const keywords = this.extractStrongVerseKeywords(verseText);
+    const dateMatch = String(this.currentSelectionDate || '').match(/^bible-(.+)-(\d+)$/);
+    const bookId = dateMatch ? dateMatch[1] : '';
+    const chapter = dateMatch ? Number(dateMatch[2]) : '';
+    const verse = Number(this.currentSelectedVerse?.getAttribute('data-verse-number')) || '';
+
+    if (!verseText.trim()) {
+        this.showToast('No se encontró texto del versículo');
+        return;
+    }
+
+    this.hideSelectionPanel();
+    window.getSelection()?.removeAllRanges();
+
+    this.openStrongDictionaryFromBible({
+        source: 'bible-verse',
+        reference,
+        verseText,
+        keywords,
+        bookId,
+        chapter,
+        verse,
+        query: keywords.length === 1 ? keywords[0] : ''
+    });
+},
+
 drawVerseImageBackground: function(ctx, canvas) {
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
 
@@ -4247,6 +4332,15 @@ if (this.$selectionShareImageBtn) {
         await this.openVerseImageEditor();
     });
 }
+
+    if (this.$selectionStrongBtn) {
+        this.$selectionStrongBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.openStrongDictionaryFromSelectedVerse();
+        });
+    }
 
     if (this.$selectionNoteBtn) {
     this.$selectionNoteBtn.addEventListener('click', (e) => {
@@ -5573,6 +5667,10 @@ showSelectionPanelForVerse: function() {
     
     if (this.$selectionNote) {
         this.$selectionNote.value = existingSelectionNote?.note || '';
+    }
+
+    if (this.$selectionStrongBtn) {
+        this.$selectionStrongBtn.hidden = this.getSelectedTextSource() !== 'bible';
     }
     
     this.currentSelectionColorDraft = highlightState.colors[0] || null;
@@ -8726,12 +8824,36 @@ openVerseStudy: function({ strongNumber = '', bookId = '', chapter = '', verse =
     this.openStrongDictionaryFromBible({ strongNumber, bookId, chapter, verse });
 },
 
-openStrongDictionaryFromBible: function({ strongNumber = '', bookId = '', chapter = '', verse = '' } = {}) {
+openStrongDictionaryFromBible: function({
+    strongNumber = '',
+    query = '',
+    source = '',
+    reference = '',
+    verseText = '',
+    keywords = [],
+    bookId = '',
+    chapter = '',
+    verse = ''
+} = {}) {
     this.pendingStrongContext = { bookId, chapter, verse };
+    this.strongDictionaryBibleContext = source === 'bible-verse'
+        ? {
+            reference,
+            verseText,
+            keywords: Array.isArray(keywords) ? keywords : [],
+            bookId,
+            chapter,
+            verse
+        }
+        : null;
+    this.strongDictionaryConsultedWord = source === 'bible-verse' && query ? query : '';
 
     if (strongNumber) {
         this.strongDictionaryQuery = strongNumber;
         this.strongDictionarySelectedId = this.normalizeStrongLookupId(strongNumber) || null;
+    } else {
+        this.strongDictionaryQuery = query || '';
+        this.strongDictionarySelectedId = null;
     }
 
     this.navigate('strong-dictionary');
@@ -8819,6 +8941,9 @@ createStrongDictionaryEntry: function(id, language, entry = {}) {
     const transliteration = entry.xlit || entry.translit || '';
     const pronunciation = entry.pronunciation || entry.pron || '';
     const derivation = entry.derivation || '';
+    const spanishGloss = entry.spanishGloss || '';
+    const spanishDefinition = entry.spanishDefinition || '';
+    const spanishAliases = Array.isArray(entry.spanishAliases) ? entry.spanishAliases : [];
     const searchableText = [
         id,
         id.replace(/^[HG]/, ''),
@@ -8828,7 +8953,10 @@ createStrongDictionaryEntry: function(id, language, entry = {}) {
         pronunciation,
         definition,
         translation,
-        derivation
+        derivation,
+        spanishGloss,
+        spanishDefinition,
+        spanishAliases.join(' ')
     ].filter(Boolean).join(' ');
 
     return {
@@ -8842,6 +8970,9 @@ createStrongDictionaryEntry: function(id, language, entry = {}) {
         definition,
         translation,
         derivation,
+        spanishGloss,
+        spanishDefinition,
+        spanishAliases,
         searchText: this.normalizeStrongSearchText(searchableText),
         internalRefs: this.extractStrongInternalRefs([definition, translation, derivation].join(' '))
     };
@@ -8864,14 +8995,55 @@ getStrongQueryTerms: function(query) {
 
     const terms = normalized.split(' ').filter(Boolean);
     const aliases = {
-        amor: ['love', 'charity', 'affection', 'benevolence'],
-        principio: ['beginning', 'first', 'chief'],
-        fe: ['faith'],
-        gracia: ['grace', 'favor'],
-        paz: ['peace']
+        amor: ['love', 'charity', 'affection', 'benevolence', 'G25', 'G26', 'H160', 'H7355'],
+        bendicion: ['blessing', 'blessed', 'bless', 'H1288', 'H1293', 'G2129'],
+        dios: ['god', 'deity', 'divine', 'H430', 'G2316'],
+        espiritu: ['spirit', 'breath', 'wind', 'H7307', 'G4151'],
+        fe: ['faith', 'belief', 'believe', 'G4102'],
+        gracia: ['grace', 'favor', 'favour', 'kindness', 'G5485', 'H2580'],
+        justicia: ['justice', 'righteousness', 'righteous', 'judgment', 'H6664', 'H6666', 'G1343'],
+        ley: ['law', 'commandment', 'torah', 'H8451', 'G3551'],
+        luz: ['light', 'shine', 'H216', 'G5457'],
+        misericordia: ['mercy', 'kindness', 'compassion', 'lovingkindness', 'H2617', 'H7356', 'G1656'],
+        muerte: ['death', 'die', 'dead', 'H4194', 'G2288'],
+        pacto: ['covenant', 'alliance', 'pledge', 'H1285', 'G1242'],
+        paz: ['peace', 'welfare', 'prosperity', 'quietness', 'H7965', 'G1515'],
+        pecado: ['sin', 'offence', 'transgression', 'iniquity', 'H2403', 'H6588', 'G266'],
+        palabra: ['word', 'speech', 'saying', 'matter', 'H1697', 'G3056'],
+        principio: ['beginning', 'first', 'chief', 'H7225', 'G746'],
+        salvacion: ['salvation', 'deliverance', 'saving', 'rescue', 'H3444', 'H8668', 'G4991'],
+        santo: ['holy', 'saint', 'sacred', 'sanctify', 'H6918', 'G40'],
+        senor: ['lord', 'master', 'sir', 'owner', 'H136', 'G2962'],
+        verdad: ['truth', 'true', 'faithfulness', 'H571', 'G225'],
+        vida: ['life', 'living', 'alive', 'H2416', 'G2222']
+    };
+    const variants = {
+        amo: ['amor', 'amar', 'love'],
+        amar: ['amor', 'love'],
+        creo: ['crear', 'create', 'created', 'make', 'made'],
+        crear: ['create', 'created', 'make', 'made'],
+        cree: ['creer', 'fe', 'believe', 'faith'],
+        creyo: ['creer', 'fe', 'believe', 'faith'],
+        creer: ['fe', 'believe', 'faith'],
+        vivira: ['vida', 'life', 'living'],
+        vida: ['life', 'living', 'alive', 'H2416', 'G2222'],
+        murio: ['muerte', 'death', 'die', 'dead'],
+        muerte: ['death', 'die', 'dead', 'H4194', 'G2288'],
+        santidad: ['santo', 'holy', 'saint', 'sacred'],
+        santo: ['holy', 'saint', 'sacred', 'sanctify', 'H6918', 'G40']
     };
 
-    return [...new Set(terms.flatMap(term => [term, ...(aliases[term] || [])]))];
+    return [
+        ...new Set(
+            terms
+                .flatMap(term => {
+                    const seeds = variants[term] || [term];
+                    return seeds.flatMap(seed => [seed, ...(aliases[seed] || [])]);
+                })
+                .map(term => this.normalizeStrongSearchText(term))
+                .filter(Boolean)
+        )
+    ];
 },
 
 normalizeStrongLookupId: function(value, preferredLanguage = this.strongDictionaryFilter) {
@@ -8952,6 +9124,9 @@ searchStrongDictionary: function(query = this.strongDictionaryQuery, filter = th
                 if (this.normalizeStrongSearchText(entry.transliteration).includes(term)) score += 4;
                 if (this.normalizeStrongSearchText(entry.translation).includes(term)) score += 3;
                 if (this.normalizeStrongSearchText(entry.definition).includes(term)) score += 2;
+                if (this.normalizeStrongSearchText(entry.spanishGloss).includes(term)) score += 4;
+                if (this.normalizeStrongSearchText(entry.spanishDefinition).includes(term)) score += 4;
+                if (entry.spanishAliases.some(alias => this.normalizeStrongSearchText(alias).includes(term))) score += 4;
             }
 
             return { entry, score };
@@ -8996,6 +9171,7 @@ renderStrongDictionaryShell: function({ loading = false, error = null } = {}) {
     const query = this.escapeHtml(this.strongDictionaryQuery);
     const count = this.strongDictionaryResults.length;
     const selected = this.getStrongEntryById(this.strongDictionarySelectedId) || this.strongDictionaryResults[0] || null;
+    const bibleContextHtml = this.renderStrongBibleContextCard();
 
     let bodyHtml = '';
 
@@ -9025,7 +9201,10 @@ renderStrongDictionaryShell: function({ loading = false, error = null } = {}) {
                     ${count ? this.strongDictionaryResults.map(entry => this.renderStrongDictionaryResult(entry)).join('') : `
                         <div class="strong-dictionary-empty">
                             <h3>Sin resultados</h3>
-                            <p>Prueba con un número Strong, lema, transliteración o una palabra de la definición.</p>
+                            <p>${this.strongDictionaryBibleContext && this.strongDictionaryQuery
+                                ? 'No encontramos una entrada clara. Prueba con otra palabra del versículo.'
+                                : 'Prueba con un número Strong, lema, transliteración o una palabra de la definición.'
+                            }</p>
                         </div>
                     `}
                 </div>
@@ -9049,6 +9228,9 @@ renderStrongDictionaryShell: function({ loading = false, error = null } = {}) {
 
                 <h2>Diccionario Strong</h2>
                 <p>Busca entradas hebreas y griegas por número, lema, transliteración, definición o glosa.</p>
+                <p class="strong-dictionary-note">
+                    Las definiciones originales están basadas en fuentes Strong en inglés. Estamos preparando una capa de consulta en español.
+                </p>
             </div>
 
             <section class="strong-dictionary-panel">
@@ -9087,8 +9269,54 @@ renderStrongDictionaryShell: function({ loading = false, error = null } = {}) {
                 </div>
             </section>
 
+            ${bibleContextHtml}
             ${bodyHtml}
         </div>
+    `;
+},
+
+renderStrongBibleContextCard: function() {
+    const context = this.strongDictionaryBibleContext;
+    if (!context) return '';
+
+    const reference = this.escapeHtml(context.reference || 'Biblia');
+    const verseText = this.escapeHtml(this.cleanStrongVerseText(context.verseText || ''));
+    const keywords = Array.isArray(context.keywords) ? context.keywords : [];
+    const activeWord = this.normalizeStrongVerseWord(this.strongDictionaryConsultedWord || this.strongDictionaryQuery);
+    const consultedWord = this.strongDictionaryConsultedWord || '';
+
+    return `
+        <section class="strong-verse-context-card" aria-label="Búsqueda Strong desde Biblia">
+            <div class="strong-verse-context-head">
+                <div>
+                    <span>Desde Biblia</span>
+                    <strong>${reference}</strong>
+                </div>
+                <button class="strong-verse-return" type="button" data-action="return-to-strong-verse">Volver al versículo</button>
+            </div>
+            ${verseText ? `<p class="strong-verse-text">${verseText}</p>` : ''}
+            <p>Selecciona una palabra del versículo para buscarla en Strong.</p>
+            ${consultedWord ? `
+                <div class="strong-consulted-word">Palabra consultada: <strong>${this.escapeHtml(consultedWord)}</strong></div>
+            ` : ''}
+            ${keywords.length ? `
+                <div class="strong-verse-chip-list">
+                    ${keywords.map(keyword => `
+                        <button
+                            class="strong-verse-chip ${activeWord === this.normalizeStrongVerseWord(keyword) ? 'active' : ''}"
+                            type="button"
+                            data-action="search-strong-keyword"
+                            data-keyword="${this.escapeHtml(keyword)}"
+                        >
+                            ${this.escapeHtml(keyword)}
+                        </button>
+                    `).join('')}
+                </div>
+            ` : `
+                <p class="strong-verse-context-empty">No se detectaron palabras clave claras en este versículo.</p>
+            `}
+            <small>Búsqueda léxica desde el texto bíblico. Para una relación exacta palabra ↔ Strong se requiere una Biblia etiquetada.</small>
+        </section>
     `;
 },
 
@@ -9143,12 +9371,12 @@ renderStrongDictionaryDetail: function(entry) {
                     <dd>${this.escapeHtml(entry.pronunciation || 'No disponible')}</dd>
                 </div>
                 <div>
-                    <dt>Definición completa</dt>
+                    <dt>Definición original</dt>
                     <dd>${this.escapeHtml(fullDefinition).replace(/\n/g, '<br>')}</dd>
                 </div>
                 ${entry.translation ? `
                     <div>
-                        <dt>Traducción / glosa</dt>
+                        <dt>Glosa</dt>
                         <dd>${this.escapeHtml(entry.translation)}</dd>
                     </div>
                 ` : ''}
@@ -9190,8 +9418,13 @@ setStrongDictionaryFilter: function(filter) {
     this.$content.innerHTML = this.renderStrongDictionaryShell();
 },
 
-setStrongDictionaryQuery: function(query) {
+setStrongDictionaryQuery: function(query, options = {}) {
     this.strongDictionaryQuery = query;
+    if (options.fromVerseChip) {
+        this.strongDictionaryConsultedWord = query;
+    } else if (options.clearConsulted || !this.strongDictionaryBibleContext) {
+        this.strongDictionaryConsultedWord = '';
+    }
     this.strongDictionarySelectedId = null;
     this.updateStrongDictionaryResults();
     this.$content.innerHTML = this.renderStrongDictionaryShell();
@@ -9200,6 +9433,40 @@ setStrongDictionaryQuery: function(query) {
         input.focus({ preventScroll: true });
         const end = input.value.length;
         input.setSelectionRange(end, end);
+    }
+},
+
+returnToStrongSourceVerse: function() {
+    const context = this.strongDictionaryBibleContext;
+    if (!context) {
+        this.navigate('bible-reading');
+        return;
+    }
+
+    if (context.bookId && context.chapter) {
+        this.selectedBibleBook = context.bookId;
+        this.selectedBibleChapter = Number(context.chapter);
+        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
+    }
+
+    if (context.verse) {
+        this.targetVerse = Number(context.verse);
+    }
+
+    this.navigate('bible-reading');
+
+    if (context.verse) {
+        const verseToFocus = Number(context.verse);
+        setTimeout(() => {
+            const verseElement = document.querySelector(`.verse-item[data-verse-number="${verseToFocus}"]`);
+            if (!verseElement) return;
+
+            verseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            verseElement.classList.add('verse-searched');
+            setTimeout(() => {
+                verseElement.classList.remove('verse-searched');
+            }, 2000);
+        }, 650);
     }
 },
 
@@ -9420,6 +9687,8 @@ if (openBibleBookBtn) {
 // Abrir búsqueda
 const openStrongDictionaryBtn = e.target.closest('[data-action="open-strong-dictionary"]');
 if (openStrongDictionaryBtn) {
+    this.strongDictionaryBibleContext = null;
+    this.strongDictionaryConsultedWord = '';
     this.navigate('strong-dictionary');
     return;
 }
@@ -9484,6 +9753,18 @@ if (selectStrongEntryBtn) {
     return;
 }
 
+const searchStrongKeywordBtn = e.target.closest('[data-action="search-strong-keyword"]');
+if (searchStrongKeywordBtn) {
+    this.setStrongDictionaryQuery(searchStrongKeywordBtn.getAttribute('data-keyword') || '', { fromVerseChip: true });
+    return;
+}
+
+const returnToStrongVerseBtn = e.target.closest('[data-action="return-to-strong-verse"]');
+if (returnToStrongVerseBtn) {
+    this.returnToStrongSourceVerse();
+    return;
+}
+
 const copyStrongEntryBtn = e.target.closest('[data-action="copy-strong-entry"]');
 if (copyStrongEntryBtn) {
     this.copyStrongDictionaryEntry(copyStrongEntryBtn.getAttribute('data-strong-id'));
@@ -9492,7 +9773,7 @@ if (copyStrongEntryBtn) {
 
 const clearStrongDictionaryBtn = e.target.closest('[data-action="clear-strong-dictionary"]');
 if (clearStrongDictionaryBtn) {
-    this.setStrongDictionaryQuery('');
+    this.setStrongDictionaryQuery('', { clearConsulted: true });
     return;
 }
 
@@ -10189,7 +10470,7 @@ if (navItem) {
        this.$content.addEventListener('input', (e) => {
     const strongDictionaryInput = e.target.closest('#strong-dictionary-input');
     if (strongDictionaryInput) {
-        this.setStrongDictionaryQuery(strongDictionaryInput.value);
+        this.setStrongDictionaryQuery(strongDictionaryInput.value, { clearConsulted: true });
         return;
     }
         if (e.target.matches('.community-reply-textarea')) {
