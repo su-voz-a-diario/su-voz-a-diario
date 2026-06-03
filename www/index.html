@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3182ce">
+    <meta name="description" content="Lectura bíblica del día, sencilla y accesible.">
+    <link rel="canonical" href="https://suvoz.app/">
+
+    <script>
+    (function () {
+        const OFFICIAL_ORIGIN = 'https://suvoz.app';
+        const isLegacyGithubOrigin = location.hostname.includes('github.io');
+
+        if (!isLegacyGithubOrigin) return;
+
+        const redirectToOfficialDomain = async () => {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(registrations.map(registration => registration.unregister()));
+                }
+
+                if ('caches' in window) {
+                    const keys = await caches.keys();
+                    await Promise.all(
+                        keys
+                            .filter(key => key.startsWith('su-voz-'))
+                            .map(key => caches.delete(key))
+                    );
+                }
+            } catch (error) {
+                console.warn('[Domain Migration] No se pudo limpiar el origen anterior:', error);
+            } finally {
+                const targetUrl = new URL('/', OFFICIAL_ORIGIN);
+                targetUrl.search = location.search;
+                targetUrl.hash = location.hash;
+                location.replace(targetUrl.href);
+            }
+        };
+
+        redirectToOfficialDomain();
+    })();
+    </script>
+
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Su Voz">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <title>Su voz a diario</title>
+
+    <link rel="manifest" href="./manifest.json?v=78">
+    <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
+    <link rel="stylesheet" href="./css/styles.css?v=78">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,400&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+
+<div id="splash-screen">
+    <img src="icons/splash.png" alt="Splash">
+</div>
+
+<script>
+(function () {
+    function hideSplashFallback(delay) {
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            if (!splash) return;
+
+            splash.style.opacity = '0';
+
+            setTimeout(() => {
+                if (splash && splash.parentNode) {
+                    splash.parentNode.removeChild(splash);
+                }
+            }, 800);
+        }, delay);
+    }
+
+    window.suVozHideSplash = hideSplashFallback;
+    document.addEventListener('DOMContentLoaded', () => hideSplashFallback(3500));
+    window.addEventListener('load', () => hideSplashFallback(1800));
+    hideSplashFallback(6500);
+})();
+</script>
+
+<div id="april-message" class="april-message hidden">
+    <div class="april-box">
+        <h2>Abril: Escuchar Su voz</h2>
+        <p>
+            Que este mes podamos escuchar la voz de Dios con atención,
+            guardarla en el corazón y ponerla en práctica cada día.
+        </p>
+    </div>
+</div>
+
+<header class="app-header">
+    <button id="header-controls-btn" class="header-left-btn" aria-label="Controles de lectura" title="Ajustes de lectura">
+        ☰
+    </button>
+
+    <div class="header-content">
+        <div class="app-header-main">
+            <h1>Su voz a diario</h1>
+        </div>
+    </div>
+
+    <button id="header-settings-btn" class="header-settings-btn" title="Abrir ajustes" aria-label="Abrir ajustes">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+            <circle cx="12" cy="12" r="3" />
+        </svg>
+    </button>
+
+    <div id="header-controls-dropdown" class="header-dropdown">
+        <div class="dropdown-section">
+            <button id="streak-indicator" class="dropdown-streak" type="button" data-action="open-stats-from-streak" aria-label="Ver tu camino de lectura. Racha actual: 0 días">
+                🔥 <span id="streak-count">0 días</span>
+            </button>
+        </div>
+        <div class="dropdown-section">
+            <button class="dropdown-btn" data-action="font-decrease">A−</button>
+            <button class="dropdown-btn" data-action="font-increase">A+</button>
+        </div>
+        <div class="dropdown-section">
+            <button class="dropdown-btn version-btn active" data-version="rvr60">RVR60</button>
+            <button class="dropdown-btn version-btn" data-version="ntv">NTV</button>
+        </div>
+        <div class="dropdown-section">
+            <button id="theme-toggle" class="dropdown-btn" title="Cambiar tema">🌙</button>
+        </div>
+        <div class="dropdown-section dropdown-section-secondary">
+            <button class="dropdown-btn dropdown-btn-secondary" type="button" data-action="open-strong-dictionary">
+                Strong beta
+            </button>
+        </div>
+    </div>
+</header>
+
+    <main id="app-content" class="container fade-in">
+        <div class="loading">Cargando la lectura de hoy...</div>
+    </main>
+
+    <nav class="bottom-nav">
+        <button id="nav-home" class="nav-btn active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            <span>Inicio</span>
+        </button>
+
+       <button id="nav-bible" class="nav-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+        </svg>
+        <span>Biblia</span>
+    </button>
+       
+        <button id="nav-calendar" class="nav-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                <line x1="16" x2="16" y1="2" y2="6" />
+                <line x1="8" x2="8" y1="2" y2="6" />
+                <line x1="3" x2="21" y1="10" y2="10" />
+                <path d="M8 14h.01" />
+                <path d="M12 14h.01" />
+                <path d="M16 14h.01" />
+                <path d="M8 18h.01" />
+                <path d="M12 18h.01" />
+                <path d="M16 18h.01" />
+            </svg>
+            <span>Calendario</span>
+        </button>
+        
+<button id="nav-community" class="nav-btn nav-btn-community">
+    <span id="community-badge" class="community-badge" hidden>0</span>
+
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="8.5" cy="7" r="4" />
+        <path d="M20 8v6" />
+        <path d="M23 11h-6" />
+    </svg>
+
+    <span>Comunidad</span>
+</button>
+        
+        <button id="nav-stats" class="nav-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" x2="18" y1="20" y2="10" />
+                <line x1="12" x2="12" y1="20" y2="4" />
+                <line x1="6" x2="6" y1="20" y2="14" />
+            </svg>
+            <span>Estadísticas</span>
+        </button>
+    </nav>
+
+<div class="selection-panel" id="selectionPanel">
+  <div class="selection-panel-backdrop"></div>
+
+  <div class="selection-sheet-full">
+    <div class="selection-sheet-handle"></div>
+
+    <button class="close-btn" id="closePanel" aria-label="Cerrar panel">✕</button>
+
+    <div class="selection-sheet-title">
+      <h3>Acciones de selección</h3>
+      <p>Elige una opción para este pasaje</p>
+    </div>
+
+    <div class="selection-section-label">RESALTAR TEXTO</div>
+
+    <div class="selection-color-card">
+      <button class="color-btn yellow" data-color="yellow" aria-label="Resaltar en amarillo"></button>
+      <button class="color-btn blue" data-color="blue" aria-label="Resaltar en azul"></button>
+      <button class="color-btn green" data-color="green" aria-label="Resaltar en verde"></button>
+      <button class="color-btn rose" data-color="rose" aria-label="Resaltar en rosa"></button>
+    </div>
+
+    <div class="selection-section-label">ACCIONES</div>
+
+<div class="selection-actions-row selection-actions-row-pro">
+  <button class="action-btn" id="copyBtn" aria-label="Copiar texto">Copiar</button>
+
+  <button class="action-btn action-btn-image" id="shareImageBtn" aria-label="Compartir selección como imagen">
+    Imagen
+  </button>
+
+  <button class="action-btn" id="noteBtn" aria-label="Agregar nota">Nota</button>
+  <button class="action-btn danger" id="clearBtn" aria-label="Quitar resaltado">Quitar</button>
+</div>
+
+    <div class="selection-bottom">
+      <textarea id="selectionNote" placeholder="Escribe una nota..."></textarea>
+      <button class="btn-primary" id="saveNoteBtn">Guardar nota</button>
+    </div>
+
+    <p class="selection-status">Tu selección está guardada en este dispositivo.</p>
+  </div>
+</div>
+
+   <div class="note-view-panel" id="noteViewPanel">
+  <div class="note-view-backdrop"></div>
+
+  <div class="note-view-sheet">
+    <div class="selection-sheet-handle"></div>
+
+    <button class="note-view-close" id="closeNoteViewPanel" aria-label="Cerrar nota">✕</button>
+
+    <div class="note-view-header">
+      <div class="note-view-icon">📝</div>
+
+      <div>
+        <div class="note-view-title">Nota guardada</div>
+        <div class="note-view-subtitle">Reflexión sobre el texto seleccionado</div>
+      </div>
+    </div>
+
+    <div class="note-view-quote" id="selectionNoteQuoted"></div>
+
+    <div class="note-view-divider">✦</div>
+
+    <div class="note-view-content" id="selectionNoteBody"></div>
+
+    <div class="note-view-actions">
+      <button id="editSelectionNoteBtn" class="note-view-edit-btn">
+        ✏️ Editar nota
+      </button>
+
+      <button id="deleteSelectionNoteBtn" class="note-view-delete-btn">
+        🗑️ Quitar nota
+      </button>
+    </div>
+
+    <div class="note-view-footer">
+      🔒 La nota es privada y solo tú puedes verla
+    </div>
+  </div>
+</div>
+
+<div class="verse-image-panel" id="verseImagePanel" aria-hidden="true">
+  <div class="verse-image-backdrop" data-action="close-verse-image-panel"></div>
+
+  <div class="verse-image-sheet">
+    <div class="selection-sheet-handle"></div>
+
+    <button class="verse-image-close" type="button" data-action="close-verse-image-panel" aria-label="Cerrar editor de imagen">
+      ✕
+    </button>
+
+    <div class="verse-image-header">
+      <span class="verse-image-kicker">IMAGEN PARA COMPARTIR</span>
+      <h3>Diseña tu imagen</h3>
+      <p>Elige un estilo, ajusta el formato y comparte la Palabra.</p>
+    </div>
+
+    <div class="verse-image-preview-wrap">
+      <canvas id="verseImagePreview" width="1080" height="1350"></canvas>
+    </div>
+
+    <div class="verse-image-controls">
+      <div class="verse-image-control-group">
+  <div class="verse-image-control-label">Formato</div>
+
+  <div class="verse-format-grid">
+    <button
+      class="verse-format-btn is-active"
+      type="button"
+      data-format="post"
+    >
+      Post
+    </button>
+
+    <button
+      class="verse-format-btn"
+      type="button"
+      data-format="story"
+    >
+      Historia
+    </button>
+
+    <button
+      class="verse-format-btn"
+      type="button"
+      data-format="square"
+    >
+      Cuadrado
+    </button>
+  </div>
+</div>
+
+<div class="verse-image-control-group">
+  <div class="verse-image-control-label">Tamaño de texto</div>
+
+  <div class="verse-text-size-grid">
+    <button
+      class="verse-text-size-btn"
+      type="button"
+      data-text-size="compact"
+    >
+      Compacto
+    </button>
+
+    <button
+      class="verse-text-size-btn is-active"
+      type="button"
+      data-text-size="normal"
+    >
+      Normal
+    </button>
+
+    <button
+      class="verse-text-size-btn"
+      type="button"
+      data-text-size="large"
+    >
+      Grande
+    </button>
+  </div>
+</div>
+
+      <div class="verse-image-control-label">Diseño</div>
+
+      <div class="verse-template-grid">
+        <button class="verse-template-btn is-active" type="button" data-template="midnight">
+          Noche
+        </button>
+
+        <button class="verse-template-btn" type="button" data-template="warm">
+          Cálido
+        </button>
+
+        <button class="verse-template-btn" type="button" data-template="paper">
+          Papel
+        </button>
+      </div>
+    </div>
+
+    <div class="verse-image-actions">
+      <button class="verse-image-secondary" type="button" data-action="close-verse-image-panel">
+        Cancelar
+      </button>
+
+      <button class="verse-image-primary" type="button" id="downloadVerseImageBtn">
+  Guardar
+</button>
+
+      <button class="verse-image-primary strong" type="button" id="shareVerseImageFinalBtn">
+        Compartir
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="strong-sheet-panel" id="strongSheetPanel" aria-hidden="true">
+  <div class="strong-sheet-backdrop" data-action="close-strong-sheet"></div>
+
+  <div class="strong-sheet-content">
+    <div class="strong-sheet-handle"></div>
+
+    <button class="strong-sheet-close" type="button" data-action="close-strong-sheet" aria-label="Cerrar Strong">
+      ✕
+    </button>
+
+    <div class="strong-sheet-title">
+      <span class="strong-sheet-kicker">CONCORDANCIA STRONG</span>
+      <h3 id="strongSheetWord">—</h3>
+      <p id="strongSheetNumber">—</p>
+    </div>
+
+    <div class="strong-sheet-card">
+      <div class="strong-sheet-row">
+        <span>Original</span>
+        <strong id="strongSheetOriginal">—</strong>
+      </div>
+
+      <div class="strong-sheet-row">
+        <span>Transliteración</span>
+        <strong id="strongSheetTransliteration">—</strong>
+      </div>
+
+      <div class="strong-sheet-definition">
+        <span>Definición</span>
+        <p id="strongSheetDefinition">—</p>
+      </div>
+    </div>
+
+    <div class="strong-sheet-actions">
+      <button class="strong-sheet-btn" type="button" data-action="copy-strong-info">
+        Copiar
+      </button>
+
+      <button class="strong-sheet-btn primary" type="button" data-action="close-strong-sheet">
+        Entendido
+      </button>
+    </div>
+  </div>
+</div>
+   
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+(function () {
+    const firebaseConfig = {
+        apiKey: "AIzaSyBuU5X87K-zyHvkFT7xirBZjN90MpID7Uo",
+        authDomain: "su-voz-a-diario-v2-f3a87.firebaseapp.com",
+        projectId: "su-voz-a-diario-v2-f3a87",
+        storageBucket: "su-voz-a-diario-v2-f3a87.firebasestorage.app",
+        messagingSenderId: "112607423194",
+        appId: "1:112607423194:web:62a17cfe618a81b3ac53e3"
+    };
+
+    window.firebaseFns = {};
+
+    Promise.all([
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js")
+    ])
+        .then(([appModule, firestoreModule, authModule, messagingModule]) => {
+            const app = appModule.initializeApp(firebaseConfig);
+
+            window.firebaseDb = firestoreModule.getFirestore(app);
+            window.firebaseAuth = authModule.getAuth(app);
+            window.firebaseMessaging = messagingModule.getMessaging(app);
+
+            window.firebaseFns = {
+                collection: firestoreModule.collection,
+                addDoc: firestoreModule.addDoc,
+                getDocs: firestoreModule.getDocs,
+                query: firestoreModule.query,
+                orderBy: firestoreModule.orderBy,
+                where: firestoreModule.where,
+                limit: firestoreModule.limit,
+                startAfter: firestoreModule.startAfter,
+                serverTimestamp: firestoreModule.serverTimestamp,
+                deleteDoc: firestoreModule.deleteDoc,
+                doc: firestoreModule.doc,
+                setDoc: firestoreModule.setDoc,
+                getDoc: firestoreModule.getDoc,
+                signInAnonymously: authModule.signInAnonymously,
+                onAuthStateChanged: authModule.onAuthStateChanged
+            };
+
+            window.fcmGetToken = messagingModule.getToken;
+            window.fcmOnMessage = messagingModule.onMessage;
+
+            window.dispatchEvent(new Event('suvoz-firebase-ready'));
+            console.log('[Index] Firebase inicializado correctamente');
+        })
+        .catch(error => {
+            console.warn('[Index] Firebase no disponible. La lectura seguirá funcionando.', error);
+            window.dispatchEvent(new Event('suvoz-firebase-unavailable'));
+        });
+})();
+</script>
+
+<script type="module" src="js/app.js?v=78"></script>
+
+<script>
+(function () {
+    const ua = navigator.userAgent || '';
+
+    const isFacebookInAppBrowser =
+        ua.includes('FBAN') ||
+        ua.includes('FBAV') ||
+        ua.includes('FBIOS') ||
+        ua.includes('FB_IAB') ||
+        ua.includes('Instagram');
+
+    if (isFacebookInAppBrowser) {
+        console.warn('[Index] Navegador interno de Facebook/Instagram detectado. No se registra Service Worker.');
+        return;
+    }
+
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                const appVersion = 'v78';
+                const versionKey = 'su-voz-app-version';
+                const versionReloadKey = `su-voz-version-guard-reloaded-${appVersion}`;
+                const swReloadKey = `su-voz-sw-reloaded-${appVersion}`;
+                const previousVersion = localStorage.getItem(versionKey);
+
+                const clearAppCaches = async () => {
+                    if (!('caches' in window)) return;
+
+                    const keys = await caches.keys();
+                    await Promise.all(
+                        keys
+                            .filter(key => key.startsWith('su-voz-'))
+                            .map(key => caches.delete(key))
+                    );
+                };
+
+                const registration = await navigator.serviceWorker.register('./sw.js?v=78', {
+                    scope: './'
+                });
+
+                console.log('[Index] ServiceWorker registrado correctamente', registration.scope);
+
+                let refreshingForUpdate = false;
+
+                navigator.serviceWorker.addEventListener('controllerchange', () => {
+                    if (refreshingForUpdate || sessionStorage.getItem(swReloadKey) === 'true') return;
+
+                    refreshingForUpdate = true;
+                    sessionStorage.setItem(swReloadKey, 'true');
+                    window.location.reload();
+                });
+
+                const requestActivation = worker => {
+                    if (!worker || !navigator.serviceWorker.controller) return;
+                    worker.postMessage({ type: 'SKIP_WAITING' });
+                };
+
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (!newWorker) return;
+
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed') {
+                            requestActivation(newWorker);
+                        }
+                    });
+                });
+
+                if (registration.waiting) {
+                    requestActivation(registration.waiting);
+                }
+
+                if (previousVersion !== appVersion) {
+                    localStorage.setItem(versionKey, appVersion);
+
+                    await clearAppCaches();
+                    await registration.update();
+
+                    if (registration.waiting) {
+                        requestActivation(registration.waiting);
+                    }
+
+                    if (sessionStorage.getItem(versionReloadKey) !== 'true') {
+                        sessionStorage.setItem(versionReloadKey, 'true');
+                        window.location.reload();
+                    }
+                }
+            } catch (error) {
+                console.error('[Index] Error registrando ServiceWorker:', error);
+            }
+        });
+    }
+})();
+</script>
+</body>
+
+</html>

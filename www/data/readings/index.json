@@ -1,0 +1,597 @@
+[
+  {
+    "date": "2026-04-07",
+    "reference": "Deuteronomio 1:1-18",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-08",
+    "reference": "Deuteronomio 1:19-33",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-09",
+    "reference": "Deuteronomio 1:34-46",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-10",
+    "reference": "Deuteronomio 2:1-15",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-11",
+    "reference": "Deuteronomio 2:16-37",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-12",
+    "reference": "Deuteronomio 3:1-17",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-13",
+    "reference": "Deuteronomio 3:18-29",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-14",
+    "reference": "Deuteronomio 4:1-14",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-15",
+    "reference": "Deuteronomio 4:15-31",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-16",
+    "reference": "Deuteronomio 4:32-43",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-17",
+    "reference": "Deuteronomio 4:44-5:6",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-18",
+    "reference": "Deuteronomio 5:7-21",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-19",
+    "reference": "Deuteronomio 5:22-33",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-20",
+    "reference": "Deuteronomio 6:1-9",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-21",
+    "reference": "Deuteronomio 6:10-19",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-22",
+    "reference": "Deuteronomio 6:20-7:11",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-23",
+    "reference": "Deuteronomio 7:12-26",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-24",
+    "reference": "Deuteronomio 8:1-20",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-25",
+    "reference": "Deuteronomio 9:1-17",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-26",
+    "reference": "Deuteronomio 9:18-29",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-27",
+    "reference": "Deuteronomio 10:1-11",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-28",
+    "reference": "Deuteronomio 10:12-22",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-29",
+    "reference": "Deuteronomio 11:1-17",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-04-30",
+    "reference": "Deuteronomio 11:18-32",
+    "bookId": "deu",
+    "month": "2026-04",
+    "file": "data/readings/2026-04.json"
+  },
+  {
+    "date": "2026-05-01",
+    "reference": "Deuteronomio 12:1-19",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-02",
+    "reference": "Deuteronomio 12:20-32",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-03",
+    "reference": "Deuteronomio 13:1-18",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-04",
+    "reference": "Deuteronomio 14:1-21",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-05",
+    "reference": "Deuteronomio 14:22-29",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-06",
+    "reference": "Deuteronomio 15:1-23",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-07",
+    "reference": "Deuteronomio 16:1-17",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-08",
+    "reference": "Deuteronomio 16:18-17:13",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-09",
+    "reference": "Deuteronomio 17:14-20",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-10",
+    "reference": "Deuteronomio 18:1-8",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-11",
+    "reference": "Deuteronomio 18:9-14",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-12",
+    "reference": "Deuteronomio 18:15-22",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-13",
+    "reference": "Deuteronomio 19:1-13",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-14",
+    "reference": "Deuteronomio 19:14-21",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-15",
+    "reference": "Deuteronomio 20:1-20",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-16",
+    "reference": "Deuteronomio 21:1-14",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-17",
+    "reference": "Deuteronomio 21:15-23",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-18",
+    "reference": "Deuteronomio 22:1-12",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-19",
+    "reference": "Deuteronomio 22:13-30",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-20",
+    "reference": "Deuteronomio 23:1-14",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-21",
+    "reference": "Deuteronomio 23:15-25",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-22",
+    "reference": "Deuteronomio 24:1-9",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-23",
+    "reference": "Deuteronomio 24:10-22",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-24",
+    "reference": "Deuteronomio 25:1-10",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-25",
+    "reference": "Deuteronomio 25:11-19",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-26",
+    "reference": "Deuteronomio 26:1-11",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-27",
+    "reference": "Deuteronomio 26:12-19",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-28",
+    "reference": "Deuteronomio 27:1-26",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-29",
+    "reference": "Deuteronomio 28:1-14",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-30",
+    "reference": "Deuteronomio 28:15-35",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-05-31",
+    "reference": "Deuteronomio 28:36-46",
+    "bookId": "deu",
+    "month": "2026-05",
+    "file": "data/readings/2026-05.json"
+  },
+  {
+    "date": "2026-06-01",
+    "reference": "Deuteronomio 28:47-68",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-02",
+    "reference": "Deuteronomio 29:1-13",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-03",
+    "reference": "Deuteronomio 29:14-29",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-04",
+    "reference": "Deuteronomio 30:1-10",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-05",
+    "reference": "Deuteronomio 30:11-20",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-06",
+    "reference": "Deuteronomio 31:1-13",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-07",
+    "reference": "Deuteronomio 31:14-29",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-08",
+    "reference": "Deuteronomio 31:30-32:14",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-09",
+    "reference": "Deuteronomio 32:15-25",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-10",
+    "reference": "Deuteronomio 32:26-52",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-11",
+    "reference": "Deuteronomio 33:1-29",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-12",
+    "reference": "Deuteronomio 34:1-12",
+    "bookId": "deu",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-13",
+    "reference": "II Timoteo 1:1-8",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-14",
+    "reference": "II Timoteo 1:9-18",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-15",
+    "reference": "II Timoteo 2:1-13",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-16",
+    "reference": "II Timoteo 2:14-26",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-17",
+    "reference": "II Timoteo 3:1-9",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-18",
+    "reference": "II Timoteo 3:10-18",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-19",
+    "reference": "II Timoteo 4:1-8",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-20",
+    "reference": "II Timoteo 4:9-22",
+    "bookId": "2ti",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-21",
+    "reference": "Miqueas 1:1-16",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-22",
+    "reference": "Miqueas 2:1-13",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-23",
+    "reference": "Miqueas 3:1-12",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-24",
+    "reference": "Miqueas 4:1-13",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-25",
+    "reference": "Miqueas 5:1-15",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-26",
+    "reference": "Miqueas 6:1-8",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-27",
+    "reference": "Miqueas 6:9-16",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-28",
+    "reference": "Miqueas 7:1-6",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-29",
+    "reference": "Miqueas 7:7-13",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-06-30",
+    "reference": "Miqueas 7:14-20",
+    "bookId": "mic",
+    "month": "2026-06",
+    "file": "data/readings/2026-06.json"
+  }
+]

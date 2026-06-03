@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "android:copy": "rsync -av --delete --exclude 'node_modules' --exclude '.git' --exclude 'android' --exclude 'www' --exclude '.DS_Store' ./ www/",
+    "android:sync": "npm run android:copy && npx cap sync android",
+    "android:open": "npm run android:sync && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0"
+  }
+}

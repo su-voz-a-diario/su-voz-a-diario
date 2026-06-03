@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Su Voz a Diario</string>
+    <string name="title_activity_main">Su Voz a Diario</string>
+    <string name="package_name">app.suvoz</string>
+    <string name="custom_url_scheme">app.suvoz</string>
+</resources>
