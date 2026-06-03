@@ -5080,6 +5080,80 @@ getCleanDailyReadingText: function(reading, rawText = '') {
     return [reading.reference, passageText].filter(Boolean).join('. ');
 },
 
+isNativeTextToSpeechAvailable: function() {
+    return !!(window.Capacitor?.Plugins?.TextToSpeech);
+},
+
+getNativeTextToSpeechChunks: function(text, maxLength = 2800) {
+    const cleanText = (text || '').replace(/\s+/g, ' ').trim();
+    if (!cleanText) return [];
+
+    const sentences = cleanText.match(/[^.!?;:]+[.!?;:]?|[^.!?;:]+$/g) || [cleanText];
+    const chunks = [];
+    let current = '';
+
+    sentences.forEach(sentence => {
+        const normalized = sentence.trim();
+        if (!normalized) return;
+
+        if ((current + ' ' + normalized).trim().length <= maxLength) {
+            current = (current + ' ' + normalized).trim();
+            return;
+        }
+
+        if (current) chunks.push(current);
+
+        if (normalized.length <= maxLength) {
+            current = normalized;
+            return;
+        }
+
+        for (let i = 0; i < normalized.length; i += maxLength) {
+            chunks.push(normalized.slice(i, i + maxLength));
+        }
+
+        current = '';
+    });
+
+    if (current) chunks.push(current);
+    return chunks;
+},
+
+speakWithNativeTextToSpeech: async function(text) {
+    const plugin = window.Capacitor?.Plugins?.TextToSpeech;
+    if (!plugin) return false;
+
+    const chunks = this.getNativeTextToSpeechChunks(text);
+    if (!chunks.length) return false;
+
+    await plugin.stop();
+
+    for (const chunk of chunks) {
+        await plugin.speak({
+            text: chunk,
+            lang: 'es-MX',
+            rate: 0.92,
+            pitch: 1.0,
+            volume: 1.0,
+            category: 'ambient',
+            queueStrategy: 1
+        });
+    }
+
+    return true;
+},
+
+stopNativeTextToSpeech: async function() {
+    const plugin = window.Capacitor?.Plugins?.TextToSpeech;
+    if (!plugin) return;
+
+    try {
+        await plugin.stop();
+    } catch (error) {
+        console.warn('[Native TTS] No se pudo detener:', error);
+    }
+},
+
 selectSpanishVoice: function(voices = []) {
     return voices.find(voice => voice.lang === 'es-MX')
         || voices.find(voice => voice.lang === 'es-ES')
@@ -5088,7 +5162,7 @@ selectSpanishVoice: function(voices = []) {
 },
 
 renderDailyReadingVoiceControl: function(reading) {
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+    if (!this.isNativeTextToSpeechAvailable() && (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined')) {
         return `
             <div class="daily-reading-voice daily-reading-voice-unsupported" role="note">
                 La lectura en voz alta no está disponible en este navegador.
@@ -5158,7 +5232,7 @@ getCleanBibleChapterVoiceText: function(chapterData, bookName, chapterNumber) {
 },
 
 renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+    if (!this.isNativeTextToSpeechAvailable() && (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined')) {
         return `
             <div class="daily-reading-voice daily-reading-voice-unsupported" role="note">
                 La lectura en voz alta no está disponible en este navegador.
@@ -5208,17 +5282,32 @@ renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
     `;
 },
 
-startBibleChapterVoice: function(key, text, reference = '') {
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-        this.showToast('La lectura en voz alta no está disponible en este navegador');
-        return;
-    }
-
+startBibleChapterVoice: async function(key, text, reference = '') {
     const cleanText = (text || '').replace(/\s+/g, ' ').trim();
     if (!cleanText) return;
 
     this.stopDailyReadingVoice(true);
     this.stopBibleChapterVoice(true);
+
+    if (this.isNativeTextToSpeechAvailable()) {
+        this.bibleChapterVoice = { utterance: null, status: 'speaking', key, reference };
+        this.updateBibleChapterVoiceUI();
+
+        try {
+            await this.speakWithNativeTextToSpeech(cleanText);
+        } catch (error) {
+            console.warn('[Bible Voice] Error iniciando lectura nativa:', error);
+        }
+
+        this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
+        this.updateBibleChapterVoiceUI();
+        return;
+    }
+
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        this.showToast('La lectura en voz alta no está disponible en este navegador');
+        return;
+    }
 
     try {
         const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -5256,6 +5345,16 @@ startBibleChapterVoice: function(key, text, reference = '') {
 },
 
 pauseOrResumeBibleChapterVoice: function(key, text, reference = '') {
+    if (this.isNativeTextToSpeechAvailable()) {
+        if (this.bibleChapterVoice.status === 'speaking' && this.bibleChapterVoice.key === key) {
+            this.stopBibleChapterVoice();
+            return;
+        }
+
+        this.startBibleChapterVoice(key, text, reference);
+        return;
+    }
+
     if (!('speechSynthesis' in window)) return;
 
     if (this.bibleChapterVoice.status === 'speaking' && this.bibleChapterVoice.key === key) {
@@ -5276,6 +5375,10 @@ pauseOrResumeBibleChapterVoice: function(key, text, reference = '') {
 },
 
 stopBibleChapterVoice: function(silent = false) {
+    if (this.isNativeTextToSpeechAvailable()) {
+        this.stopNativeTextToSpeech();
+    }
+
     if ('speechSynthesis' in window) {
         try {
             window.speechSynthesis.cancel();
@@ -5396,17 +5499,32 @@ updateBibleChapterMiniPlayer: function() {
     document.body.insertAdjacentHTML('beforeend', html);
 },
 
-startDailyReadingVoice: function(date, text) {
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-        this.showToast('La lectura en voz alta no está disponible en este navegador');
-        return;
-    }
-
+startDailyReadingVoice: async function(date, text) {
     const cleanText = (text || '').replace(/\s+/g, ' ').trim();
     if (!cleanText) return;
 
     this.stopBibleChapterVoice(true);
     this.stopDailyReadingVoice(true);
+
+    if (this.isNativeTextToSpeechAvailable()) {
+        this.dailyReadingVoice = { utterance: null, status: 'speaking', date };
+        this.updateDailyReadingVoiceUI();
+
+        try {
+            await this.speakWithNativeTextToSpeech(cleanText);
+        } catch (error) {
+            console.warn('[Voice] Error iniciando lectura nativa:', error);
+        }
+
+        this.dailyReadingVoice = { utterance: null, status: 'idle', date: null };
+        this.updateDailyReadingVoiceUI();
+        return;
+    }
+
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+        this.showToast('La lectura en voz alta no está disponible en este navegador');
+        return;
+    }
 
     try {
         const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -5444,6 +5562,16 @@ startDailyReadingVoice: function(date, text) {
 },
 
 pauseOrResumeDailyReadingVoice: function(date, text) {
+    if (this.isNativeTextToSpeechAvailable()) {
+        if (this.dailyReadingVoice.status === 'speaking' && this.dailyReadingVoice.date === date) {
+            this.stopDailyReadingVoice();
+            return;
+        }
+
+        this.startDailyReadingVoice(date, text);
+        return;
+    }
+
     if (!('speechSynthesis' in window)) return;
 
     if (this.dailyReadingVoice.status === 'speaking' && this.dailyReadingVoice.date === date) {
@@ -5464,6 +5592,10 @@ pauseOrResumeDailyReadingVoice: function(date, text) {
 },
 
 stopDailyReadingVoice: function(silent = false) {
+    if (this.isNativeTextToSpeechAvailable()) {
+        this.stopNativeTextToSpeech();
+    }
+
     if ('speechSynthesis' in window) {
         try {
             window.speechSynthesis.cancel();
