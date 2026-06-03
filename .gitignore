@@ -2,3 +2,5 @@
 node_modules/
 
 android/keystores/*.keystore
+
+android/keystore.properties
