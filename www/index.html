@@ -470,18 +470,16 @@
 
     window.firebaseFns = {};
 
-    Promise.all([
+    window.suVozFirebaseReady = Promise.all([
         import("https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"),
         import("https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js"),
-        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"),
-        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js")
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")
     ])
-        .then(([appModule, firestoreModule, authModule, messagingModule]) => {
+        .then(([appModule, firestoreModule, authModule]) => {
             const app = appModule.initializeApp(firebaseConfig);
 
             window.firebaseDb = firestoreModule.getFirestore(app);
             window.firebaseAuth = authModule.getAuth(app);
-            window.firebaseMessaging = messagingModule.getMessaging(app);
 
             window.firebaseFns = {
                 collection: firestoreModule.collection,
@@ -501,15 +499,29 @@
                 onAuthStateChanged: authModule.onAuthStateChanged
             };
 
-            window.fcmGetToken = messagingModule.getToken;
-            window.fcmOnMessage = messagingModule.onMessage;
-
             window.dispatchEvent(new Event('suvoz-firebase-ready'));
-            console.log('[Index] Firebase inicializado correctamente');
+            console.log('[Index] Firebase Auth y Firestore inicializados correctamente');
+
+            import("https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging.js")
+                .then(messagingModule => {
+                    try {
+                        window.firebaseMessaging = messagingModule.getMessaging(app);
+                        window.fcmGetToken = messagingModule.getToken;
+                        window.fcmOnMessage = messagingModule.onMessage;
+                    } catch (error) {
+                        console.warn('[Index] Firebase Messaging no disponible en esta plataforma.', error);
+                    }
+                })
+                .catch(error => {
+                    console.warn('[Index] No se pudo cargar Firebase Messaging.', error);
+                });
+
+            return true;
         })
         .catch(error => {
-            console.warn('[Index] Firebase no disponible. La lectura seguirá funcionando.', error);
+            console.warn('[Index] Firebase Auth/Firestore no disponibles. La lectura seguirá funcionando.', error);
             window.dispatchEvent(new Event('suvoz-firebase-unavailable'));
+            return false;
         });
 })();
 </script>

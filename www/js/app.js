@@ -599,13 +599,16 @@ _savedScrollY: null,
 pushListenersReady: false,
 themeListenerReady: false,
 _selectionPanelEventsBound: false,
+_authInitPromise: null,
+_authListenerReady: false,
+_lastAuthError: null,
     
     // ========================================
     // INICIALIZACIÓN
     // ========================================
    init: async function() {
     console.log('[App] Inicializando...');
-    
+
     this.cacheDOM();
     this.bindSelectionPanelEvents();
     this.bindVerseImageEditorEvents();
@@ -636,6 +639,11 @@ this.updateStreakUI();
 
 this.initAuth().then(async () => {
     try {
+        if (!this.currentUser?.uid) {
+            console.warn('[Community] Badge omitido: no hay usuario autenticado');
+            return;
+        }
+
         await this.refreshCommunityBadge();
 
         const savedToken = localStorage.getItem('su-voz-fcm-token');
@@ -653,7 +661,16 @@ this.initAuth().then(async () => {
 });
 
 console.log('[App] Inicialización completada');
-},
+	},
+
+    isCapacitorAndroid: function() {
+        return window.Capacitor?.getPlatform?.() === 'android' &&
+            window.Capacitor?.isNativePlatform?.();
+    },
+
+    getCapacitorPlugin: function(name) {
+        return window.Capacitor?.Plugins?.[name] || null;
+    },
 
 ensureSinaiTemplateButton: function() {
     if (document.querySelector('.verse-template-btn[data-template="sinai"]')) return;
@@ -1336,10 +1353,13 @@ bindStrongNativeLongPress: function() {
 bindHeaderControlsToggle: function() {
     if (!this.$headerControlsBtn) return;
 
-    this.$headerControlsBtn.addEventListener('click', (e) => {
+    const toggleHeaderControls = (e) => {
+        e.preventDefault();
         e.stopPropagation();
         this.$headerControlsDropdown.classList.toggle('show');
-    });
+    };
+
+    this.$headerControlsBtn.addEventListener('click', toggleHeaderControls);
 
     this.$headerControlsDropdown?.addEventListener('click', (e) => {
         const strongBetaBtn = e.target.closest('[data-action="open-strong-dictionary"]');
@@ -1691,10 +1711,15 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
         };
     } catch (error) {
         console.error("Error cargando posts:", error);
+        const firebaseUnavailable = !window.firebaseDb ||
+            !window.firebaseFns?.getDocs ||
+            String(error?.message || '').includes('Firebase no disponible');
+
         return {
             posts: [],
             lastVisible: null,
-            hasMore: false
+            hasMore: false,
+            firebaseUnavailable
         };
     }
 },
@@ -1704,11 +1729,16 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
 // ========================================
 
 // Método con caché para posts
-getCommunityPostsCached: async function() {
+getCommunityPostsCached: async function(options = {}) {
     const CACHE_DURATION = 30000; // 30 segundos de caché
     const now = Date.now();
+
+    if (!this.currentUser?.uid) {
+        throw new Error('Auth no disponible: falta currentUser.uid');
+    }
     
-    if (this.communityCache &&
+    if (!options.forceRefresh &&
+        this.communityCache &&
         this.communityCache.posts &&
         (
             (now - this.communityCache.timestamp) < CACHE_DURATION ||
@@ -1725,6 +1755,12 @@ getCommunityPostsCached: async function() {
     const page = await this.getCommunityPosts({
         pageSize: this.communityPageSize
     });
+
+    if (page.firebaseUnavailable) {
+        this.communityPostsLoaded = false;
+        throw new Error('Firebase no disponible para cargar Comunidad');
+    }
+
     const posts = page.posts;
 
     this.communityLastVisible = page.lastVisible;
@@ -3358,6 +3394,114 @@ getVerseImageBlob: function() {
     });
 },
 
+blobToBase64: function(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => {
+            const result = String(reader.result || '');
+            const separatorIndex = result.indexOf(',');
+
+            if (separatorIndex < 0) {
+                reject(new Error('No se pudo codificar la imagen'));
+                return;
+            }
+
+            resolve(result.slice(separatorIndex + 1));
+        };
+        reader.onerror = () => reject(reader.error || new Error('No se pudo leer la imagen'));
+        reader.readAsDataURL(blob);
+    });
+},
+
+shareImageBlobNative: async function(blob, fileName, title, text) {
+    const Filesystem = this.getCapacitorPlugin('Filesystem');
+    const Share = this.getCapacitorPlugin('Share');
+
+    if (!Filesystem?.writeFile || !Filesystem?.getUri || !Share?.share) {
+        throw new Error('Los plugins nativos para compartir imágenes no están disponibles');
+    }
+
+    const base64Data = await this.blobToBase64(blob);
+    const path = `shared-images/${Date.now()}-${fileName}`;
+
+    await Filesystem.writeFile({
+        path,
+        data: base64Data,
+        directory: 'CACHE',
+        recursive: true
+    });
+
+    const { uri } = await Filesystem.getUri({
+        path,
+        directory: 'CACHE'
+    });
+
+    if (!uri) {
+        throw new Error('No se obtuvo la ruta temporal de la imagen');
+    }
+
+    await Share.share({
+        title,
+        text,
+        files: [uri],
+        dialogTitle: 'Compartir imagen'
+    });
+},
+
+saveImageBlobNative: async function(blob, fileName) {
+    const ImageSaver = this.getCapacitorPlugin('ImageSaver');
+
+    if (!ImageSaver?.saveImage) {
+        throw new Error('El guardado nativo de imágenes no está disponible');
+    }
+
+    const base64Data = await this.blobToBase64(blob);
+    const result = await ImageSaver.saveImage({
+        data: base64Data,
+        fileName,
+        mimeType: 'image/png',
+        album: 'Su Voz a Diario'
+    });
+
+    if (!result?.uri) {
+        throw new Error('Android no confirmó el guardado de la imagen');
+    }
+
+    return result;
+},
+
+shareImageBlobWeb: async function(blob, fileName, title, text) {
+    const file = new File([blob], fileName, { type: 'image/png' });
+
+    if (!navigator.share ||
+        !navigator.canShare ||
+        !navigator.canShare({ files: [file] })) {
+        return false;
+    }
+
+    await navigator.share({
+        title,
+        text,
+        files: [file]
+    });
+
+    return true;
+},
+
+downloadImageBlobWeb: function(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+},
+
 downloadVerseImage: async function() {
     const blob = await this.getVerseImageBlob();
 
@@ -3377,35 +3521,14 @@ downloadVerseImage: async function() {
         ? `su-voz-${safeReference}.png`
         : 'su-voz-a-diario.png';
 
-    const file = new File([blob], fileName, {
-        type: 'image/png'
-    });
-
     try {
-        const isMobileDevice = isIOSDevice() || isAndroidDevice();
+        if (this.isCapacitorAndroid()) {
+            await this.saveImageBlobNative(blob, fileName);
+            this.showToast('Imagen guardada en Galería');
+            return;
+        }
 
-if (isMobileDevice && navigator.canShare && navigator.canShare({ files: [file] })) {
-    await navigator.share({
-        title: reference,
-        text: 'Guardar imagen · Su voz a diario',
-        files: [file]
-    });
-
-    this.showToast('Imagen lista para guardar');
-    return;
-}
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-
-        link.href = url;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        URL.revokeObjectURL(url);
-
+        this.downloadImageBlobWeb(blob, fileName);
         this.showToast('Imagen descargada');
     } catch (error) {
         if (error?.name === 'AbortError') {
@@ -3427,26 +3550,33 @@ shareVerseImageFromEditor: async function() {
     }
 
     const reference = this.verseImageReference || await this.getSelectedTextReferenceLabel();
-    const file = new File([blob], 'su-voz-a-diario.png', {
-        type: 'image/png'
-    });
+    const fileName = 'su-voz-a-diario.png';
 
     try {
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-                title: reference,
-                text: `${reference} · https://suvoz.app`,
-                files: [file]
-            });
+        if (this.isCapacitorAndroid()) {
+            await this.shareImageBlobNative(
+                blob,
+                fileName,
+                reference,
+                `${reference} · https://suvoz.app`
+            );
+        } else {
+            const shared = await this.shareImageBlobWeb(
+                blob,
+                fileName,
+                reference,
+                `${reference} · https://suvoz.app`
+            );
 
-            this.closeVerseImageEditor();
-            this.hideSelectionPanel();
-            window.getSelection()?.removeAllRanges();
-            return;
+            if (!shared) {
+                this.showToast('Tu navegador no permite compartir archivos');
+                return;
+            }
         }
 
-        await this.downloadVerseImage();
-        this.showToast('Tu navegador no permite compartir archivos; la imagen fue descargada');
+        this.closeVerseImageEditor();
+        this.hideSelectionPanel();
+        window.getSelection()?.removeAllRanges();
     } catch (error) {
         if (error?.name === 'AbortError') {
             console.log('[Verse Image] Compartir cancelado por el usuario');
@@ -3484,36 +3614,33 @@ shareVerseImageFromEditor: async function() {
             return;
         }
 
-        const file = new File([blob], 'su-voz-a-diario.png', {
-            type: 'image/png'
-        });
-
         try {
-            if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({
-                    title: reference,
-                    text: reference,
-                    files: [file]
-                });
+            const fileName = 'su-voz-a-diario.png';
 
-                this.hideSelectionPanel();
-                window.getSelection()?.removeAllRanges();
-                return;
+            if (this.isCapacitorAndroid()) {
+                await this.shareImageBlobNative(blob, fileName, reference, reference);
+            } else {
+                const shared = await this.shareImageBlobWeb(
+                    blob,
+                    fileName,
+                    reference,
+                    reference
+                );
+
+                if (!shared) {
+                    this.showToast('Tu navegador no permite compartir archivos');
+                    return;
+                }
             }
 
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'su-voz-a-diario.png';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            URL.revokeObjectURL(url);
-
-            this.showToast('Imagen descargada');
             this.hideSelectionPanel();
             window.getSelection()?.removeAllRanges();
         } catch (error) {
+            if (error?.name === 'AbortError') {
+                console.log('[Share Image] Compartir cancelado por el usuario');
+                return;
+            }
+
             console.error('[Share Image] Error:', error);
             this.showToast('No se pudo compartir la imagen');
         }
@@ -4938,6 +5065,7 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
     if (oldView === 'bible-reading' && view !== 'bible-reading') {
         this.stopBibleChapterVoice(true);
         this.bibleReaderPickerOpen = false;
+        document.body.classList.remove('bible-picker-open');
         this.bibleReadingSettingsOpen = false;
     }
 
@@ -7644,14 +7772,29 @@ renderBibleMemoryView: function() {
 renderBibleReaderPicker: function() {
     if (!this.bibleReaderPickerOpen) return '';
 
-    const selectedBookId = this.bibleReaderPickerBook || this.selectedBibleBook;
-    const selectedBook = this.bibleBooks.find(item => item.id === selectedBookId)
-        || this.bibleBooks.find(item => item.id === this.selectedBibleBook)
-        || this.bibleBooks[0];
+    const bookAbbreviations = {
+        gen: 'Gn', exo: 'Ex', lev: 'Lv', num: 'Nm', deu: 'Dt',
+        jos: 'Jos', jdg: 'Jue', rut: 'Rut', '1sa': '1 S', '2sa': '2 S',
+        '1ki': '1 R', '2ki': '2 R', '1ch': '1 Cr', '2ch': '2 Cr',
+        ezr: 'Esd', neh: 'Neh', est: 'Est', job: 'Job', psa: 'Sal',
+        pro: 'Pr', ecc: 'Ec', sng: 'Cnt', isa: 'Is', jer: 'Jer',
+        lam: 'Lm', ezk: 'Ez', dan: 'Dn', hos: 'Os', jol: 'Jl',
+        amo: 'Am', oba: 'Abd', jon: 'Jon', mic: 'Mi', nam: 'Nah',
+        hab: 'Hab', zep: 'Sof', hag: 'Hag', zec: 'Zac', mal: 'Mal',
+        mat: 'Mt', mrk: 'Mc', luk: 'Lc', jhn: 'Jn', act: 'Hch',
+        rom: 'Ro', '1co': '1 Co', '2co': '2 Co', gal: 'Gá', eph: 'Ef',
+        php: 'Fil', col: 'Col', '1th': '1 Ts', '2th': '2 Ts',
+        '1ti': '1 Ti', '2ti': '2 Ti', tit: 'Tit', phm: 'Flm',
+        heb: 'Heb', jas: 'Stg', '1pe': '1 P', '2pe': '2 P',
+        '1jn': '1 Jn', '2jn': '2 Jn', '3jn': '3 Jn', jud: 'Jud',
+        rev: 'Ap'
+    };
+    const selectedBook = this.bibleBooks.find(item => item.id === this.bibleReaderPickerBook);
+    const currentBook = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
     const selectedChapter = Number(this.selectedBibleChapter) || 1;
     const activeTestament = this.bibleReaderPickerTestament === 'new'
         ? 'new'
-        : this.getTestamentFromBookId(selectedBook?.id || this.selectedBibleBook);
+        : 'old';
     const books = this.getBibleBooksByTestament(activeTestament);
     const chapters = selectedBook
         ? Array.from({ length: selectedBook.chapters }, (_, i) => i + 1)
@@ -7664,8 +7807,12 @@ renderBibleReaderPicker: function() {
                 <div class="bible-picker-handle" aria-hidden="true"></div>
                 <div class="bible-picker-head">
                     <div>
-                        <span>Elegir pasaje</span>
-                        <h3>${this.escapeHtml(selectedBook?.name || 'Biblia')} ${selectedChapter}</h3>
+                        <h2>Elegir pasaje</h2>
+                        <p>${selectedBook
+                            ? `${this.escapeHtml(selectedBook.name)} · Selecciona un capítulo`
+                            : this.escapeHtml(currentBook
+                                ? `Actual: ${currentBook.name} ${selectedChapter}`
+                                : 'Selecciona un libro')}</p>
                     </div>
                     <button
                         class="bible-picker-close"
@@ -7700,38 +7847,56 @@ renderBibleReaderPicker: function() {
                     </button>
                 </div>
 
-                <div class="bible-picker-layout">
-                    <div class="bible-picker-books" aria-label="Libros">
+                <div class="bible-picker-layout ${selectedBook ? 'is-chapter-view' : 'is-book-view'}">
+                    ${selectedBook ? `
+                        <div class="bible-picker-section-head">
+                            <button
+                                class="bible-picker-back"
+                                type="button"
+                                data-action="back-reader-picker-books"
+                                aria-label="Volver a libros"
+                            >
+                                <span aria-hidden="true">←</span>
+                                Libros
+                            </button>
+                            <strong>${this.escapeHtml(selectedBook.name)}</strong>
+                            <span>${selectedBook.chapters} capítulos</span>
+                        </div>
+
+                        <div class="bible-picker-chapters" aria-label="Capítulos de ${this.escapeHtml(selectedBook.name)}">
+                            ${chapters.map(chapter => {
+                                const isActive = selectedBook.id === this.selectedBibleBook && chapter === selectedChapter;
+
+                                return `
+                                    <button
+                                        class="bible-picker-chapter ${isActive ? 'is-active' : ''}"
+                                        type="button"
+                                        data-action="open-reader-picker-chapter"
+                                        data-book-id="${selectedBook.id}"
+                                        data-chapter="${chapter}"
+                                        aria-label="${this.escapeHtml(selectedBook.name)} ${chapter}"
+                                    >
+                                        ${chapter}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+                    ` : `
+                    <div class="bible-picker-books" aria-label="Libros del ${activeTestament === 'old' ? 'Antiguo' : 'Nuevo'} Testamento">
                         ${books.map(book => `
                             <button
-                                class="bible-picker-book ${book.id === selectedBook?.id ? 'is-active' : ''}"
+                                class="bible-picker-book ${book.id === currentBook?.id ? 'is-active' : ''}"
                                 type="button"
                                 data-action="select-reader-picker-book"
                                 data-book-id="${book.id}"
+                                aria-label="${this.escapeHtml(book.name)}, ${book.chapters} capítulos"
                             >
-                                <span>${this.escapeHtml(book.name)}</span>
-                                <small>${book.chapters} cap.</small>
+                                <span class="bible-picker-book-abbr">${this.escapeHtml(bookAbbreviations[book.id] || book.name.slice(0, 3))}</span>
+                                <span class="bible-picker-book-name">${this.escapeHtml(book.name)}</span>
                             </button>
                         `).join('')}
                     </div>
-
-                    <div class="bible-picker-chapters" aria-label="Capítulos">
-                        ${chapters.map(chapter => {
-                            const isActive = selectedBook?.id === this.selectedBibleBook && chapter === selectedChapter;
-
-                            return `
-                                <button
-                                    class="bible-picker-chapter ${isActive ? 'is-active' : ''}"
-                                    type="button"
-                                    data-action="open-reader-picker-chapter"
-                                    data-book-id="${selectedBook.id}"
-                                    data-chapter="${chapter}"
-                                >
-                                    ${chapter}
-                                </button>
-                            `;
-                        }).join('')}
-                    </div>
+                    `}
                 </div>
             </section>
         </div>
@@ -7740,6 +7905,8 @@ renderBibleReaderPicker: function() {
 
 mountBibleReaderPicker: function() {
     if (!this.$content) return;
+
+    document.body.classList.toggle('bible-picker-open', this.bibleReaderPickerOpen);
 
     const existing = this.$content.querySelector('.bible-picker-sheet');
 
@@ -7755,7 +7922,7 @@ mountBibleReaderPicker: function() {
         readerView.insertAdjacentHTML('beforeend', this.renderBibleReaderPicker());
         requestAnimationFrame(() => {
             const activeBook = this.$content?.querySelector('.bible-picker-book.is-active');
-            activeBook?.scrollIntoView({ block: 'nearest', inline: 'center' });
+            activeBook?.scrollIntoView({ block: 'center', inline: 'nearest' });
         });
     }
 },
@@ -7764,8 +7931,8 @@ openBibleReaderPicker: function() {
     const currentBook = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
 
     this.bibleReaderPickerOpen = true;
-    this.bibleReaderPickerBook = currentBook?.id || this.selectedBibleBook || 'gen';
-    this.bibleReaderPickerTestament = this.getTestamentFromBookId(this.bibleReaderPickerBook) === 'new' ? 'new' : 'old';
+    this.bibleReaderPickerBook = null;
+    this.bibleReaderPickerTestament = this.getTestamentFromBookId(currentBook?.id) === 'new' ? 'new' : 'old';
     this.mountBibleReaderPicker();
 },
 
@@ -8565,6 +8732,31 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
 });
 },
 
+renderCommunityLoadError: function(error) {
+    if (this.currentView !== 'community') return;
+
+    const errorDetails = {
+        code: error?.code || this._lastAuthError?.code || 'community/load-failed',
+        message: error?.message || this._lastAuthError?.message || 'Error desconocido',
+        name: error?.name || this._lastAuthError?.name || 'Error'
+    };
+
+    console.error(`[Community] No se pudo completar la carga: ${JSON.stringify(errorDetails)}`);
+    this.$content.innerHTML = `
+        <div class="community-container">
+            <div class="community-empty-state">
+                <div class="community-empty-title">No se pudo cargar Comunidad</div>
+                <div class="community-empty-text">
+                    Revisa tu conexión e inténtalo nuevamente.
+                </div>
+                <button class="btn-primary" type="button" data-action="retry-community">
+                    Reintentar
+                </button>
+            </div>
+        </div>
+    `;
+},
+
    renderCommunity: async function(options = {}) {
     const todayStr = this.getTodayDateStr();
     const todayReading = this.getReadingMetadataByDate(todayStr);
@@ -8584,15 +8776,60 @@ renderCalendarBookSection: function(group, readDateSet, todayStr) {
             </div>
         `;
     }
-    
-   // Cargar posts primero
-const posts = await this.getCommunityPostsCached();
 
-// Luego cargar reacciones y respuestas en paralelo
-const [reactionSummary, repliesSummary] = await Promise.all([
-    this.getCommunityReactionSummary(posts),
-    this.getRepliesSummary(posts)
-]);
+    let posts;
+    let reactionSummary;
+    let repliesSummary;
+    let loadingCompleted = false;
+
+    try {
+        const user = await this.initAuth();
+
+        if (!user?.uid) {
+            const authMessage = this._lastAuthError
+                ? `${this._lastAuthError.code}: ${this._lastAuthError.message}`
+                : 'No se pudo identificar al usuario de Comunidad';
+            throw new Error(authMessage);
+        }
+
+        const communityTimeout = 25000;
+
+        posts = await this.withTimeout(
+            this.getCommunityPostsCached({
+                forceRefresh: options.forceRefresh === true
+            }),
+            communityTimeout,
+            'La consulta de Comunidad tardó demasiado'
+        );
+
+        [reactionSummary, repliesSummary] = await this.withTimeout(
+            Promise.all([
+                this.getCommunityReactionSummary(posts),
+                this.getRepliesSummary(posts)
+            ]),
+            communityTimeout,
+            'La información de Comunidad tardó demasiado'
+        );
+
+        loadingCompleted = true;
+    } catch (error) {
+        if (options.preserveOnError) {
+            console.warn('[Community] La actualización posterior se retrasó; se conserva la vista actual.', error);
+            if (this.currentView === 'community') {
+                this.showToast('Se guardó correctamente. La actualización puede tardar un momento.');
+            }
+            return;
+        }
+
+        this.renderCommunityLoadError(error);
+        return;
+    } finally {
+        if (!loadingCompleted && !options.preserveOnError) {
+            this.communityPostsLoaded = false;
+        }
+    }
+
+if (this.currentView !== 'community') return;
 
 const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
 const hasCommunityDraft = Boolean(communityDraft.trim());
@@ -9598,33 +9835,115 @@ if (notificationsToggle) {
         setTimeout(() => location.reload(), 1000);
     },
 
+    withTimeout: function(promise, timeoutMs, message) {
+        return new Promise((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+                reject(new Error(message || 'La operación tardó demasiado'));
+            }, timeoutMs);
+
+            Promise.resolve(promise).then(
+                value => {
+                    clearTimeout(timeoutId);
+                    resolve(value);
+                },
+                error => {
+                    clearTimeout(timeoutId);
+                    reject(error);
+                }
+            );
+        });
+    },
+
 	 initAuth: async function() {
-        if (!window.firebaseAuth || !window.firebaseFns?.onAuthStateChanged || !window.firebaseFns?.signInAnonymously) {
-            console.warn('[Auth] Firebase Auth no disponible. La app continuará sin comunidad autenticada.');
-            this.currentUser = null;
-            return;
+        if (this.currentUser?.uid) {
+            return this.currentUser;
         }
 
-	        return new Promise((resolve) => {
-	            onAuthStateChanged(auth, async (user) => {
-                if (user) {
-                    this.currentUser = user;
-                    console.log('[Auth] Usuario anónimo activo:', user.uid);
-                    resolve();
-                } else {
-                    try {
-                        const cred = await signInAnonymously(auth);
-                        this.currentUser = cred.user;
-                        console.log('[Auth] Sesión anónima iniciada:', cred.user.uid);
-                        resolve();
-                    } catch (error) {
-                        console.error('[Auth] Error en autenticación anónima:', error);
-                        this.showToast('No se pudo iniciar la sesión de comunidad');
-                        resolve();
+        if (this._authInitPromise) {
+            return this._authInitPromise;
+        }
+
+        const authTimeout = 20000;
+
+        const authPromise = (async () => {
+            const firebaseReady = window.suVozFirebaseReady
+                ? await this.withTimeout(
+                    window.suVozFirebaseReady,
+                    authTimeout,
+                    'Firebase tardó demasiado en inicializar'
+                )
+                : true;
+
+            if (!firebaseReady ||
+                !window.firebaseAuth ||
+                !window.firebaseFns?.onAuthStateChanged ||
+                !window.firebaseFns?.signInAnonymously) {
+                console.warn('[Auth] Firebase Auth no disponible. La app continuará sin comunidad autenticada.');
+                this.currentUser = null;
+                return null;
+            }
+
+            if (!this._authListenerReady) {
+                onAuthStateChanged(
+                    auth,
+                    user => {
+                        this.currentUser = user || null;
+                    },
+                    error => {
+                        console.warn(`[Auth] El observador de sesión reportó un error: ${JSON.stringify({
+                            code: error?.code || 'auth/unknown',
+                            message: error?.message || String(error || 'Error desconocido'),
+                            name: error?.name || 'Error'
+                        })}`);
                     }
-                }
-            });
+                );
+                this._authListenerReady = true;
+            }
+
+            if (window.firebaseAuth.currentUser?.uid) {
+                this.currentUser = window.firebaseAuth.currentUser;
+                this._lastAuthError = null;
+                console.log('[Auth] Usuario activo restaurado:', this.currentUser.uid);
+                return this.currentUser;
+            }
+
+            const cred = await this.withTimeout(
+                signInAnonymously(auth),
+                authTimeout,
+                'La autenticación anónima tardó demasiado'
+            );
+
+            this.currentUser = cred?.user || window.firebaseAuth.currentUser || null;
+
+            if (!this.currentUser?.uid) {
+                throw new Error('Firebase Auth no devolvió un usuario válido');
+            }
+
+            this._lastAuthError = null;
+            console.log('[Auth] Sesión anónima iniciada:', this.currentUser.uid);
+            return this.currentUser;
+        })().catch(error => {
+            const errorDetails = {
+                code: error?.code || 'auth/unknown',
+                message: error?.message || String(error || 'Error desconocido'),
+                name: error?.name || 'Error'
+            };
+
+            this._lastAuthError = errorDetails;
+            console.error(`[Auth] No se pudo completar la autenticación: ${JSON.stringify(errorDetails)}`);
+            this.currentUser = null;
+            return null;
         });
+
+        this._authInitPromise = authPromise;
+
+        try {
+            return await authPromise;
+        } finally {
+            if (this._authInitPromise === authPromise) {
+                this._authInitPromise = null;
+            }
+        }
     },
 
 enableNotificationsFlow: async function() {
@@ -9682,8 +10001,8 @@ enableNotificationsFlow: async function() {
 initPushNotifications: async function() {
     console.log('[App] Iniciando Push Notifications...');
 
-    if (!window.firebaseMessaging || !window.fcmGetToken) {
-        console.warn('[App] Firebase Messaging no disponible');
+    if (!window.firebaseMessaging || typeof window.fcmGetToken !== 'function') {
+        console.warn('[App] Notificaciones no soportadas');
         return false;
     }
 
@@ -9751,8 +10070,8 @@ savePushToken: async function(token) {
     setupPushListeners: function() {
     if (this.pushListenersReady) return;
 
-    if (!window.firebaseMessaging || !window.fcmOnMessage) {
-        console.warn('[App] Listeners no disponibles');
+    if (!window.firebaseMessaging || typeof window.fcmOnMessage !== 'function') {
+        console.warn('[App] Notificaciones no soportadas');
         return;
     }
     
@@ -10552,7 +10871,9 @@ if (this.$navCommunity) {
 }
 
 if (this.$headerSettingsBtn) {
-    this.$headerSettingsBtn.addEventListener('click', () => {
+    const openHeaderSettings = (e) => {
+        e?.preventDefault?.();
+        e?.stopPropagation?.();
 
         if (this.currentView === 'settings') {
             const fallback = this.previousView || 'home';
@@ -10562,7 +10883,9 @@ if (this.$headerSettingsBtn) {
 
         this.previousView = this.currentView;
         this.navigate('settings');
-    });
+    };
+
+    this.$headerSettingsBtn.addEventListener('click', openHeaderSettings);
 }
         window.addEventListener('popstate', () => {
             this.handleRoute().catch(error => {
@@ -10882,6 +11205,7 @@ const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"
 if (backToBibleBooksBtn) {
     this.stopBibleChapterVoice(true);
     this.bibleReaderPickerOpen = false;
+    document.body.classList.remove('bible-picker-open');
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
     this.bibleChapterPickerMode = false;
@@ -10907,12 +11231,17 @@ if (readerPickerTestamentBtn) {
     const testament = readerPickerTestamentBtn.getAttribute('data-testament');
 
     if (testament === 'old' || testament === 'new') {
-        const books = this.getBibleBooksByTestament(testament);
-
         this.bibleReaderPickerTestament = testament;
-        this.bibleReaderPickerBook = books[0]?.id || this.bibleReaderPickerBook;
+        this.bibleReaderPickerBook = null;
         this.mountBibleReaderPicker();
     }
+    return;
+}
+
+const readerPickerBackBtn = e.target.closest('[data-action="back-reader-picker-books"]');
+if (readerPickerBackBtn) {
+    this.bibleReaderPickerBook = null;
+    this.mountBibleReaderPicker();
     return;
 }
 
@@ -10941,6 +11270,7 @@ if (readerPickerChapterBtn) {
         this.selectedBibleChapter = chapter;
         this.bibleChapterPickerMode = false;
         this.bibleReaderPickerOpen = false;
+        document.body.classList.remove('bible-picker-open');
         this.saveBibleLastLocation(book.id, chapter);
         this.navigate('bible-reading');
         requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
@@ -11298,6 +11628,15 @@ if (shareCommunityBtn) {
     return;
 }
 
+const retryCommunityBtn = e.target.closest('[data-action="retry-community"]');
+if (retryCommunityBtn) {
+    this.invalidateCommunityCache();
+    this.renderCommunity().catch(error => {
+        this.renderCommunityLoadError(error);
+    });
+    return;
+}
+
 const loadMoreCommunityBtn = e.target.closest('[data-action="load-more-community-posts"]');
 if (loadMoreCommunityBtn) {
     this.saveCommunityScrollPosition();
@@ -11387,8 +11726,6 @@ if (publishCommunityBtn) {
         return;
     }
 
-    // ✅ NUEVO: Invalidar caché y marcar para scroll al último
-    this.invalidateCommunityCache();
     this.shouldScrollToLastPost = true;  // Esto hará que al recargar vaya al nuevo post
 
     if ('vibrate' in navigator) {
@@ -11408,8 +11745,19 @@ if (publishCommunityBtn) {
 
     this.showToast('Gracias por compartir lo que Dios te habló');
 
-    this.handleRoute().catch(error => {
-        console.error('[Route] Error actualizando comunidad:', error);
+    this.$content.querySelector('.community-form-card')?.remove();
+
+    const composerButton = this.$content.querySelector('[data-action="share-community-reflection"]');
+    if (composerButton) {
+        composerButton.textContent = 'Compartir lo que Dios me habló';
+    }
+
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveOnError: true,
+        forceRefresh: true
+    }).catch(error => {
+        console.warn('[Community] No se pudo sincronizar la publicación en segundo plano:', error);
     });
     return;
 }
@@ -11490,14 +11838,18 @@ if (publishReplyBtn) {
         return;
     }
 
-    this.invalidateCommunityCache(); 
-
     this.clearReplyDraft(postId);
     this.openReplyPostId = null;
     this.showToast('Respuesta publicada');
 
-    this.renderCommunity().catch(error => {
-        console.error('[Community] Error actualizando respuestas:', error);
+    publishReplyBtn.closest('.community-reply-form')?.remove();
+
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveOnError: true,
+        forceRefresh: true
+    }).catch(error => {
+        console.warn('[Community] No se pudo sincronizar la respuesta en segundo plano:', error);
     });
     return;
 }
