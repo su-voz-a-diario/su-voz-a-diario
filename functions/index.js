@@ -11,7 +11,7 @@ if (getApps().length === 0) {
   initializeApp();
 }
 
-const DAILY_SCHEDULE = "0 8 * * *";
+const DAILY_SCHEDULE = "*/5 * * * *";
 const TIME_ZONE = "America/Mexico_City";
 const MAX_MULTICAST_TOKENS = 500;
 const INVALID_TOKEN_CODES = new Set([
@@ -27,6 +27,23 @@ function chunk(items, size) {
   }
 
   return chunks;
+}
+
+function getCurrentReminderTime(date = new Date()) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const hour = parts.find(({ type }) => type === "hour")?.value;
+  const minute = parts.find(({ type }) => type === "minute")?.value;
+
+  if (!hour || !minute) {
+    throw new Error(`No se pudo calcular la hora actual en ${TIME_ZONE}.`);
+  }
+
+  return `${hour}:${minute}`;
 }
 
 async function deleteInvalidTokens(db, documents) {
@@ -162,27 +179,35 @@ exports.sendDailyNotification = onSchedule(
   },
   async () => {
     const db = getFirestore();
+    const currentReminderTime = getCurrentReminderTime();
     const snapshot = await db
       .collection("pushTokens")
       .where("notificationsEnabled", "==", true)
+      .where("reminderTime", "==", currentReminderTime)
       .get();
 
     const recipients = getRecipients(snapshot.docs);
 
     if (recipients.length === 0) {
-      logger.info("No hay tokens activos para el recordatorio diario.");
+      logger.info("No hay tokens para el recordatorio diario.", {
+        currentReminderTime,
+        tokensFound: 0,
+        successCount: 0,
+        failureCount: 0,
+      });
       return;
     }
 
     const result = await sendNotification(db, recipients, {
       title: "Su Voz a Diario",
-      body: "¿Ya escuchaste Su voz hoy?",
+      body: "Es momento de escuchar Su voz hoy.",
       url: "https://suvoz.app/#home",
       tag: "daily-reminder",
     });
 
     logger.info("Recordatorio diario procesado.", {
-      recipients: recipients.length,
+      currentReminderTime,
+      tokensFound: recipients.length,
       ...result,
     });
   }

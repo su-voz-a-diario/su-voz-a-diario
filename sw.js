@@ -1,4 +1,4 @@
-const APP_VERSION = 'v81';
+const APP_VERSION = 'v82';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=81',
-  './css/styles.css?v=81',
-  './js/app.js?v=81',
+  './manifest.json?v=82',
+  './css/styles.css?v=82',
+  './js/app.js?v=82',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -37,12 +37,12 @@ importScripts('https://www.gstatic.com/firebasejs/12.11.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/12.11.0/firebase-messaging-compat.js');
 
 firebase.initializeApp({
-  apiKey: "AIzaSyATEQ0kmd3HPloNlZ872t8C11jiYitLkUk",
-  authDomain: "su-voz-a-diario.firebaseapp.com",
-  projectId: "su-voz-a-diario",
-  storageBucket: "su-voz-a-diario.firebasestorage.app",
-  messagingSenderId: "372912228994",
-  appId: "1:372912228994:web:f252b44bdbd00d7c56429b"
+  apiKey: "AIzaSyBuU5X87K-zyHvkFT7xirBZjN90MpID7Uo",
+  authDomain: "su-voz-a-diario-v2-f3a87.firebaseapp.com",
+  projectId: "su-voz-a-diario-v2-f3a87",
+  storageBucket: "su-voz-a-diario-v2-f3a87.firebasestorage.app",
+  messagingSenderId: "112607423194",
+  appId: "1:112607423194:web:62a17cfe618a81b3ac53e3"
 });
 
 const messaging = firebase.messaging();
@@ -229,14 +229,12 @@ messaging.onBackgroundMessage((payload) => {
   console.log('[sw] Background push recibido:', payload);
 
   const title =
-    payload?.notification?.title ||
     payload?.data?.title ||
     'Su Voz a Diario';
 
   const body =
-    payload?.notification?.body ||
     payload?.data?.body ||
-    'Tienes una nueva notificación';
+    'Es momento de escuchar Su voz hoy.';
 
   const url =
     payload?.data?.url ||
@@ -257,53 +255,7 @@ messaging.onBackgroundMessage((payload) => {
     requireInteraction: false
   };
 
-  self.registration.showNotification(title, options);
-});
-
-// Fallback para push genérico no-Firebase
-self.addEventListener('push', event => {
-  if (!event.data) return;
-
-  let data = {};
-  try {
-    data = event.data.json();
-  } catch (error) {
-    data = {};
-  }
-
-  const title =
-    data?.notification?.title ||
-    data?.title ||
-    'Su Voz a Diario';
-
-  const body =
-    data?.notification?.body ||
-    data?.body ||
-    'Tienes una nueva notificación';
-
-  const url =
-    data?.data?.url ||
-    data?.url ||
-    './#home';
-
-  const tag =
-    data?.data?.tag ||
-    data?.tag ||
-    `notif-${Date.now()}`;
-
-  const options = {
-    body,
-    icon: './icons/icon-192.png',
-    badge: './icons/icon-48.png',
-    data: { url },
-    tag,
-    renotify: false,
-    requireInteraction: false
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+  return self.registration.showNotification(title, options);
 });
 
 self.addEventListener('notificationclick', event => {
