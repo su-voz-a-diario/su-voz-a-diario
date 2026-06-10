@@ -16,6 +16,7 @@ const DAILY_SCHEDULE = "*/5 * * * *";
 const TIME_ZONE = "America/Mexico_City";
 const MAX_MULTICAST_TOKENS = 500;
 const MAX_FIRESTORE_BATCH_WRITES = 500;
+const MAX_FIRESTORE_IN_VALUES = 30;
 const INVALID_TOKEN_CODES = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
@@ -50,21 +51,28 @@ function getCurrentReminderTime(date = new Date()) {
 
 async function incrementUserActivity(db, uid) {
   if (typeof uid !== "string" || uid.length === 0) {
-    return false;
+    return null;
   }
 
   const activityRef = db.collection("userActivity").doc(uid);
-  const activitySnapshot = await activityRef.get();
+  return db.runTransaction(async (transaction) => {
+    const activitySnapshot = await transaction.get(activityRef);
 
-  if (!activitySnapshot.exists) {
-    return false;
-  }
+    if (!activitySnapshot.exists) {
+      return null;
+    }
 
-  await activityRef.update({
-    unreadCommunityCount: FieldValue.increment(1),
+    const currentCount = activitySnapshot.get("unreadCommunityCount");
+    const badgeCount = Number.isInteger(currentCount) && currentCount >= 0
+      ? currentCount + 1
+      : 1;
+
+    transaction.update(activityRef, {
+      unreadCommunityCount: badgeCount,
+    });
+
+    return { uid, badgeCount };
   });
-
-  return true;
 }
 
 async function incrementCommunityForAllUsers(db, actorUid) {
@@ -72,6 +80,7 @@ async function incrementCommunityForAllUsers(db, actorUid) {
   const recipientDocuments = snapshot.docs.filter(
     (document) => document.id !== actorUid
   );
+  const updates = [];
 
   for (const documentsBatch of chunk(
     recipientDocuments,
@@ -86,9 +95,24 @@ async function incrementCommunityForAllUsers(db, actorUid) {
     }
 
     await writeBatch.commit();
+
+    const updatedSnapshots = await db.getAll(
+      ...documentsBatch.map((document) => document.ref)
+    );
+
+    for (const activitySnapshot of updatedSnapshots) {
+      const badgeCount = activitySnapshot.get("unreadCommunityCount");
+
+      if (Number.isInteger(badgeCount) && badgeCount > 0) {
+        updates.push({
+          uid: activitySnapshot.id,
+          badgeCount,
+        });
+      }
+    }
   }
 
-  return recipientDocuments.length;
+  return updates;
 }
 
 async function getCommunityPostOwner(db, postId) {
@@ -98,6 +122,87 @@ async function getCommunityPostOwner(db, postId) {
 
   const postSnapshot = await db.collection("communityPosts").doc(postId).get();
   return postSnapshot.exists ? postSnapshot.get("ownerUid") : null;
+}
+
+async function getActiveRecipientsByUid(db, uids) {
+  const recipientsByUid = new Map();
+  const uniqueUids = [...new Set(uids.filter(Boolean))];
+
+  for (const uidBatch of chunk(uniqueUids, MAX_FIRESTORE_IN_VALUES)) {
+    const snapshot = await db
+      .collection("pushTokens")
+      .where("uid", "in", uidBatch)
+      .get();
+
+    for (const document of snapshot.docs) {
+      if (document.get("notificationsEnabled") !== true) {
+        continue;
+      }
+
+      const uid = document.get("uid");
+      const documents = recipientsByUid.get(uid) || [];
+      documents.push(document);
+      recipientsByUid.set(uid, documents);
+    }
+  }
+
+  return recipientsByUid;
+}
+
+async function sendCommunityBadgeUpdates(db, updates) {
+  if (!updates.length) {
+    return {
+      usersWithActivity: 0,
+      usersWithTokens: 0,
+      successCount: 0,
+      failureCount: 0,
+      invalidTokensDeleted: 0,
+    };
+  }
+
+  const recipientsByUid = await getActiveRecipientsByUid(
+    db,
+    updates.map(({ uid }) => uid)
+  );
+  const updatesByBadgeCount = new Map();
+
+  for (const update of updates) {
+    const documents = recipientsByUid.get(update.uid);
+
+    if (!documents?.length) {
+      continue;
+    }
+
+    const recipients = getRecipients(documents);
+    const groupedRecipients = updatesByBadgeCount.get(update.badgeCount) || [];
+    groupedRecipients.push(...recipients);
+    updatesByBadgeCount.set(update.badgeCount, groupedRecipients);
+  }
+
+  const totals = {
+    usersWithActivity: updates.length,
+    usersWithTokens: [...recipientsByUid.keys()].length,
+    successCount: 0,
+    failureCount: 0,
+    invalidTokensDeleted: 0,
+  };
+
+  for (const [badgeCount, recipients] of updatesByBadgeCount.entries()) {
+    const result = await sendNotification(db, recipients, {
+      type: "community-badge",
+      badgeCount: String(badgeCount),
+      title: "Su Voz a Diario",
+      body: "Hay nueva actividad en Comunidad.",
+      url: "https://suvoz.app/#community",
+      tag: "community-activity",
+    });
+
+    totals.successCount += result.successCount;
+    totals.failureCount += result.failureCount;
+    totals.invalidTokensDeleted += result.invalidTokensDeleted;
+  }
+
+  return totals;
 }
 
 async function deleteInvalidTokens(db, documents) {
@@ -275,15 +380,17 @@ exports.countNewCommunityPost = onDocumentCreated(
   async (event) => {
     const post = event.data?.data();
     const db = getFirestore();
-    const updatedUsers = await incrementCommunityForAllUsers(
+    const updates = await incrementCommunityForAllUsers(
       db,
       post?.ownerUid
     );
+    const pushResult = await sendCommunityBadgeUpdates(db, updates);
 
     logger.info("Actividad de publicación contabilizada.", {
       postId: event.params.postId,
       actorUid: post?.ownerUid || null,
-      updatedUsers,
+      updatedUsers: updates.length,
+      ...pushResult,
     });
   }
 );
@@ -297,16 +404,21 @@ exports.countNewCommunityReply = onDocumentCreated(
     const reply = event.data?.data();
     const db = getFirestore();
     const postOwnerUid = await getCommunityPostOwner(db, reply?.postId);
-    const updated = postOwnerUid !== reply?.ownerUid
+    const update = postOwnerUid !== reply?.ownerUid
       ? await incrementUserActivity(db, postOwnerUid)
-      : false;
+      : null;
+    const pushResult = await sendCommunityBadgeUpdates(
+      db,
+      update ? [update] : []
+    );
 
     logger.info("Actividad de respuesta contabilizada.", {
       replyId: event.params.replyId,
       postId: reply?.postId || null,
       actorUid: reply?.ownerUid || null,
       recipientUid: postOwnerUid,
-      updated,
+      badgeCount: update?.badgeCount || 0,
+      ...pushResult,
     });
   }
 );
@@ -320,16 +432,21 @@ exports.countNewCommunityReaction = onDocumentCreated(
     const reaction = event.data?.data();
     const db = getFirestore();
     const postOwnerUid = await getCommunityPostOwner(db, reaction?.postId);
-    const updated = postOwnerUid !== reaction?.userId
+    const update = postOwnerUid !== reaction?.userId
       ? await incrementUserActivity(db, postOwnerUid)
-      : false;
+      : null;
+    const pushResult = await sendCommunityBadgeUpdates(
+      db,
+      update ? [update] : []
+    );
 
     logger.info("Actividad de reacción contabilizada.", {
       reactionId: event.params.reactionId,
       postId: reaction?.postId || null,
       actorUid: reaction?.userId || null,
       recipientUid: postOwnerUid,
-      updated,
+      badgeCount: update?.badgeCount || 0,
+      ...pushResult,
     });
   }
 );

@@ -1,4 +1,4 @@
-const APP_VERSION = 'v83';
+const APP_VERSION = 'v84';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=83',
-  './css/styles.css?v=83',
-  './js/app.js?v=83',
+  './manifest.json?v=84',
+  './css/styles.css?v=84',
+  './js/app.js?v=84',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',
@@ -224,9 +224,59 @@ async function staleWhileRevalidateStrategy(request) {
   });
 }
 
+async function updateCommunityAppBadge(rawBadgeCount) {
+  const badgeCount = Number(rawBadgeCount);
+  const workerNavigator = self.navigator;
+
+  try {
+    if (Number.isFinite(badgeCount) && badgeCount > 0) {
+      if ('setAppBadge' in workerNavigator) {
+        await workerNavigator.setAppBadge(badgeCount);
+      }
+      return;
+    }
+
+    if ('clearAppBadge' in workerNavigator) {
+      await workerNavigator.clearAppBadge();
+    }
+  } catch (error) {
+    console.warn('[SW] No se pudo actualizar el badge de Comunidad:', error);
+  }
+}
+
+async function handleCommunityBadgeMessage(data) {
+  await updateCommunityAppBadge(data?.badgeCount);
+
+  const badgeCount = Number(data?.badgeCount);
+  if (!Number.isFinite(badgeCount) || badgeCount <= 0) {
+    return;
+  }
+
+  const title = data?.title || 'Su Voz a Diario';
+  const options = {
+    body: data?.body || 'Hay nueva actividad en Comunidad.',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-48.png',
+    data: {
+      url: data?.url || './#community',
+      type: 'community-badge',
+      badgeCount: data?.badgeCount || '0'
+    },
+    tag: data?.tag || 'community-activity',
+    renotify: false,
+    requireInteraction: false
+  };
+
+  return self.registration.showNotification(title, options);
+}
+
 // Background messages con Firebase Messaging
-messaging.onBackgroundMessage((payload) => {
+messaging.onBackgroundMessage(async (payload) => {
   console.log('[sw] Background push recibido:', payload);
+
+  if (payload?.data?.type === 'community-badge') {
+    return handleCommunityBadgeMessage(payload.data);
+  }
 
   const title =
     payload?.data?.title ||

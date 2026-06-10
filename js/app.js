@@ -10225,6 +10225,21 @@ savePushToken: async function(token) {
     
     window.fcmOnMessage(messaging, (payload) => {
         console.log('[App] 📨 Push recibido:', payload);
+
+        if (payload?.data?.type === 'community-badge') {
+            const badgeCount = Number(payload.data.badgeCount);
+
+            if (Number.isFinite(badgeCount) && badgeCount >= 0) {
+                this.communityUnreadCount = badgeCount;
+                this.updateCommunityBadge();
+            }
+
+            if (this.currentView !== 'community') {
+                this.showToast(payload.data.body || 'Hay nueva actividad en Comunidad.');
+            }
+            return;
+        }
+
         if (payload.notification) {
             this.showToast(payload.notification.body || 'Nueva notificación');
         }
