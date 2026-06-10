@@ -1,4 +1,4 @@
-const APP_VERSION = 'v80';
+const APP_VERSION = 'v81';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=80',
-  './css/styles.css?v=80',
-  './js/app.js?v=80',
+  './manifest.json?v=81',
+  './css/styles.css?v=81',
+  './js/app.js?v=81',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/services/storageService.js',

@@ -9632,16 +9632,37 @@ renderStats: function() {
         
 if (reminderTime) {
     reminderTime.addEventListener('change', async (e) => {
-        this.settings.reminderTime = e.target.value;
+        const nextReminderTime = String(e.target.value || '');
+
+        if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(nextReminderTime)) {
+            e.target.value = this.settings.reminderTime;
+            this.showToast('Selecciona una hora válida.');
+            return;
+        }
+
+        this.settings.reminderTime = nextReminderTime;
         this.saveSettings();
 
         const savedToken = localStorage.getItem('su-voz-fcm-token');
-        if (savedToken && this.currentUser && this.settings.notificationsEnabled) {
-            const updated = await this.savePushToken(savedToken);
 
-            if (!updated) {
-                console.warn('[App] No se pudo actualizar el token al cambiar la hora');
-            }
+        if (!savedToken) {
+            this.showToast('Hora guardada. Activa las notificaciones para sincronizarla.');
+            return;
+        }
+
+        const user = await this.initAuth();
+
+        if (!user?.uid) {
+            this.showToast('Hora guardada localmente. No se pudo sincronizar con Firebase.');
+            return;
+        }
+
+        const updated = await this.savePushToken(savedToken);
+
+        if (!updated) {
+            console.warn('[App] No se pudo actualizar el token al cambiar la hora');
+            this.showToast('Hora guardada localmente. No se pudo sincronizar con Firebase.');
+            return;
         }
 
         this.showToast('Hora de recordatorio actualizada');
