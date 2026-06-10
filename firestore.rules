@@ -1,0 +1,116 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function ownsExistingDocument() {
+      return isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function validPushToken(deviceId) {
+      return request.resource.data.keys().hasOnly([
+          'token',
+          'uid',
+          'deviceId',
+          'platform',
+          'userAgent',
+          'reminderTime',
+          'notificationsEnabled',
+          'lastActive',
+          'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'token',
+          'uid',
+          'deviceId',
+          'platform',
+          'userAgent',
+          'reminderTime',
+          'notificationsEnabled',
+          'lastActive',
+          'updatedAt'
+        ])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.deviceId == deviceId
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.platform in ['web', 'android', 'ios']
+        && request.resource.data.userAgent is string
+        && request.resource.data.userAgent.size() <= 1024
+        && request.resource.data.reminderTime is string
+        && request.resource.data.reminderTime.matches('^([01][0-9]|2[0-3]):[0-5][0-9]$')
+        && request.resource.data.notificationsEnabled is bool
+        && request.resource.data.lastActive is timestamp
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    match /pushTokens/{deviceId} {
+      allow create: if isSignedIn() && validPushToken(deviceId);
+
+      allow update: if ownsExistingDocument()
+        && request.resource.data.uid == resource.data.uid
+        && request.resource.data.deviceId == resource.data.deviceId
+        && validPushToken(deviceId);
+
+      allow read, delete: if ownsExistingDocument();
+    }
+
+    match /communityPosts/{postId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid;
+
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+
+      allow update: if false;
+    }
+
+    match /communityReactions/{reactionId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.reactions is map
+        && request.resource.data.reactions.keys().hasOnly(['useful', 'thanks'])
+        && request.resource.data.reactions.useful is bool
+        && request.resource.data.reactions.thanks is bool;
+
+      allow update: if isSignedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.postId == resource.data.postId
+        && request.resource.data.reactions is map
+        && request.resource.data.reactions.keys().hasOnly(['useful', 'thanks'])
+        && request.resource.data.reactions.useful is bool
+        && request.resource.data.reactions.thanks is bool;
+
+      allow delete: if isSignedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /communityReplies/{replyId} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.postId is string
+        && request.resource.data.name is string
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 300
+        && request.resource.data.date is string;
+
+      allow delete: if isSignedIn()
+        && resource.data.ownerUid == request.auth.uid;
+
+      allow update: if false;
+    }
+  }
+}

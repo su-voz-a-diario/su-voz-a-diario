@@ -51,11 +51,11 @@
 
     <title>Su voz a diario</title>
 
-    <link rel="manifest" href="./manifest.json?v=78">
+    <link rel="manifest" href="./manifest.json?v=79">
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
-    <link rel="stylesheet" href="./css/styles.css?v=78">
+    <link rel="stylesheet" href="./css/styles.css?v=79">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -473,13 +473,16 @@
     window.suVozFirebaseReady = Promise.all([
         import("https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js"),
         import("https://www.gstatic.com/firebasejs/12.11.0/firebase-firestore.js"),
-        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js")
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js"),
+        import("https://www.gstatic.com/firebasejs/12.11.0/firebase-functions.js")
     ])
-        .then(([appModule, firestoreModule, authModule]) => {
+        .then(([appModule, firestoreModule, authModule, functionsModule]) => {
             const app = appModule.initializeApp(firebaseConfig);
 
+            window.firebaseApp = app;
             window.firebaseDb = firestoreModule.getFirestore(app);
             window.firebaseAuth = authModule.getAuth(app);
+            window.firebaseFunctions = functionsModule.getFunctions(app, "us-central1");
 
             window.firebaseFns = {
                 collection: firestoreModule.collection,
@@ -496,7 +499,8 @@
                 setDoc: firestoreModule.setDoc,
                 getDoc: firestoreModule.getDoc,
                 signInAnonymously: authModule.signInAnonymously,
-                onAuthStateChanged: authModule.onAuthStateChanged
+                onAuthStateChanged: authModule.onAuthStateChanged,
+                httpsCallable: functionsModule.httpsCallable
             };
 
             window.dispatchEvent(new Event('suvoz-firebase-ready'));
@@ -526,7 +530,7 @@
 })();
 </script>
 
-<script type="module" src="js/app.js?v=78"></script>
+<script type="module" src="js/app.js?v=79"></script>
 
 <script>
 (function () {
@@ -547,7 +551,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
-                const appVersion = 'v78';
+                const appVersion = 'v79';
                 const versionKey = 'su-voz-app-version';
                 const versionReloadKey = `su-voz-version-guard-reloaded-${appVersion}`;
                 const swReloadKey = `su-voz-sw-reloaded-${appVersion}`;
@@ -564,7 +568,7 @@
                     );
                 };
 
-                const registration = await navigator.serviceWorker.register('./sw.js?v=78', {
+                const registration = await navigator.serviceWorker.register('./sw.js?v=79', {
                     scope: './'
                 });
 

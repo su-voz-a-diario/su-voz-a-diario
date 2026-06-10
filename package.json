@@ -2,7 +2,10 @@
   "scripts": {
     "android:copy": "rsync -av --delete --exclude 'node_modules' --exclude '.git' --exclude 'android' --exclude 'ios' --exclude 'www' --exclude '.DS_Store' ./ www/",
     "android:sync": "npm run android:copy && npx cap sync android",
-    "android:open": "npm run android:sync && npx cap open android"
+    "android:open": "npm run android:sync && npx cap open android",
+    "firebase:emulators": "firebase emulators:start --only functions,firestore",
+    "firebase:deploy:functions": "firebase deploy --only functions",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.0",

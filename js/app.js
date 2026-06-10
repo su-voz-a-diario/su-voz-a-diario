@@ -9675,8 +9675,16 @@ if (notificationsToggle) {
 }
 
        if (testNotification) {
-    testNotification.addEventListener('click', () => {
-        this.showToast('La prueba manual ahora se hace desde Firebase con push remoto.');
+    testNotification.addEventListener('click', async () => {
+        if (testNotification.disabled) return;
+
+        testNotification.disabled = true;
+
+        try {
+            await this.sendTestPushNotification();
+        } finally {
+            testNotification.disabled = false;
+        }
     });
 }
         
@@ -9946,6 +9954,46 @@ if (notificationsToggle) {
         }
     },
 
+sendTestPushNotification: async function() {
+    this.showToast('Enviando notificación de prueba...');
+
+    try {
+        const user = await this.initAuth();
+
+        if (!user?.uid) {
+            throw new Error('No se pudo autenticar al usuario.');
+        }
+
+        if (
+            !window.firebaseFunctions ||
+            typeof window.firebaseFns?.httpsCallable !== 'function'
+        ) {
+            throw new Error('Firebase Functions no está disponible.');
+        }
+
+        const sendTestNotification = window.firebaseFns.httpsCallable(
+            window.firebaseFunctions,
+            'sendTestNotification'
+        );
+        const response = await sendTestNotification({});
+        const result = response?.data || {};
+
+        if (Number(result.successCount) < 1) {
+            throw new Error(
+                `No se pudo entregar la notificación. Envíos fallidos: ${Number(result.failureCount) || 0}.`
+            );
+        }
+
+        this.showToast('Notificación enviada correctamente.');
+        return result;
+    } catch (error) {
+        const message = error?.message || 'No se pudo enviar la notificación de prueba.';
+        console.error('[App] Error enviando notificación de prueba:', error);
+        this.showToast(message, 5000);
+        return null;
+    }
+},
+
 enableNotificationsFlow: async function() {
     if (!('Notification' in window)) {
         this.showToast('Este dispositivo no soporta notificaciones');
@@ -10038,22 +10086,43 @@ initPushNotifications: async function() {
 },
 
 savePushToken: async function(token) {
-    if (!token || !this.currentUser?.uid) {
+    const normalizedToken = typeof token === 'string' ? token.trim() : '';
+    const uid = typeof this.currentUser?.uid === 'string'
+        ? this.currentUser.uid.trim()
+        : '';
+
+    if (!normalizedToken || normalizedToken.length > 4096 || !uid) {
         console.warn('[App] No se pudo guardar token: falta token o usuario');
         return false;
     }
 
     try {
-        const deviceId = this.getDeviceId();
+        const deviceId = String(this.getDeviceId() || '').trim();
+
+        if (!deviceId) {
+            console.warn('[App] No se pudo guardar token: falta identificador del dispositivo');
+            return false;
+        }
+
+        const allowedPlatforms = new Set(['web', 'android', 'ios']);
+        const detectedPlatform = this.getPlatformLabel();
+        const platform = allowedPlatforms.has(detectedPlatform)
+            ? detectedPlatform
+            : 'web';
+        const userAgent = String(navigator.userAgent || '').slice(0, 1024);
+        const savedReminderTime = String(this.settings.reminderTime || '');
+        const reminderTime = /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(savedReminderTime)
+            ? savedReminderTime
+            : DEFAULT_SETTINGS.reminderTime;
         const tokenRef = doc(db, 'pushTokens', deviceId);
 
         await setDoc(tokenRef, {
-            token,
-            uid: this.currentUser.uid,
+            token: normalizedToken,
+            uid,
             deviceId,
-            platform: this.getPlatformLabel(),
-            userAgent: navigator.userAgent || '',
-            reminderTime: this.settings.reminderTime,
+            platform,
+            userAgent,
+            reminderTime,
             notificationsEnabled: !!this.settings.notificationsEnabled,
             lastActive: serverTimestamp(),
             updatedAt: serverTimestamp()

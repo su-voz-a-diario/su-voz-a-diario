@@ -1,8 +1,14 @@
 
 node_modules/
+functions/node_modules/
 
 android/keystores/*.keystore
 
 android/keystore.properties
 
 .DS_Store
+
+firebase-debug.log*
+.firebase/
+
+/legado/su-voz-firebase/
