@@ -9958,21 +9958,43 @@ sendTestPushNotification: async function() {
     this.showToast('Enviando notificación de prueba...');
 
     try {
-        const user = await this.initAuth();
+        const firebaseReady = window.suVozFirebaseReady
+            ? await window.suVozFirebaseReady
+            : false;
 
-        if (!user?.uid) {
+        if (!firebaseReady) {
+            throw new Error('Firebase no pudo inicializarse.');
+        }
+
+        const user = await this.initAuth();
+        const currentUser = window.firebaseAuth?.currentUser;
+
+        if (!user?.uid || !currentUser?.uid || user.uid !== currentUser.uid) {
             throw new Error('No se pudo autenticar al usuario.');
         }
 
         if (
-            !window.firebaseFunctions ||
+            typeof window.firebaseFns?.getApp !== 'function' ||
+            typeof window.firebaseFns?.getFunctions !== 'function' ||
+            typeof window.firebaseFns?.getIdToken !== 'function' ||
             typeof window.firebaseFns?.httpsCallable !== 'function'
         ) {
             throw new Error('Firebase Functions no está disponible.');
         }
 
+        await window.firebaseFns.getIdToken(currentUser, true);
+
+        if (!window.firebaseAuth.currentUser?.uid) {
+            throw new Error('La sesión de Firebase Auth no está disponible.');
+        }
+
+        const firebaseApp = window.firebaseFns.getApp();
+        const functions = window.firebaseFns.getFunctions(
+            firebaseApp,
+            'us-central1'
+        );
         const sendTestNotification = window.firebaseFns.httpsCallable(
-            window.firebaseFunctions,
+            functions,
             'sendTestNotification'
         );
         const response = await sendTestNotification({});
@@ -9988,7 +10010,14 @@ sendTestPushNotification: async function() {
         return result;
     } catch (error) {
         const message = error?.message || 'No se pudo enviar la notificación de prueba.';
-        console.error('[App] Error enviando notificación de prueba:', error);
+        console.error('[App] Error enviando notificación de prueba:', {
+            code: error?.code || 'unknown',
+            message,
+            details: error?.details || null,
+            customData: error?.customData || null,
+            stack: error?.stack || null,
+            error
+        });
         this.showToast(message, 5000);
         return null;
     }
