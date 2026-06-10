@@ -1,9 +1,10 @@
 "use strict";
 
 const { getApps, initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { logger } = require("firebase-functions");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 
@@ -14,6 +15,7 @@ if (getApps().length === 0) {
 const DAILY_SCHEDULE = "*/5 * * * *";
 const TIME_ZONE = "America/Mexico_City";
 const MAX_MULTICAST_TOKENS = 500;
+const MAX_FIRESTORE_BATCH_WRITES = 500;
 const INVALID_TOKEN_CODES = new Set([
   "messaging/invalid-registration-token",
   "messaging/registration-token-not-registered",
@@ -44,6 +46,58 @@ function getCurrentReminderTime(date = new Date()) {
   }
 
   return `${hour}:${minute}`;
+}
+
+async function incrementUserActivity(db, uid) {
+  if (typeof uid !== "string" || uid.length === 0) {
+    return false;
+  }
+
+  const activityRef = db.collection("userActivity").doc(uid);
+  const activitySnapshot = await activityRef.get();
+
+  if (!activitySnapshot.exists) {
+    return false;
+  }
+
+  await activityRef.update({
+    unreadCommunityCount: FieldValue.increment(1),
+  });
+
+  return true;
+}
+
+async function incrementCommunityForAllUsers(db, actorUid) {
+  const snapshot = await db.collection("userActivity").get();
+  const recipientDocuments = snapshot.docs.filter(
+    (document) => document.id !== actorUid
+  );
+
+  for (const documentsBatch of chunk(
+    recipientDocuments,
+    MAX_FIRESTORE_BATCH_WRITES
+  )) {
+    const writeBatch = db.batch();
+
+    for (const document of documentsBatch) {
+      writeBatch.update(document.ref, {
+        unreadCommunityCount: FieldValue.increment(1),
+      });
+    }
+
+    await writeBatch.commit();
+  }
+
+  return recipientDocuments.length;
+}
+
+async function getCommunityPostOwner(db, postId) {
+  if (typeof postId !== "string" || postId.length === 0) {
+    return null;
+  }
+
+  const postSnapshot = await db.collection("communityPosts").doc(postId).get();
+  return postSnapshot.exists ? postSnapshot.get("ownerUid") : null;
 }
 
 async function deleteInvalidTokens(db, documents) {
@@ -209,6 +263,73 @@ exports.sendDailyNotification = onSchedule(
       currentReminderTime,
       tokensFound: recipients.length,
       ...result,
+    });
+  }
+);
+
+exports.countNewCommunityPost = onDocumentCreated(
+  {
+    document: "communityPosts/{postId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    const post = event.data?.data();
+    const db = getFirestore();
+    const updatedUsers = await incrementCommunityForAllUsers(
+      db,
+      post?.ownerUid
+    );
+
+    logger.info("Actividad de publicación contabilizada.", {
+      postId: event.params.postId,
+      actorUid: post?.ownerUid || null,
+      updatedUsers,
+    });
+  }
+);
+
+exports.countNewCommunityReply = onDocumentCreated(
+  {
+    document: "communityReplies/{replyId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    const reply = event.data?.data();
+    const db = getFirestore();
+    const postOwnerUid = await getCommunityPostOwner(db, reply?.postId);
+    const updated = postOwnerUid !== reply?.ownerUid
+      ? await incrementUserActivity(db, postOwnerUid)
+      : false;
+
+    logger.info("Actividad de respuesta contabilizada.", {
+      replyId: event.params.replyId,
+      postId: reply?.postId || null,
+      actorUid: reply?.ownerUid || null,
+      recipientUid: postOwnerUid,
+      updated,
+    });
+  }
+);
+
+exports.countNewCommunityReaction = onDocumentCreated(
+  {
+    document: "communityReactions/{reactionId}",
+    region: "us-central1",
+  },
+  async (event) => {
+    const reaction = event.data?.data();
+    const db = getFirestore();
+    const postOwnerUid = await getCommunityPostOwner(db, reaction?.postId);
+    const updated = postOwnerUid !== reaction?.userId
+      ? await incrementUserActivity(db, postOwnerUid)
+      : false;
+
+    logger.info("Actividad de reacción contabilizada.", {
+      reactionId: event.params.reactionId,
+      postId: reaction?.postId || null,
+      actorUid: reaction?.userId || null,
+      recipientUid: postOwnerUid,
+      updated,
     });
   }
 );

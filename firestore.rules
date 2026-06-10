@@ -59,6 +59,40 @@ service cloud.firestore {
       allow read, delete: if ownsExistingDocument();
     }
 
+    match /userActivity/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'unreadCommunityCount',
+          'lastCommunitySeenAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'unreadCommunityCount',
+          'lastCommunitySeenAt'
+        ])
+        && request.resource.data.unreadCommunityCount is int
+        && request.resource.data.unreadCommunityCount == 0
+        && request.resource.data.lastCommunitySeenAt == request.time;
+
+      allow update: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+          'unreadCommunityCount',
+          'lastCommunitySeenAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'unreadCommunityCount',
+          'lastCommunitySeenAt'
+        ])
+        && request.resource.data.unreadCommunityCount is int
+        && request.resource.data.unreadCommunityCount == 0
+        && request.resource.data.lastCommunitySeenAt == request.time;
+
+      allow delete: if false;
+    }
+
     match /communityPosts/{postId} {
       allow read: if true;
 

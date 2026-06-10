@@ -76,6 +76,7 @@ const deleteDoc = (...args) => getFirebaseFunction('deleteDoc')(...args);
 const doc = (dbArg, ...args) => getFirebaseFunction('doc')(dbArg || window.firebaseDb, ...args);
 const setDoc = (...args) => getFirebaseFunction('setDoc')(...args);
 const getDoc = (...args) => getFirebaseFunction('getDoc')(...args);
+const onSnapshot = (...args) => getFirebaseFunction('onSnapshot')(...args);
 const signInAnonymously = (authArg, ...args) => getFirebaseFunction('signInAnonymously')(authArg || window.firebaseAuth, ...args);
 const onAuthStateChanged = (authArg, ...args) => getFirebaseFunction('onAuthStateChanged')(authArg || window.firebaseAuth, ...args);
 const db = null;
@@ -536,7 +537,8 @@ const App = {
     communityFormOpen: false,
     currentUser: null,
     communityUnreadCount: 0,
-    lastSeenCommunityAt: null,
+    _communityActivityUnsubscribe: null,
+    _communityMarkSeenPromise: null,
     openReplyPostId: null,
     replyDrafts: {},
     replyCharLimit: 300,
@@ -617,7 +619,6 @@ _lastAuthError: null,
     this.loadStreak();
     this.loadFontSize();
     this.loadBibleReadingSettings();
-    this.loadCommunityLastSeen();
     localStorage.removeItem('su-voz-last-reminder-date');
        
     const savedVersion = localStorage.getItem('current-version');
@@ -644,7 +645,7 @@ this.initAuth().then(async () => {
             return;
         }
 
-        await this.refreshCommunityBadge();
+        await this.subscribeToCommunityActivity();
 
         const savedToken = localStorage.getItem('su-voz-fcm-token');
 
@@ -2394,91 +2395,117 @@ toggleCommunityReaction: async function(postId, reaction) {
     }
 },
 
-getCommunityLastSeenKey: function() {
-return 'su-voz-community-last-seen';
-},
-
-loadCommunityLastSeen: function() {
-    this.lastSeenCommunityAt = localStorage.getItem(this.getCommunityLastSeenKey());
-},
-
-saveCommunityLastSeen: function(value) {
-    const normalizedValue = value === null || value === undefined ? null : String(value);
-    this.lastSeenCommunityAt = normalizedValue;
-
-    if (normalizedValue !== null) {
-        localStorage.setItem(this.getCommunityLastSeenKey(), normalizedValue);
-    } else {
-        localStorage.removeItem(this.getCommunityLastSeenKey());
-    }
-},
-
 markCommunityAsSeen: async function() {
-    try {
-        const posts = await this.getCommunityPostsCached();
+    this.communityUnreadCount = 0;
+    this.updateCommunityBadge();
 
-        if (!posts.length) {
-            this.saveCommunityLastSeen(null);
-            this.communityUnreadCount = 0;
-            this.updateCommunityBadge();
-            return;
-        }
-
-        const latestPost = posts[0];
-        const latestValue = latestPost.createdAt?.seconds || 0;
-
-        this.saveCommunityLastSeen(latestValue);
-        this.communityUnreadCount = 0;
-        this.updateCommunityBadge();
-    } catch (error) {
-        console.error('[Community] Error marcando como visto:', error);
+    if (this._communityMarkSeenPromise) {
+        return this._communityMarkSeenPromise;
     }
-},
-    
-refreshCommunityBadge: async function() {
-    try {
-        const posts = await this.getCommunityPostsCached();
-        const lastSeen = this.lastSeenCommunityAt;
 
-        if (!posts.length) {
-            this.communityUnreadCount = 0;
-            this.updateCommunityBadge();
+    this._communityMarkSeenPromise = (async () => {
+        const user = this.currentUser || await this.initAuth();
+
+        if (!user?.uid) {
+            console.warn('[Community] No se pudo marcar la actividad como vista: falta autenticación');
             return;
         }
 
-        if (!lastSeen) {
-            this.communityUnreadCount = posts.length;
-            this.updateCommunityBadge();
-            return;
-        }
-
-        const lastSeenNumber = Number(lastSeen) || 0;
-        let unread = 0;
-
-        posts.forEach(post => {
-            const postValue = post.createdAt?.seconds || 0;
-
-            if (postValue > lastSeenNumber) {
-                unread++;
-            }
+        await setDoc(doc(db, 'userActivity', user.uid), {
+            unreadCommunityCount: 0,
+            lastCommunitySeenAt: serverTimestamp()
+        }, { merge: true });
+    })()
+        .catch(error => {
+            console.error('[Community] Error marcando como visto:', error);
+        })
+        .finally(() => {
+            this._communityMarkSeenPromise = null;
         });
 
-        this.communityUnreadCount = unread;
-        this.updateCommunityBadge();
-    } catch (error) {
-        console.error('[Community] Error actualizando badge:', error);
+    return this._communityMarkSeenPromise;
+},
+
+subscribeToCommunityActivity: async function() {
+    const user = this.currentUser || await this.initAuth();
+
+    if (!user?.uid) {
+        console.warn('[Community] No se pudo escuchar la actividad: falta autenticación');
+        return;
     }
+
+    if (this._communityActivityUnsubscribe) {
+        this._communityActivityUnsubscribe();
+        this._communityActivityUnsubscribe = null;
+    }
+
+    const activityRef = doc(db, 'userActivity', user.uid);
+    const activitySnapshot = await getDoc(activityRef);
+
+    if (!activitySnapshot.exists()) {
+        await setDoc(activityRef, {
+            unreadCommunityCount: 0,
+            lastCommunitySeenAt: serverTimestamp()
+        });
+    }
+
+    this._communityActivityUnsubscribe = onSnapshot(
+        activityRef,
+        snapshot => {
+            const rawCount = snapshot.exists()
+                ? snapshot.data()?.unreadCommunityCount
+                : 0;
+            const count = Number.isInteger(rawCount) && rawCount > 0
+                ? rawCount
+                : 0;
+
+            this.communityUnreadCount = count;
+            this.updateCommunityBadge();
+
+            if (this.currentView === 'community' && count > 0) {
+                this.markCommunityAsSeen();
+            }
+        },
+        error => {
+            console.error('[Community] Error escuchando actividad:', error);
+        }
+    );
 },
 
 updateCommunityBadge: function() {
-    if (!this.$communityBadge) return;
+    const count = Math.max(0, Number(this.communityUnreadCount) || 0);
 
-    if (this.communityUnreadCount > 0) {
-        this.$communityBadge.hidden = false;
-        this.$communityBadge.textContent = this.communityUnreadCount > 9 ? '9+' : String(this.communityUnreadCount);
-    } else {
-        this.$communityBadge.hidden = true;
-        this.$communityBadge.textContent = '0';
+    if (this.$communityBadge) {
+        if (count > 0) {
+            this.$communityBadge.hidden = false;
+            this.$communityBadge.dataset.count = String(count);
+            this.$communityBadge.textContent = count > 99 ? '99+' : String(count);
+        } else {
+            this.$communityBadge.hidden = true;
+            this.$communityBadge.textContent = '0';
+            delete this.$communityBadge.dataset.count;
+        }
+    }
+
+    this.syncAppBadge(count);
+},
+
+syncAppBadge: function(count) {
+    try {
+        if (count > 0 && 'setAppBadge' in navigator) {
+            Promise.resolve(navigator.setAppBadge(count)).catch(error => {
+                console.warn('[Community] No se pudo actualizar el badge de la PWA:', error);
+            });
+            return;
+        }
+
+        if (count === 0 && 'clearAppBadge' in navigator) {
+            Promise.resolve(navigator.clearAppBadge()).catch(error => {
+                console.warn('[Community] No se pudo limpiar el badge de la PWA:', error);
+            });
+        }
+    } catch (error) {
+        console.warn('[Community] Badging API no disponible:', error);
     }
 },
     
