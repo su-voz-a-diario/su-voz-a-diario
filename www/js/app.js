@@ -3624,7 +3624,7 @@ downloadVerseImage: async function() {
                 return;
             }
 
-            this.showToast('Elige “Guardar imagen” en el menú Compartir', 4500);
+            this.showToast('Si elegiste “Guardar imagen”, la imagen ya quedó guardada en Fotos.', 4500);
             return;
         }
 
