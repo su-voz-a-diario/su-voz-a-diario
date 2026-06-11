@@ -3516,17 +3516,62 @@ shareImageBlobWeb: async function(blob, fileName, title, text) {
     return true;
 },
 
+isSecureFileShareContext: function() {
+    const hostname = String(window.location.hostname || '').toLowerCase();
+    const isLocalhost = hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '::1';
+
+    return window.isSecureContext ||
+        window.location.protocol === 'https:' ||
+        isLocalhost;
+},
+
 downloadImageBlobWeb: function(blob, fileName) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
 
     link.href = url;
     link.download = fileName;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
     link.remove();
 
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+},
+
+restoreImageEditorInteractionState: function() {
+    const panelIsVisible = this.$verseImagePanel?.classList.contains('visible');
+    const sheet = this.$verseImagePanel?.querySelector('.verse-image-sheet');
+
+    this.$selectionPanel?.classList.remove('visible', 'note-mode', 'note-view-mode');
+    document.body.classList.remove('selection-panel-open', 'keyboard-open');
+
+    if (document.body.style.overflow === 'hidden') {
+        document.body.style.removeProperty('overflow');
+    }
+
+    if (document.documentElement.style.overflow === 'hidden') {
+        document.documentElement.style.removeProperty('overflow');
+    }
+
+    if (this.$verseImagePanel) {
+        this.$verseImagePanel.style.removeProperty('pointer-events');
+    }
+
+    if (sheet) {
+        sheet.style.removeProperty('pointer-events');
+        sheet.style.removeProperty('overflow-y');
+    }
+
+    if (panelIsVisible) {
+        this.$verseImagePanel.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('verse-image-open');
+        return;
+    }
+
+    document.body.classList.remove('verse-image-open');
 },
 
 downloadVerseImage: async function() {
@@ -3555,6 +3600,34 @@ downloadVerseImage: async function() {
             return;
         }
 
+        if (isIOSDevice()) {
+            if (!this.isSecureFileShareContext()) {
+                this.showToast(
+                    'En iPhone, la descarga directa desde navegador puede estar limitada. Prueba desde suvoz.app o usa Compartir para guardar la imagen.',
+                    6000
+                );
+                return;
+            }
+
+            const shared = await this.shareImageBlobWeb(
+                blob,
+                fileName,
+                reference,
+                'Guarda esta imagen en Fotos desde el menú Compartir'
+            );
+
+            if (!shared) {
+                this.showToast(
+                    'En iPhone, la descarga directa desde navegador puede estar limitada. Prueba desde suvoz.app o usa Compartir para guardar la imagen.',
+                    6000
+                );
+                return;
+            }
+
+            this.showToast('Elige “Guardar imagen” en el menú Compartir', 4500);
+            return;
+        }
+
         this.downloadImageBlobWeb(blob, fileName);
         this.showToast('Imagen descargada');
     } catch (error) {
@@ -3563,8 +3636,19 @@ downloadVerseImage: async function() {
             return;
         }
 
+        if (isIOSDevice()) {
+            console.warn('[Verse Image] No se pudo abrir el guardado de iOS:', error);
+            this.showToast(
+                'En iPhone, la descarga directa desde navegador puede estar limitada. Prueba desde suvoz.app o usa Compartir para guardar la imagen.',
+                6000
+            );
+            return;
+        }
+
         console.error('[Verse Image] Error guardando:', error);
         this.showToast('No se pudo guardar la imagen');
+    } finally {
+        this.restoreImageEditorInteractionState();
     }
 },
 
@@ -3587,23 +3671,38 @@ shareVerseImageFromEditor: async function() {
                 reference,
                 `${reference} · https://suvoz.app`
             );
-        } else {
-            const shared = await this.shareImageBlobWeb(
-                blob,
-                fileName,
-                reference,
-                `${reference} · https://suvoz.app`
-            );
 
-            if (!shared) {
-                this.showToast('Tu navegador no permite compartir archivos');
-                return;
-            }
+            this.closeVerseImageEditor();
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+            return;
         }
 
-        this.closeVerseImageEditor();
-        this.hideSelectionPanel();
-        window.getSelection()?.removeAllRanges();
+        if (isIOSDevice() && !this.isSecureFileShareContext()) {
+            this.showToast(
+                'Para compartir archivos desde iPhone, prueba desde la versión publicada en HTTPS.',
+                5500
+            );
+            return;
+        }
+
+        const shared = await this.shareImageBlobWeb(
+            blob,
+            fileName,
+            reference,
+            `${reference} · https://suvoz.app`
+        );
+
+        if (!shared) {
+            const message = isIOSDevice()
+                ? 'Para compartir archivos desde iPhone, prueba desde la versión publicada en HTTPS.'
+                : 'Tu navegador no permite compartir archivos';
+
+            this.showToast(message, 5500);
+            return;
+        }
+
+        this.showToast('Imagen compartida');
     } catch (error) {
         if (error?.name === 'AbortError') {
             console.log('[Verse Image] Compartir cancelado por el usuario');
@@ -3612,6 +3711,8 @@ shareVerseImageFromEditor: async function() {
 
         console.error('[Verse Image] Error compartiendo:', error);
         this.showToast('No se pudo compartir la imagen');
+    } finally {
+        this.restoreImageEditorInteractionState();
     }
 },
 
@@ -3716,6 +3817,128 @@ getSelectedTextVersionLabel: function() {
     }
 
     return this.getBibleVersionLabel(this.currentVersion);
+},
+
+buildVerseCopyText: function({ text, book, chapter, verse, version } = {}) {
+    const cleanText = String(text || '').trim();
+    const cleanBook = String(book || '').trim();
+    const cleanChapter = String(chapter || '').trim();
+    const cleanVerse = String(verse || '').trim();
+    const cleanVersion = String(version || '').trim();
+    const reference = [
+        cleanBook,
+        cleanChapter && cleanVerse ? `${cleanChapter}:${cleanVerse}` : cleanChapter
+    ]
+        .filter(Boolean)
+        .join(' ');
+
+    if (reference && cleanVersion) {
+        return `${cleanText}\n\n${reference} — ${cleanVersion}`;
+    }
+
+    if (reference) {
+        return `${cleanText}\n\n${reference}`;
+    }
+
+    if (cleanVersion) {
+        return `${cleanText}\n\n${cleanVersion}`;
+    }
+
+    return cleanText;
+},
+
+getSelectedVerseCopyData: async function() {
+    const verseItem = this.currentSelectedVerse;
+    const text = (
+        verseItem?.getAttribute('data-verse-text') ||
+        verseItem?.querySelector('.verse-text-content, .verse-text')?.textContent ||
+        this.currentSelectedText ||
+        ''
+    )
+        .replace(/\s+/g, ' ')
+        .trim();
+    const verse = String(verseItem?.getAttribute('data-verse-number') || '').trim();
+    const version = this.getSelectedTextVersionLabel() || 'Biblia';
+
+    if (this.getSelectedTextSource() === 'bible') {
+        const match = String(this.currentSelectionDate || '').match(/^bible-(.+)-(\d+)$/);
+        const bookId = match?.[1] || '';
+        const book = this.bibleBooks.find(item => item.id === bookId);
+
+        return {
+            text,
+            book: book?.name || bookId || 'Biblia',
+            chapter: match?.[2] || '',
+            verse,
+            version: version || 'RV1909'
+        };
+    }
+
+    const dateStr = this.currentSelectionDate || this.homeViewingDate || this.getTodayDateStr();
+    const reading = await this.getReadingByDate(dateStr);
+    const referenceMatch = String(reading?.reference || '').match(/^(.+?)\s+(\d+):/);
+    let chapter = referenceMatch?.[2] || '';
+
+    if (chapter && verseItem && this.activeSelectionSurface) {
+        let currentChapter = Number(chapter);
+        let previousVerse = null;
+        const verseItems = Array.from(
+            this.activeSelectionSurface.querySelectorAll('.verse-selectable')
+        );
+
+        for (const item of verseItems) {
+            const itemVerse = Number(item.getAttribute('data-verse-number'));
+
+            if (Number.isFinite(itemVerse)) {
+                if (previousVerse !== null && itemVerse <= previousVerse) {
+                    currentChapter += 1;
+                }
+
+                previousVerse = itemVerse;
+            }
+
+            if (item === verseItem) {
+                chapter = String(currentChapter);
+                break;
+            }
+        }
+    }
+
+    return {
+        text,
+        book: referenceMatch?.[1] || '',
+        chapter,
+        verse,
+        version: version || 'Biblia'
+    };
+},
+
+copyTextToClipboard: async function(text) {
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch (error) {
+            console.warn('[Clipboard] Se usará el método alternativo:', error);
+        }
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+
+    try {
+        textarea.select();
+
+        if (!document.execCommand('copy')) {
+            throw new Error('No se pudo copiar el texto');
+        }
+    } finally {
+        textarea.remove();
+    }
 },
 
 getBibleVersionLabel: function(versionKey) {
@@ -4578,11 +4801,13 @@ if (textSizeBtn) {
 
     this.$verseImageDownloadBtn?.addEventListener('click', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         await this.downloadVerseImage();
     });
 
     this.$verseImageShareBtn?.addEventListener('click', async (e) => {
         e.preventDefault();
+        e.stopPropagation();
         await this.shareVerseImageFromEditor();
     });
 
@@ -4614,7 +4839,10 @@ bindSelectionPanelEvents: function() {
             e.stopPropagation();
 
             try {
-                await navigator.clipboard.writeText(this.currentSelectedText || '');
+                const copyData = await this.getSelectedVerseCopyData();
+                const copyText = this.buildVerseCopyText(copyData);
+
+                await this.copyTextToClipboard(copyText);
                 this.showToast('Texto copiado');
             } catch (error) {
                 this.showToast('No se pudo copiar');
