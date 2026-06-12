@@ -633,6 +633,7 @@ this.bindEvents();
 this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
+this.setupAndroidBackButton();
 await this.loadData();
 
 await this.handleRoute();
@@ -667,6 +668,98 @@ console.log('[App] Inicialización completada');
     isCapacitorAndroid: function() {
         return window.Capacitor?.getPlatform?.() === 'android' &&
             window.Capacitor?.isNativePlatform?.();
+    },
+
+    setupAndroidBackButton: function() {
+        if (!this.isCapacitorAndroid() || this._androidBackButtonListenerReady) return;
+
+        const AppPlugin = this.getCapacitorPlugin('App');
+
+        if (!AppPlugin?.addListener) {
+            console.warn('[Android Back] El plugin @capacitor/app no está disponible');
+            return;
+        }
+
+        this._androidBackButtonListenerReady = true;
+
+        Promise.resolve(
+            AppPlugin.addListener('backButton', (event) => {
+                this.handleAndroidBackButton(event);
+            })
+        ).catch(error => {
+            this._androidBackButtonListenerReady = false;
+            console.error('[Android Back] No se pudo registrar el listener:', error);
+        });
+    },
+
+    handleAndroidBackButton: function(event = {}) {
+        if (!this.isCapacitorAndroid()) return;
+
+        if (this.$verseImagePanel?.classList.contains('visible')) {
+            this.closeVerseImageEditor();
+            return;
+        }
+
+        const noteViewPanel = document.getElementById('noteViewPanel');
+        if (noteViewPanel?.classList.contains('visible')) {
+            noteViewPanel.classList.remove('visible');
+            document.body.classList.remove('selection-panel-open');
+            this.clearVerseSelection();
+            return;
+        }
+
+        if (this.$selectionPanel?.classList.contains('visible')) {
+            this.hideSelectionPanel();
+            window.getSelection()?.removeAllRanges();
+            return;
+        }
+
+        const strongSheetPanel = document.getElementById('strongSheetPanel');
+        if (strongSheetPanel?.classList.contains('visible')) {
+            this.closeStrongSheet();
+            return;
+        }
+
+        if (this.bibleReaderPickerOpen) {
+            this.closeBibleReaderPicker();
+            return;
+        }
+
+        if (this.bibleReadingSettingsOpen) {
+            this.bibleReadingSettingsOpen = false;
+            this.mountBibleReadingSettingsPanel();
+            this.updateBibleReaderContextBarUI();
+            return;
+        }
+
+        if (this.$headerControlsDropdown?.classList.contains('show')) {
+            this.$headerControlsDropdown.classList.remove('show');
+            return;
+        }
+
+        if (this.communityFormOpen) {
+            this.communityFormOpen = false;
+            this.handleRoute().catch(error => {
+                console.error('[Android Back] Error cerrando formulario de comunidad:', error);
+            });
+            return;
+        }
+
+        if (this.currentView !== 'home') {
+            if (event.canGoBack) {
+                history.back();
+                return;
+            }
+
+            history.replaceState(null, '', '#home');
+            this.handleRoute().catch(error => {
+                console.error('[Android Back] Error regresando a Inicio:', error);
+            });
+            return;
+        }
+
+        const AppPlugin = this.getCapacitorPlugin('App');
+        AppPlugin?.exitApp?.();
     },
 
     getCapacitorPlugin: function(name) {
@@ -7402,8 +7495,9 @@ renderBiblePagination: function() {
 },
 
 performBibleSearch: async function(query, resetPage = true) {
-    const normalizedQuery = (query || '').trim();
-    this.bibleSearchQuery = normalizedQuery;
+    const inputQuery = String(query || '');
+    const normalizedQuery = inputQuery.trim();
+    this.bibleSearchQuery = inputQuery;
 
     if (resetPage) {
         this.bibleSearchPage = 1;
@@ -12443,7 +12537,7 @@ if (navItem) {
 
 // ✅ NUEVO: Búsqueda en la Biblia
 if (e.target.id === 'bible-search-input') {
-    const query = e.target.value.trim();
+    const query = e.target.value;
     clearTimeout(this.searchTimeout);
     this.searchTimeout = setTimeout(() => {
         this.performBibleSearch(query);
@@ -12611,8 +12705,9 @@ const Sanitizer = {
         cleaned = cleaned.replace(/javascript:/gi, '');
         cleaned = cleaned.replace(/on\w+=/gi, '');
 
-        // Normalizar espacios
-        cleaned = cleaned.replace(/\s+/g, ' ');
+        // Normalizar espacios horizontales sin eliminar saltos de línea.
+        cleaned = cleaned.replace(/\r\n?/g, '\n');
+        cleaned = cleaned.replace(/[^\S\n]+/g, ' ');
 
         return cleaned.trim();
     },
