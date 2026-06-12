@@ -11,6 +11,19 @@ export function shouldShowIntroVideo(dateStr, config = INTRO_VIDEO_CONFIG) {
     return dateStr >= config.startDate && dateStr <= config.endDate;
 }
 
+export const TEMPORARY_HOME_INTRO_CONFIG = {
+    startDate: '2026-06-13',
+    endDate: '2026-06-15',
+    url: 'https://www.youtube.com/watch?v=fNIwuJKVu88',
+    title: 'Introducción a 2 Timoteo',
+    description: 'Antes de comenzar la lectura de 2 Timoteo, mira esta breve introducción para ubicar el contexto del libro.',
+    buttonLabel: 'Ver introducción'
+};
+
+export function shouldShowTemporaryHomeIntro(dateStr, config = TEMPORARY_HOME_INTRO_CONFIG) {
+    return dateStr >= config.startDate && dateStr <= config.endDate;
+}
+
 export const BADGE_LEVELS = [
     { min: 365, key: 'corona', label: 'Corona', icon: '👑' },
     { min: 180, key: 'diamante', label: 'Diamante', icon: '💎' },

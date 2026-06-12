@@ -99,7 +99,10 @@ export function calculateCurrentPlanStreak(validReadDates, planDates, startDate 
 }
 
 export function extractFirstChapterNumber(reference) {
-    const match = String(reference || '').match(/(\d+)/);
+    const normalizedReference = String(reference || '');
+    const match = normalizedReference.match(/(\d+):\d+/)
+        || normalizedReference.match(/(\d+)/);
+
     return match ? parseInt(match[1]) : 0;
 }
 
@@ -107,12 +110,35 @@ export function findReadingByDate(readings, dateStr) {
     return readings.find(reading => reading.date === dateStr) || null;
 }
 
-export function findBookByReference(reference, bibleBooks) {
-    const normalizedReference = String(reference || '').toLowerCase();
+export function findBookById(bookId, bibleBooks) {
+    const normalizedBookId = String(bookId || '').trim();
+    const book = bibleBooks.find(item => item.id === normalizedBookId);
 
-    const book = bibleBooks.find(item =>
-        normalizedReference.includes(String(item.name || '').toLowerCase())
-    );
+    if (!book) return null;
+
+    return {
+        id: book.id,
+        nombre: book.name,
+        capitulosTotales: book.chapters
+    };
+}
+
+function referenceMatchesBook(reference, bookName) {
+    const normalizedReference = String(reference || '').toLowerCase();
+    const normalizedBookName = String(bookName || '').toLowerCase();
+    const numberedBookMatch = normalizedBookName.match(/^([123])\s+(.+)$/);
+
+    if (normalizedReference.includes(normalizedBookName)) return true;
+    if (!numberedBookMatch) return false;
+
+    const romanNumerals = { 1: 'i', 2: 'ii', 3: 'iii' };
+    const romanBookName = `${romanNumerals[numberedBookMatch[1]]} ${numberedBookMatch[2]}`;
+
+    return normalizedReference.includes(romanBookName);
+}
+
+export function findBookByReference(reference, bibleBooks) {
+    const book = bibleBooks.find(item => referenceMatchesBook(reference, item.name));
 
     if (!book) return null;
 
@@ -132,12 +158,15 @@ export function getChapterFromReading(reading) {
 export function calculateBookProgress(book, readings, readDates) {
     const readDateSet = new Set(readDates);
     const readChapters = new Set();
-    const bookName = String(book.name || '').toLowerCase();
+    const hasBookIdMatches = readings.some(reading => reading.bookId === book.id);
 
     readings.forEach(reading => {
-        const reference = String(reading.reference || '').toLowerCase();
+        const matchesBookId = reading.bookId === book.id;
+        const shouldUseReferenceFallback = !hasBookIdMatches || !reading.bookId;
+        const matchesBook = matchesBookId
+            || (shouldUseReferenceFallback && referenceMatchesBook(reading.reference, book.name));
 
-        if (readDateSet.has(reading.date) && reference.includes(bookName)) {
+        if (readDateSet.has(reading.date) && matchesBook) {
             const chapterNumber = extractFirstChapterNumber(reading.reference);
             if (chapterNumber) readChapters.add(chapterNumber);
         }

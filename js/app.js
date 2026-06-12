@@ -1,6 +1,7 @@
 import {
     formatDateEs,
     formatDateForCompare,
+    getDateStrInTimeZone,
     getTodayDateStr,
     getYesterdayDateStr
 } from './utils/dates.js';
@@ -23,6 +24,7 @@ import {
 
 import {
     findReadingByDate,
+    findBookById,
     findBookByReference,
     getChapterFromReading,
     calculateProgressForBookId,
@@ -39,7 +41,9 @@ import {
 } from './utils/platform.js';
 
 import {
-    shouldShowIntroVideo
+    shouldShowIntroVideo,
+    shouldShowTemporaryHomeIntro,
+    TEMPORARY_HOME_INTRO_CONFIG
 } from './core/constants.js';
 
 import {
@@ -1114,14 +1118,22 @@ hitosPorLibro: {
     // Aquí se añadirán más libros cuando corresponda: 'jos', 'jdg', etc.
 },
 
-// Obtener libro actual basado en la lectura de hoy
-getLibroActual: function() {
-    const hoy = this.getTodayDateStr();
-    const lecturaHoy = findReadingByDate(this.data, hoy);
+// Obtener libro actual basado en la lectura mostrada en Inicio
+getLibroActual: function(dateStr = this.getTodayDateStr(), reading = null) {
+    const targetDate = dateStr || this.getTodayDateStr();
+    const targetReading = reading || findReadingByDate(this.data, targetDate);
+    const metadata = this.getReadingMetadataByDate(targetDate);
     
-    if (!lecturaHoy) return null;
-    
-    return findBookByReference(lecturaHoy.reference, this.bibleBooks);
+    if (!targetReading) return null;
+
+    const libroPorId = findBookById(
+        metadata?.bookId || targetReading.bookId,
+        this.bibleBooks
+    );
+
+    if (libroPorId) return libroPorId;
+
+    return findBookByReference(targetReading.reference, this.bibleBooks);
 },
 
 // Obtener capítulo actual
@@ -1135,11 +1147,20 @@ getCapituloActual: function() {
 // Calcular progreso en el libro actual
 getProgresoLibro: function(libroId) {
     const readDates = this.getReadDates();
+    const metadataByDate = new Map(
+        this.readingIndex.map(reading => [reading.date, reading])
+    );
+    const readings = this.data.length > 0
+        ? this.data.map(reading => ({
+            ...reading,
+            bookId: reading.bookId || metadataByDate.get(reading.date)?.bookId
+        }))
+        : this.readingIndex;
 
     return calculateProgressForBookId(
         libroId,
         this.bibleBooks,
-        this.data,
+        readings,
         readDates
     );
 },
@@ -1231,8 +1252,8 @@ obtenerMensajeLibro: function(libroId) {
 },
 
 // Método helper para saber cuántos capítulos se han meditado
-getProgresoLibroVisual: function() {
-    const libroActual = this.getLibroActual();
+getProgresoLibroVisual: function(dateStr = this.getHomeViewingDate(), reading = null) {
+    const libroActual = this.getLibroActual(dateStr, reading);
     if (!libroActual) return '';
     
     const progreso = this.getProgresoLibro(libroActual.id);
@@ -6594,6 +6615,29 @@ this.rerenderCurrentReadingView(dateStr, true);
     
    getTodayDateStr,
 
+renderTemporaryHomeIntro: function(date = new Date()) {
+    const mexicoCityDate = getDateStrInTimeZone(date);
+
+    if (!shouldShowTemporaryHomeIntro(mexicoCityDate)) return '';
+
+    const config = TEMPORARY_HOME_INTRO_CONFIG;
+
+    return `
+        <a
+            class="temporary-home-intro-card"
+            href="${config.url}"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="${config.buttonLabel}: ${config.title}"
+        >
+            <span class="temporary-home-intro-kicker">Video introductorio</span>
+            <span class="temporary-home-intro-title">${config.title}</span>
+            <span class="temporary-home-intro-description">${config.description}</span>
+            <span class="temporary-home-intro-button">${config.buttonLabel}</span>
+        </a>
+    `;
+},
+
 scrollWindowInstantly: function(top = 0) {
     const html = document.documentElement;
     const targetTop = Math.max(0, top);
@@ -6669,7 +6713,7 @@ restoreCalendarPosition: function() {
     
     // Si es hoy Y hay lectura, mostrar el pergamino de progreso
     if (isToday && reading) {
-        const pergaminoHtml = this.getProgresoLibroVisual();
+        const pergaminoHtml = this.getProgresoLibroVisual(viewingDate, reading);
         
         // Construir la vista con el pergamino incluido
         const dateFormatted = this.formatDateEs(reading.date);
@@ -6687,6 +6731,8 @@ restoreCalendarPosition: function() {
         const readingLabel = isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día';
 
         this.$content.innerHTML = `
+
+            ${this.renderTemporaryHomeIntro()}
 
             ${this.renderViewHeader(
                 'Lectura bíblica del día',
@@ -6804,6 +6850,9 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
        const showIntroVideo = shouldShowIntroVideo(reading.date);
 
 const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
+        const progressHtml = isHome
+            ? this.getProgresoLibroVisual(reading.date, reading)
+            : '';
         
         const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
         const hasPrev = currentIndex > 0;
@@ -6815,6 +6864,8 @@ const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
         
         this.$content.innerHTML = `
 
+    ${isHome ? this.renderTemporaryHomeIntro() : ''}
+
     ${isHome ? this.renderViewHeader(
         'Lectura bíblica del día',
         'Un momento diario para escuchar, meditar y responder a la Palabra.',
@@ -6822,6 +6873,8 @@ const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
     ) : `
         <div class="reading-date-header">${dateFormatted.toUpperCase()}</div>
     `}
+
+    ${progressHtml}
 
     ${introVideoHtml}
     
