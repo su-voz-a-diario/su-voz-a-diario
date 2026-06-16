@@ -11478,6 +11478,7 @@ document.addEventListener('click', (e) => {
         this.changeFontSize(-0.05);
     }
 
+    const versionBtn = e.target.closest('[data-version]');
     if (versionBtn) {
         const selectedVersion = versionBtn.getAttribute('data-version');
 
