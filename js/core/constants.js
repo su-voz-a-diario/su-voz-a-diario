@@ -7,21 +7,36 @@ export const INTRO_VIDEO_CONFIG = {
     note: 'Antes de comenzar la lectura, puedes ver esta introducción.'
 };
 
-export function shouldShowIntroVideo(dateStr, config = INTRO_VIDEO_CONFIG) {
-    return dateStr >= config.startDate && dateStr <= config.endDate;
-}
-
-export const TEMPORARY_HOME_INTRO_CONFIG = {
-    startDate: '2026-06-13',
-    endDate: '2026-06-15',
-    url: 'https://www.youtube.com/watch?v=fNIwuJKVu88',
-    title: 'Introducción a 2 Timoteo',
-    description: 'Antes de comenzar la lectura de 2 Timoteo, mira esta breve introducción para ubicar el contexto del libro.',
-    buttonLabel: 'Ver introducción'
+export const INTRO_VIDEO_CONFIG_MICAH = {
+    startDate: '2026-06-21',
+    endDate: '2026-06-25',
+    url: 'https://www.youtube.com/embed/114lAJ5fPL0',
+    label: '🎬 Video introductorio',
+    title: 'Introducción al libro de Miqueas',
+    note: 'Antes de comenzar la lectura de Miqueas, te recomendamos ver esta breve introducción para comprender mejor su contexto, mensaje y propósito.'
 };
 
-export function shouldShowTemporaryHomeIntro(dateStr, config = TEMPORARY_HOME_INTRO_CONFIG) {
-    return dateStr >= config.startDate && dateStr <= config.endDate;
+export const INTRO_VIDEO_CONFIG_2TIMOTHY = {
+    startDate: '2026-06-13',
+    endDate: '2026-06-20',
+    url: 'https://www.youtube.com/embed/fNIwuJKVu88',
+    label: '🎬 Video introductorio',
+    title: 'Introducción a 2 Timoteo',
+    note: 'Antes de continuar la lectura de este libro, mira esta breve introducción para comprender mejor su contexto, propósito y mensaje principal.'
+};
+
+export const INTRO_VIDEO_CONFIGS = [
+    INTRO_VIDEO_CONFIG,
+    INTRO_VIDEO_CONFIG_2TIMOTHY,
+    INTRO_VIDEO_CONFIG_MICAH
+];
+
+export function getIntroVideoConfig(dateStr) {
+    return INTRO_VIDEO_CONFIGS.find(config => dateStr >= config.startDate && dateStr <= config.endDate) || null;
+}
+
+export function shouldShowIntroVideo(dateStr) {
+    return INTRO_VIDEO_CONFIGS.some(config => dateStr >= config.startDate && dateStr <= config.endDate);
 }
 
 export const BADGE_LEVELS = [

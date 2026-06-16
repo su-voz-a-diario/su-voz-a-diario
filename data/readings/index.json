@@ -593,5 +593,439 @@
     "bookId": "mic",
     "month": "2026-06",
     "file": "data/readings/2026-06.json"
+  },
+  {
+    "date": "2026-07-01",
+    "reference": "Salmos 100:1-5",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-02",
+    "reference": "Salmos 101:1-8",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-03",
+    "reference": "Salmos 102:1-11",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-04",
+    "reference": "Salmos 102:12-28",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-05",
+    "reference": "Salmos 103:1-22",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-06",
+    "reference": "Salmos 104:1-18",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-07",
+    "reference": "Salmos 104:19-35",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-08",
+    "reference": "Salmos 105:1-22",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-09",
+    "reference": "Salmos 105:23-45",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-10",
+    "reference": "Salmos 106:1-18",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-11",
+    "reference": "Salmos 106:19-39",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-12",
+    "reference": "Salmos 106:40-48",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-13",
+    "reference": "Salmos 107:1-22",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-14",
+    "reference": "Salmos 107:23-43",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-15",
+    "reference": "Salmos 108:1-13",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-16",
+    "reference": "Salmos 109:1-20",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-17",
+    "reference": "Salmos 109:21-31",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-18",
+    "reference": "Salmos 110:1-7",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-19",
+    "reference": "Salmos 111:1-10",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-20",
+    "reference": "Salmos 112:1-10",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-21",
+    "reference": "Salmos 113:1-9",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-22",
+    "reference": "Salmos 114:1-8",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-23",
+    "reference": "Salmos 115:1-18",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-24",
+    "reference": "Salmos 116:1 – 117:2",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-25",
+    "reference": "Salmos 118:1-29",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-26",
+    "reference": "Salmos 119:1-16",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-27",
+    "reference": "Salmos 119:17-32",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-28",
+    "reference": "Salmos 119:33-48",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-29",
+    "reference": "Salmos 119:49-64",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-30",
+    "reference": "Salmos 119:65-80",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-07-31",
+    "reference": "Salmos 119:81-96",
+    "bookId": "psa",
+    "month": "2026-07",
+    "file": "data/readings/julio-2026.json"
+  },
+  {
+    "date": "2026-08-01",
+    "reference": "Salmos 119:97-112",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-02",
+    "reference": "Salmos 119:113-128",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-03",
+    "reference": "Salmos 119:129-144",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-04",
+    "reference": "Salmos 119:145-160",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-05",
+    "reference": "Salmos 119:161-176",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-06",
+    "reference": "Salmos 120:1 – 121:8",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-07",
+    "reference": "Salmos 122:1 – 123:4",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-08",
+    "reference": "Salmos 124:1 – 125:5",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-09",
+    "reference": "Salmos 126:1 – 127:5",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-10",
+    "reference": "Salmos 128:1 – 129:8",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-11",
+    "reference": "Salmos 130:1 – 131:3",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-12",
+    "reference": "Salmos 132:1-18",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-13",
+    "reference": "Salmos 133:1 – 134:3",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-14",
+    "reference": "Salmos 135:1-21",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-15",
+    "reference": "Salmos 136:1-15",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-16",
+    "reference": "Salmos 136:16-26",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-17",
+    "reference": "Salmos 137:1-9",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-18",
+    "reference": "Salmos 138:1-8",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-19",
+    "reference": "Salmos 139:1-12",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-20",
+    "reference": "Salmos 139:13-24",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-21",
+    "reference": "Salmos 140:1-13",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-22",
+    "reference": "Salmos 141:1-10",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-23",
+    "reference": "Salmos 142:1-7",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-24",
+    "reference": "Salmos 143:1-12",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-25",
+    "reference": "Salmos 144:1-15",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-26",
+    "reference": "Salmos 145:1-21",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-27",
+    "reference": "Salmos 146:1-10",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-28",
+    "reference": "Salmos 147:1-20",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-29",
+    "reference": "Salmos 148:1-14",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-30",
+    "reference": "Salmos 149:1-9",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
+  },
+  {
+    "date": "2026-08-31",
+    "reference": "Salmos 150:1-6",
+    "bookId": "psa",
+    "month": "2026-08",
+    "file": "data/readings/2026-08.json"
   }
 ]

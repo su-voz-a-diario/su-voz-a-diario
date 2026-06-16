@@ -159,6 +159,9 @@ export function calculateBookProgress(book, readings, readDates) {
     const readDateSet = new Set(readDates);
     const readChapters = new Set();
     const hasBookIdMatches = readings.some(reading => reading.bookId === book.id);
+    const startChapter = book.startChapter || 1;
+    const endChapter = book.endChapter || book.chapters;
+    const totalChapters = endChapter - startChapter + 1;
 
     readings.forEach(reading => {
         const matchesBookId = reading.bookId === book.id;
@@ -168,7 +171,9 @@ export function calculateBookProgress(book, readings, readDates) {
 
         if (readDateSet.has(reading.date) && matchesBook) {
             const chapterNumber = extractFirstChapterNumber(reading.reference);
-            if (chapterNumber) readChapters.add(chapterNumber);
+            if (chapterNumber && chapterNumber >= startChapter && chapterNumber <= endChapter) {
+                readChapters.add(chapterNumber);
+            }
         }
     });
 
@@ -176,9 +181,11 @@ export function calculateBookProgress(book, readings, readDates) {
 
     return {
         leidos,
-        total: book.chapters,
-        porcentaje: calculateProgress(leidos.length, book.chapters),
-        libroNombre: book.name
+        total: totalChapters,
+        porcentaje: calculateProgress(leidos.length, totalChapters),
+        libroNombre: book.name,
+        startChapter,
+        endChapter
     };
 }
 

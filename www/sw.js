@@ -1,4 +1,4 @@
-const APP_VERSION = 'v84';
+const APP_VERSION = 'v89';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,11 +6,20 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=84',
-  './css/styles.css?v=84',
-  './js/app.js?v=84',
+  './manifest.json?v=89',
+  './css/styles.css?v=89',
+  './js/app.js?v=89',
   './js/core/constants.js',
   './js/core/defaults.js',
+  './js/bible/bibleModel.js',
+  './js/bible/bibleErrors.js',
+  './js/bible/bibleBookIds.js',
+  './js/bible/bibleInternalTest.js',
+  './js/bible/BibleApiClient.js',
+  './js/bible/BibleRepository.js',
+  './js/bible/FirebaseBibleApiClient.js',
+  './js/bible/LocalRv1909Provider.js',
+  './js/bible/RemoteBibleProvider.js',
   './js/services/storageService.js',
   './js/utils/dates.js',
   './js/utils/dom.js',
@@ -23,6 +32,9 @@ const STATIC_ASSETS = [
   './data/readings/2026-04.json',
   './data/readings/2026-05.json',
   './data/readings/2026-06.json',
+  './data/readings/julio-2026.json',
+  './data/readings/2026-07.json',
+  './data/readings/2026-08.json',
   './data/rv1909.json',
   './icons/icon-48.png',
   './icons/icon-180.png',

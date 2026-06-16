@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "112607423194",
+    "project_id": "su-voz-a-diario-v2-f3a87",
+    "storage_bucket": "su-voz-a-diario-v2-f3a87.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:112607423194:android:ed6d4170292e47d2ac53e3",
+        "android_client_info": {
+          "package_name": "app.suvoz"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlr9Umx2M9lw9lbeax1pIKIN-fANhYCtU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

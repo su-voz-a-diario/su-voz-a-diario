@@ -1,15 +1,24 @@
 {
+  "type": "module",
   "scripts": {
     "android:copy": "rsync -av --delete --exclude 'node_modules' --exclude '.git' --exclude 'android' --exclude 'ios' --exclude 'www' --exclude '.DS_Store' ./ www/",
     "android:sync": "npm run android:copy && npx cap sync android",
-    "android:open": "npm run android:sync && npx cap open android"
+    "android:open": "npm run android:sync && npx cap open android",
+    "firebase:emulators": "firebase emulators:start --only functions,firestore",
+    "firebase:deploy:functions": "firebase deploy --only functions",
+    "firebase:deploy:rules": "firebase deploy --only firestore:rules",
+    "test:bible-phase3": "node scripts/validate-bible-phase3.mjs",
+    "test:bible-phase6": "node scripts/validate-bible-phase6.mjs",
+    "test:bible-phase7": "node scripts/validate-bible-phase7.mjs"
   },
   "dependencies": {
     "@capacitor-community/text-to-speech": "^8.0.0",
     "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/push-notifications": "^8.1.1",
     "@capacitor/share": "^8.0.1"
   },
   "devDependencies": {

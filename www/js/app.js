@@ -42,8 +42,7 @@ import {
 
 import {
     shouldShowIntroVideo,
-    shouldShowTemporaryHomeIntro,
-    TEMPORARY_HOME_INTRO_CONFIG
+    getIntroVideoConfig
 } from './core/constants.js';
 
 import {
@@ -56,6 +55,36 @@ import {
     set as storageSet,
     remove as storageRemove
 } from './services/storageService.js';
+
+import {
+    BibleRepository
+} from './bible/BibleRepository.js';
+
+import {
+    LocalRv1909Provider,
+    RV1909_VERSION_ID
+} from './bible/LocalRv1909Provider.js';
+
+import {
+    REMOTE_BIBLE_VERSIONS,
+    RemoteBibleProvider
+} from './bible/RemoteBibleProvider.js';
+
+import {
+    FirebaseBibleApiClient
+} from './bible/FirebaseBibleApiClient.js';
+
+import {
+    BIBLE_REMOTE_INTERNAL_TEST,
+    createBibleReadingKey,
+    getInternalBibleTestVersion,
+    parseBibleReadingKey,
+    resolveInternalBibleVersion,
+    setBibleAdminState,
+    canAccessRemoteBibleVersions
+} from './bible/bibleInternalTest.js';
+
+window.BIBLE_REMOTE_INTERNAL_TEST = BIBLE_REMOTE_INTERNAL_TEST;
 
 function getFirebaseFunction(name) {
     const fn = window.firebaseFns?.[name];
@@ -90,124 +119,45 @@ const LOCAL_BIBLE_PATH = './data/rv1909.json';
 const STRONG_HEBREW_PATH = './data/strong-hebrew-clean.json';
 const STRONG_GREEK_PATH = './data/strong-greek-dictionary.json';
 
-let rv1909BibleCache = null;
-
-const RV1909_BOOK_MAP = {
-    gen: 'gn',
-    exo: 'ex',
-    lev: 'lv',
-    num: 'nm',
-    deu: 'dt',
-    jos: 'js',
-    jdg: 'jud',
-    rut: 'rt',
-    '1sa': '1sm',
-    '2sa': '2sm',
-    '1ki': '1kgs',
-    '2ki': '2kgs',
-    '1ch': '1ch',
-    '2ch': '2ch',
-    ezr: 'ezr',
-    neh: 'ne',
-    est: 'et',
-    job: 'job',
-    psa: 'ps',
-    pro: 'prv',
-    ecc: 'ec',
-    sng: 'so',
-    isa: 'is',
-    jer: 'jr',
-    lam: 'lm',
-    ezk: 'ez',
-    dan: 'dn',
-    hos: 'ho',
-    jol: 'jl',
-    amo: 'am',
-    oba: 'ob',
-    jon: 'jn',
-    mic: 'mi',
-    nam: 'na',
-    hab: 'hk',
-    zep: 'zp',
-    hag: 'hg',
-    zec: 'zc',
-    mal: 'ml',
-    mat: 'mt',
-    mrk: 'mk',
-    luk: 'lk',
-    jhn: 'jo',
-    act: 'act',
-    rom: 'rm',
-    '1co': '1co',
-    '2co': '2co',
-    gal: 'gl',
-    eph: 'eph',
-    php: 'ph',
-    col: 'cl',
-    '1th': '1ts',
-    '2th': '2ts',
-    '1ti': '1tm',
-    '2ti': '2tm',
-    tit: 'tt',
-    phm: 'phm',
-    heb: 'hb',
-    jas: 'jm',
-    '1pe': '1pe',
-    '2pe': '2pe',
-    '1jn': '1jo',
-    '2jn': '2jo',
-    '3jn': '3jo',
-    jud: 'jd',
-    rev: 're'
-};
+const localRv1909Provider = new LocalRv1909Provider({
+    dataPath: LOCAL_BIBLE_PATH
+});
+const firebaseBibleApiClient = new FirebaseBibleApiClient();
+const remoteBibleProvider = new RemoteBibleProvider({
+    versions: REMOTE_BIBLE_VERSIONS,
+    client: firebaseBibleApiClient,
+    canUseDisabledVersion: versionId => (
+        canAccessRemoteBibleVersions()
+    )
+});
+const bibleRepository = new BibleRepository([
+    localRv1909Provider,
+    remoteBibleProvider
+], {
+    versionResolver: versionId => versionId
+});
 
 async function loadRV1909Bible() {
-    if (rv1909BibleCache) return rv1909BibleCache;
-
-    const response = await fetch(LOCAL_BIBLE_PATH);
-
-    if (!response.ok) {
-        throw new Error('No se pudo cargar la Biblia RV1909 local.');
-    }
-
-    const data = await response.json();
-
-    if (!Array.isArray(data)) {
-        throw new Error('El archivo RV1909 no tiene el formato esperado.');
-    }
-
-    rv1909BibleCache = data;
-    return rv1909BibleCache;
+    return localRv1909Provider.loadBible();
 }
 
 async function getBibleChapter(bookId, chapterNumber) {
-    const bible = await loadRV1909Bible();
-    const localAbbrev = RV1909_BOOK_MAP[bookId];
-
-    if (!localAbbrev) {
-        throw new Error(`No hay equivalencia RV1909 para el libro: ${bookId}`);
-    }
-
-    const book = bible.find(item => item.abbrev === localAbbrev);
-
-    if (!book) {
-        throw new Error(`No se encontró el libro en RV1909: ${localAbbrev}`);
-    }
-
-    const chapter = book.chapters[Number(chapterNumber) - 1];
-
-    if (!Array.isArray(chapter)) {
-        throw new Error(`No se encontró el capítulo ${chapterNumber}.`);
-    }
+    const versionId = window.App?.currentBibleVersion || RV1909_VERSION_ID;
+    const chapterData = await bibleRepository.getChapter(
+        versionId,
+        bookId,
+        chapterNumber
+    );
 
 const content = `
         <div class="verse-container">
-            ${chapter.map((text, index) => {
-const verseNumber = index + 1;
+            ${chapterData.verses.map(verse => {
+const verseNumber = verse.number;
+const text = verse.text;
 const safeText = escapeBibleHtml(text);
 
 const strongTokens = window.App?.getVerseStrongTokens(
-    bookId,
+    chapterData.bookId,
     chapterNumber,
     verseNumber
 );
@@ -233,9 +183,7 @@ const tokenizedText = window.App?.tokenizeVerseText(
     `;
 
     return {
-        id: `${bookId}.${chapterNumber}`,
-        bookId,
-        chapterNumber: Number(chapterNumber),
+        ...chapterData,
         content
     };
 }
@@ -258,6 +206,8 @@ const App = {
     monthlyReadingsLoadPromises: {},
     currentView: 'home',
     currentVersion: 'rvr60',
+    currentBibleVersion: 'rv1909',
+    isBibleAudioPlaying: false,
     bibleBooks: [
     { id: 'gen', name: 'Génesis', chapters: 50 },
     { id: 'exo', name: 'Éxodo', chapters: 40 },
@@ -277,7 +227,7 @@ const App = {
     { id: 'neh', name: 'Nehemías', chapters: 13 },
     { id: 'est', name: 'Ester', chapters: 10 },
     { id: 'job', name: 'Job', chapters: 42 },
-    { id: 'psa', name: 'Salmos', chapters: 150 },
+    { id: 'psa', name: 'Salmos', chapters: 150, startChapter: 100, endChapter: 150 },
     { id: 'pro', name: 'Proverbios', chapters: 31 },
     { id: 'ecc', name: 'Eclesiastés', chapters: 12 },
     { id: 'sng', name: 'Cantares', chapters: 8 },
@@ -528,6 +478,7 @@ const App = {
     bibleReaderPickerOpen: false,
     bibleReaderPickerTestament: 'old',
     bibleReaderPickerBook: null,
+    bibleVersionPickerOpen: false,
     bibleReadingSettingsOpen: false,
     bibleReadingSettings: {
         textSize: 'normal',
@@ -629,6 +580,13 @@ _lastAuthError: null,
     if (savedVersion) {
         this.currentVersion = savedVersion;
     }
+
+    const savedBibleVersion = localStorage.getItem('current-bible-version');
+    if (savedBibleVersion) {
+        this.currentBibleVersion = savedBibleVersion;
+    } else {
+        this.currentBibleVersion = 'rv1909';
+    }
        
 this.initTheme();
 this.initNotifications();
@@ -647,7 +605,39 @@ this.initAuth().then(async () => {
     try {
         if (!this.currentUser?.uid) {
             console.warn('[Community] Badge omitido: no hay usuario autenticado');
+            setBibleAdminState(false);
             return;
+        }
+
+        let isAdmin = false;
+        try {
+            const getIdTokenResult = window.firebaseFns?.getIdTokenResult;
+            if (this.currentUser) {
+                const tokenResult = typeof getIdTokenResult === 'function'
+                    ? await getIdTokenResult(this.currentUser, true)
+                    : await this.currentUser.getIdTokenResult(true);
+                isAdmin = tokenResult?.claims?.bibleAdmin === true;
+            }
+        } catch (authErr) {
+            console.warn('[Auth] Error al verificar claims de bibleAdmin:', authErr);
+        }
+
+        setBibleAdminState(isAdmin);
+
+        if (isAdmin) {
+            if (this.currentView === 'bible-reading') {
+                this.handleRoute().catch(err => console.error('[Route] Error al refrescar versión remota para administrador:', err));
+            }
+        } else {
+            const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
+            if (REMOTE_BIBLE_IDS.includes(String(this.currentBibleVersion).toLowerCase())) {
+                console.warn('[Auth] Acceso denegado a versión remota. Restableciendo a RV1909.');
+                this.currentBibleVersion = 'rv1909';
+                localStorage.setItem('current-bible-version', 'rv1909');
+                if (this.currentView === 'bible-reading') {
+                    this.handleRoute().catch(err => console.error('[Route] Error al restablecer versión:', err));
+                }
+            }
         }
 
         await this.subscribeToCommunityActivity();
@@ -726,6 +716,11 @@ console.log('[App] Inicialización completada');
 
         if (this.bibleReaderPickerOpen) {
             this.closeBibleReaderPicker();
+            return;
+        }
+
+        if (this.bibleVersionPickerOpen) {
+            this.closeBibleVersionPicker();
             return;
         }
 
@@ -1257,6 +1252,8 @@ getProgresoLibroVisual: function(dateStr = this.getHomeViewingDate(), reading = 
     if (!libroActual) return '';
     
     const progreso = this.getProgresoLibro(libroActual.id);
+    const startChapter = progreso.startChapter || 1;
+    const endChapter = progreso.endChapter || progreso.total;
     const total = progreso.total;
     const leidos = progreso.leidos.length;
     const ultimoLeido = leidos > 0 ? Math.max(...progreso.leidos) : 0;
@@ -1264,10 +1261,16 @@ getProgresoLibroVisual: function(dateStr = this.getHomeViewingDate(), reading = 
     // Crear visualización de los capítulos como un scroll horizontal
     let html = '<div class="pergamino-libro">';
     html += `<div class="pergamino-titulo">📖 ${progreso.libroNombre}</div>`;
-    html += `<div class="pergamino-subtitulo">Capítulo ${ultimoLeido} de ${total}</div>`;
+
+    // Subtítulo adaptado para rangos de lectura (ej. Salmos 100-150)
+    let subtituloText = `Capítulo ${ultimoLeido || startChapter} de ${endChapter}`;
+    if (startChapter > 1) {
+        subtituloText += ` (${leidos} de ${total} meditados)`;
+    }
+    html += `<div class="pergamino-subtitulo">${subtituloText}</div>`;
     html += '<div class="pergamino-capitulos">';
     
-    for (let i = 1; i <= total; i++) {
+    for (let i = startChapter; i <= endChapter; i++) {
         const leido = progreso.leidos.includes(i);
         const clase = leido ? 'capitulo-leido' : 'capitulo-pendiente';
         const titulo = leido ? `Capítulo ${i} - Meditado ✓` : `Capítulo ${i} - Pendiente`;
@@ -3927,7 +3930,8 @@ getSelectedTextSource: function() {
 
 getSelectedTextVersionLabel: function() {
     if (this.getSelectedTextSource() === 'bible') {
-        return this.getBibleVersionLabel('rv1909');
+        return this.currentBibleChapterData?.versionLabel ||
+            this.getBibleVersionLabel(this.currentBibleVersion);
     }
 
     return this.getBibleVersionLabel(this.currentVersion);
@@ -3975,14 +3979,14 @@ getSelectedVerseCopyData: async function() {
     const version = this.getSelectedTextVersionLabel() || 'Biblia';
 
     if (this.getSelectedTextSource() === 'bible') {
-        const match = String(this.currentSelectionDate || '').match(/^bible-(.+)-(\d+)$/);
-        const bookId = match?.[1] || '';
+        const readingKey = parseBibleReadingKey(this.currentSelectionDate);
+        const bookId = readingKey?.bookId || '';
         const book = this.bibleBooks.find(item => item.id === bookId);
 
         return {
             text,
             book: book?.name || bookId || 'Biblia',
-            chapter: match?.[2] || '',
+            chapter: readingKey?.chapter || '',
             verse,
             version: version || 'RV1909'
         };
@@ -4060,7 +4064,10 @@ getBibleVersionLabel: function(versionKey) {
     const labels = {
         rvr60: 'RVR60',
         ntv: 'NTV',
-        rv1909: 'RV1909'
+        rv1909: 'Reina-Valera 1909',
+        nbla: 'NBLA',
+        nvi: 'NVI',
+        'biblia-libre': 'Biblia Libre'
     };
 
     return labels[normalized] || String(versionKey || '').trim().toUpperCase();
@@ -4068,13 +4075,13 @@ getBibleVersionLabel: function(versionKey) {
 
 getBibleSelectionReferenceLabel: function() {
     const dateStr = this.currentSelectionDate || '';
-    const match = dateStr.match(/^bible-(.+)-(\d+)$/);
+    const readingKey = parseBibleReadingKey(dateStr);
 
-    if (!match) {
+    if (!readingKey) {
         return 'Biblia';
     }
 
-    const [, bookId, chapter] = match;
+    const { bookId, chapter } = readingKey;
     const book = this.bibleBooks.find(item => item.id === bookId);
     const bookName = book?.name || bookId;
     const selectedVerses = Array.from(
@@ -4161,9 +4168,9 @@ openStrongDictionaryFromSelectedVerse: function() {
     const verseText = this.currentSelectedText || '';
     const reference = this.getBibleSelectionReferenceLabel();
     const keywords = this.extractStrongVerseKeywords(verseText);
-    const dateMatch = String(this.currentSelectionDate || '').match(/^bible-(.+)-(\d+)$/);
-    const bookId = dateMatch ? dateMatch[1] : '';
-    const chapter = dateMatch ? Number(dateMatch[2]) : '';
+    const readingKey = parseBibleReadingKey(this.currentSelectionDate);
+    const bookId = readingKey?.bookId || '';
+    const chapter = readingKey?.chapter || '';
     const verse = Number(this.currentSelectedVerse?.getAttribute('data-verse-number')) || '';
 
     if (!verseText.trim()) {
@@ -5739,17 +5746,10 @@ renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
 
     const key = `${bookName}-${chapterNumber}`;
     const reference = `${bookName} ${chapterNumber}`;
-    const isSameChapter = this.bibleChapterVoice.key === key;
-    const status = isSameChapter ? this.bibleChapterVoice.status : 'idle';
-    const isReading = status === 'speaking';
-    const isPaused = status === 'paused';
-    const label = isReading
-        ? 'Escuchando capítulo'
-        : (isPaused ? 'Continuar capítulo' : 'Escuchar capítulo');
-    const icon = isReading ? 'pause' : 'play';
-    const ariaLabel = isReading
-        ? 'Pausar capítulo en voz alta'
-        : (isPaused ? 'Continuar capítulo en voz alta' : 'Escuchar capítulo en voz alta');
+    const isReading = this.isBibleAudioPlaying;
+    const label = isReading ? 'Detener capítulo' : 'Escuchar capítulo';
+    const icon = isReading ? 'stop' : 'play';
+    const ariaLabel = isReading ? 'Detener capítulo en voz alta' : 'Escuchar capítulo en voz alta';
 
     return `
         <div class="daily-reading-voice" data-bible-voice-key="${this.escapeHtml(key)}">
@@ -5764,17 +5764,6 @@ renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
                 <span class="daily-reading-voice-icon daily-reading-voice-icon-${icon}" aria-hidden="true"></span>
                 <span class="daily-reading-voice-label">${label}</span>
             </button>
-            ${isReading || isPaused ? `
-                <button
-                    class="daily-reading-voice-stop"
-                    type="button"
-                    data-action="bible-chapter-voice-stop"
-                    aria-label="Detener capítulo en voz alta"
-                    title="Detener"
-                >
-                    <span aria-hidden="true"></span>
-                </button>
-            ` : ''}
         </div>
     `;
 },
@@ -5786,16 +5775,18 @@ startBibleChapterVoice: async function(key, text, reference = '') {
     this.stopDailyReadingVoice(true);
     this.stopBibleChapterVoice(true);
 
-    if (this.isNativeTextToSpeechAvailable()) {
-        this.bibleChapterVoice = { utterance: null, status: 'speaking', key, reference };
-        this.updateBibleChapterVoiceUI();
+    this.isBibleAudioPlaying = true;
+    this.bibleChapterVoice = { utterance: null, status: 'speaking', key, reference };
+    this.updateBibleChapterVoiceUI();
 
+    if (this.isNativeTextToSpeechAvailable()) {
         try {
             await this.speakWithNativeTextToSpeech(cleanText);
         } catch (error) {
             console.warn('[Bible Voice] Error iniciando lectura nativa:', error);
         }
 
+        this.isBibleAudioPlaying = false;
         this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
         this.updateBibleChapterVoiceUI();
         return;
@@ -5803,6 +5794,9 @@ startBibleChapterVoice: async function(key, text, reference = '') {
 
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
         this.showToast('La lectura en voz alta no está disponible en este navegador');
+        this.isBibleAudioPlaying = false;
+        this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
+        this.updateBibleChapterVoiceUI();
         return;
     }
 
@@ -5819,6 +5813,7 @@ startBibleChapterVoice: async function(key, text, reference = '') {
         utterance.onend = () => {
             if (this.bibleChapterVoice.utterance !== utterance) return;
 
+            this.isBibleAudioPlaying = false;
             this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
             this.updateBibleChapterVoiceUI();
         };
@@ -5827,6 +5822,7 @@ startBibleChapterVoice: async function(key, text, reference = '') {
             if (this.bibleChapterVoice.utterance !== utterance) return;
 
             console.warn('[Bible Voice] No se pudo leer el capítulo:', error);
+            this.isBibleAudioPlaying = false;
             this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
             this.updateBibleChapterVoiceUI();
         };
@@ -5836,39 +5832,10 @@ startBibleChapterVoice: async function(key, text, reference = '') {
         this.updateBibleChapterVoiceUI();
     } catch (error) {
         console.warn('[Bible Voice] Error iniciando lectura:', error);
+        this.isBibleAudioPlaying = false;
         this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
         this.updateBibleChapterVoiceUI();
     }
-},
-
-pauseOrResumeBibleChapterVoice: function(key, text, reference = '') {
-    if (this.isNativeTextToSpeechAvailable()) {
-        if (this.bibleChapterVoice.status === 'speaking' && this.bibleChapterVoice.key === key) {
-            this.stopBibleChapterVoice();
-            return;
-        }
-
-        this.startBibleChapterVoice(key, text, reference);
-        return;
-    }
-
-    if (!('speechSynthesis' in window)) return;
-
-    if (this.bibleChapterVoice.status === 'speaking' && this.bibleChapterVoice.key === key) {
-        window.speechSynthesis.pause();
-        this.bibleChapterVoice.status = 'paused';
-        this.updateBibleChapterVoiceUI();
-        return;
-    }
-
-    if (this.bibleChapterVoice.status === 'paused' && this.bibleChapterVoice.key === key) {
-        window.speechSynthesis.resume();
-        this.bibleChapterVoice.status = 'speaking';
-        this.updateBibleChapterVoiceUI();
-        return;
-    }
-
-    this.startBibleChapterVoice(key, text, reference);
 },
 
 stopBibleChapterVoice: function(silent = false) {
@@ -5884,6 +5851,7 @@ stopBibleChapterVoice: function(silent = false) {
         }
     }
 
+    this.isBibleAudioPlaying = false;
     this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
     this.updateBibleChapterVoiceUI();
 },
@@ -5895,105 +5863,35 @@ updateBibleChapterVoiceUI: function() {
         const mainBtn = control.querySelector('[data-action="bible-chapter-voice-toggle"]');
 
         if (mainBtn) {
-            const isSameChapter = this.bibleChapterVoice.key === control.getAttribute('data-bible-voice-key');
-            const status = isSameChapter ? this.bibleChapterVoice.status : 'idle';
-            const isReading = status === 'speaking';
-            const isPaused = status === 'paused';
+            const isReading = this.isBibleAudioPlaying;
             const icon = mainBtn.querySelector('.daily-reading-voice-icon');
             const label = mainBtn.querySelector('.daily-reading-voice-label');
 
             if (icon) {
-                icon.className = `daily-reading-voice-icon daily-reading-voice-icon-${isReading ? 'pause' : 'play'}`;
+                icon.className = `daily-reading-voice-icon daily-reading-voice-icon-${isReading ? 'stop' : 'play'}`;
             }
 
             if (label) {
                 label.textContent = isReading
-                    ? 'Escuchando capítulo'
-                    : (isPaused ? 'Continuar capítulo' : 'Escuchar capítulo');
+                    ? 'Detener capítulo'
+                    : 'Escuchar capítulo';
             }
 
             mainBtn.setAttribute(
                 'aria-label',
                 isReading
-                    ? 'Pausar capítulo en voz alta'
-                    : (isPaused ? 'Continuar capítulo en voz alta' : 'Escuchar capítulo en voz alta')
+                    ? 'Detener capítulo en voz alta'
+                    : 'Escuchar capítulo en voz alta'
             );
 
             const currentStopBtn = control.querySelector('[data-action="bible-chapter-voice-stop"]');
-            if ((isReading || isPaused) && !currentStopBtn) {
-                control.insertAdjacentHTML('beforeend', `
-                    <button
-                        class="daily-reading-voice-stop"
-                        type="button"
-                        data-action="bible-chapter-voice-stop"
-                        aria-label="Detener capítulo en voz alta"
-                        title="Detener"
-                    >
-                        <span aria-hidden="true"></span>
-                    </button>
-                `);
-            } else if (!isReading && !isPaused && currentStopBtn) {
+            if (currentStopBtn) {
                 currentStopBtn.remove();
             }
         }
     }
 
-    this.updateBibleChapterMiniPlayer();
     this.updateBibleReaderContextBarUI();
-},
-
-renderBibleChapterMiniPlayer: function() {
-    const { status, key, reference } = this.bibleChapterVoice;
-    const isReading = status === 'speaking';
-    const isPaused = status === 'paused';
-
-    if (!key || (!isReading && !isPaused)) return '';
-
-    return `
-        <div class="bible-mini-player" id="bibleChapterMiniPlayer" role="region" aria-label="Reproductor de capítulo bíblico">
-            <div class="bible-mini-player-meta">
-                <span>Audio Biblia</span>
-                <strong>${this.escapeHtml(reference || 'Capítulo bíblico')}</strong>
-            </div>
-            <div class="bible-mini-player-actions">
-                <button
-                    class="bible-mini-player-btn primary"
-                    type="button"
-                    data-action="bible-chapter-voice-toggle"
-                    data-key="${this.escapeHtml(key)}"
-                    data-reference="${this.escapeHtml(reference || '')}"
-                    aria-label="${isReading ? 'Pausar capítulo en voz alta' : 'Continuar capítulo en voz alta'}"
-                >
-                    <span class="daily-reading-voice-icon daily-reading-voice-icon-${isReading ? 'pause' : 'play'}" aria-hidden="true"></span>
-                </button>
-                <button
-                    class="bible-mini-player-btn"
-                    type="button"
-                    data-action="bible-chapter-voice-stop"
-                    aria-label="Detener capítulo en voz alta"
-                >
-                    <span aria-hidden="true"></span>
-                </button>
-            </div>
-        </div>
-    `;
-},
-
-updateBibleChapterMiniPlayer: function() {
-    const existing = document.getElementById('bibleChapterMiniPlayer');
-    const html = this.renderBibleChapterMiniPlayer();
-
-    if (!html) {
-        existing?.remove();
-        return;
-    }
-
-    if (existing) {
-        existing.outerHTML = html;
-        return;
-    }
-
-    document.body.insertAdjacentHTML('beforeend', html);
 },
 
 startDailyReadingVoice: async function(date, text) {
@@ -6615,28 +6513,7 @@ this.rerenderCurrentReadingView(dateStr, true);
     
    getTodayDateStr,
 
-renderTemporaryHomeIntro: function(date = new Date()) {
-    const mexicoCityDate = getDateStrInTimeZone(date);
 
-    if (!shouldShowTemporaryHomeIntro(mexicoCityDate)) return '';
-
-    const config = TEMPORARY_HOME_INTRO_CONFIG;
-
-    return `
-        <a
-            class="temporary-home-intro-card"
-            href="${config.url}"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="${config.buttonLabel}: ${config.title}"
-        >
-            <span class="temporary-home-intro-kicker">Video introductorio</span>
-            <span class="temporary-home-intro-title">${config.title}</span>
-            <span class="temporary-home-intro-description">${config.description}</span>
-            <span class="temporary-home-intro-button">${config.buttonLabel}</span>
-        </a>
-    `;
-},
 
 scrollWindowInstantly: function(top = 0) {
     const html = document.documentElement;
@@ -6721,8 +6598,8 @@ restoreCalendarPosition: function() {
 
         // Video intro (si aplica)
         const showIntroVideo = shouldShowIntroVideo(reading.date);
-        
-        const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
+        const introVideoConfig = showIntroVideo ? getIntroVideoConfig(reading.date) : null;
+        const introVideoHtml = introVideoConfig ? renderIntroVideoHtml(introVideoConfig) : '';
 
         const currentIndex = reading ? this.getReadingIndexByDate(reading.date) : -1;
         const hasPrev = currentIndex > 0;
@@ -6731,8 +6608,6 @@ restoreCalendarPosition: function() {
         const readingLabel = isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día';
 
         this.$content.innerHTML = `
-
-            ${this.renderTemporaryHomeIntro()}
 
             ${this.renderViewHeader(
                 'Lectura bíblica del día',
@@ -6848,8 +6723,8 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
         const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
 
        const showIntroVideo = shouldShowIntroVideo(reading.date);
-
-const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
+       const introVideoConfig = showIntroVideo ? getIntroVideoConfig(reading.date) : null;
+       const introVideoHtml = introVideoConfig ? renderIntroVideoHtml(introVideoConfig) : '';
         const progressHtml = isHome
             ? this.getProgresoLibroVisual(reading.date, reading)
             : '';
@@ -6863,8 +6738,6 @@ const introVideoHtml = showIntroVideo ? renderIntroVideoHtml() : '';
             : '📖 Su voz este día';
         
         this.$content.innerHTML = `
-
-    ${isHome ? this.renderTemporaryHomeIntro() : ''}
 
     ${isHome ? this.renderViewHeader(
         'Lectura bíblica del día',
@@ -7850,7 +7723,7 @@ renderBible: function() {
     this.$content.innerHTML = `
         <div class="bible-library-view">
             <div class="bible-library-hero">
-                <div class="bible-library-kicker">Reina-Valera 1909</div>
+                <div class="bible-library-kicker">${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}</div>
                 <h2>Biblia</h2>
                 <p>Lee, busca y profundiza en la Palabra.</p>
 
@@ -7968,12 +7841,11 @@ renderBible: function() {
 },
 
 parseBibleMemoryDate: function(dateStr) {
-    const match = String(dateStr || '').match(/^bible-(.+)-(\d+)$/);
+    const readingKey = parseBibleReadingKey(dateStr);
 
-    if (!match) return null;
+    if (!readingKey) return null;
 
-    const bookId = match[1];
-    const chapter = Number(match[2]);
+    const { versionId, bookId, chapter } = readingKey;
     const book = this.bibleBooks.find(item => item.id === bookId);
 
     if (!book || !Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) {
@@ -7982,6 +7854,7 @@ parseBibleMemoryDate: function(dateStr) {
 
     return {
         date: dateStr,
+        versionId,
         bookId,
         chapter,
         bookName: book.name,
@@ -8343,12 +8216,81 @@ closeBibleReaderPicker: function() {
     this.mountBibleReaderPicker();
 },
 
+renderBibleVersionPicker: function() {
+    if (!this.bibleVersionPickerOpen) return '';
+
+    const versions = [
+        { id: 'rv1909', label: 'Reina-Valera 1909' },
+        { id: 'nbla', label: 'NBLA' },
+        { id: 'nvi', label: 'NVI' },
+        { id: 'biblia-libre', label: 'Biblia Libre' }
+    ];
+
+    return `
+        <div id="bible-version-picker-sheet" class="bible-picker-sheet version-picker-sheet" role="dialog" aria-modal="true" aria-labelledby="version-picker-title">
+            <div class="bible-picker-backdrop" data-action="close-version-picker"></div>
+            <section class="bible-picker-panel">
+                <div class="bible-picker-handle" data-action="close-version-picker"></div>
+                <div class="bible-picker-head">
+                    <div>
+                        <h2 id="version-picker-title">Versión Bíblica</h2>
+                        <p>Seleccionar versión bíblica</p>
+                    </div>
+                    <button class="bible-picker-close" type="button" data-action="close-version-picker" aria-label="Cerrar selector">×</button>
+                </div>
+                <div class="bible-picker-body">
+                    <div class="version-picker-list">
+                        ${versions.map(v => `
+                            <button
+                                class="version-picker-option-btn ${this.currentBibleVersion === v.id ? 'is-active' : ''}"
+                                type="button"
+                                data-action="select-version-option"
+                                data-version-id="${v.id}"
+                            >
+                                <span>${this.escapeHtml(v.label)}</span>
+                                ${this.currentBibleVersion === v.id ? '<span class="version-option-check">✓</span>' : ''}
+                            </button>
+                        `).join('')}
+                    </div>
+                </div>
+            </section>
+        </div>
+    `;
+},
+
+mountBibleVersionPicker: function() {
+    if (!this.$content) return;
+
+    document.body.classList.toggle('bible-version-picker-open', this.bibleVersionPickerOpen);
+
+    const existing = this.$content.querySelector('#bible-version-picker-sheet');
+    if (existing) {
+        existing.remove();
+    }
+
+    if (!this.bibleVersionPickerOpen) return;
+
+    const readerView = this.$content.querySelector('.bible-reader-view');
+    if (readerView) {
+        readerView.insertAdjacentHTML('beforeend', this.renderBibleVersionPicker());
+    }
+},
+
+openBibleVersionPicker: function() {
+    this.bibleVersionPickerOpen = true;
+    this.mountBibleVersionPicker();
+},
+
+closeBibleVersionPicker: function() {
+    this.bibleVersionPickerOpen = false;
+    this.mountBibleVersionPicker();
+},
+
 renderBibleReaderContextBar: function(bookName, chapterNumber) {
-    const key = `${bookName}-${chapterNumber}`;
-    const isSameChapter = this.bibleChapterVoice.key === key;
-    const isReading = isSameChapter && this.bibleChapterVoice.status === 'speaking';
-    const isPaused = isSameChapter && this.bibleChapterVoice.status === 'paused';
-    const audioLabel = isReading ? 'Pausar' : (isPaused ? 'Continuar' : 'Audio');
+    const isReading = this.isBibleAudioPlaying;
+    const audioLabel = isReading ? 'Stop' : 'Audio';
+    const audioIcon = isReading ? '■' : '▶';
+    const audioAriaLabel = isReading ? 'Detener audio del capítulo' : 'Escuchar capítulo';
 
     return `
         <div class="bible-reader-context-bar" role="toolbar" aria-label="Accesos rápidos del lector bíblico">
@@ -8356,9 +8298,9 @@ renderBibleReaderContextBar: function(bookName, chapterNumber) {
                 class="bible-reader-tool ${isReading ? 'is-active' : ''}"
                 type="button"
                 data-action="reader-context-audio"
-                aria-label="${isReading ? 'Pausar audio del capítulo' : 'Escuchar capítulo'}"
+                aria-label="${audioAriaLabel}"
             >
-                <span class="bible-reader-tool-icon" aria-hidden="true">${isReading ? 'Ⅱ' : '▶'}</span>
+                <span class="bible-reader-tool-icon" aria-hidden="true">${audioIcon}</span>
                 <span>${audioLabel}</span>
             </button>
             <button
@@ -8524,7 +8466,11 @@ toggleBibleChapterVoiceFromContext: function() {
     const key = `${book.name}-${chapter}`;
     const text = this.getCleanBibleChapterVoiceText(this.currentBibleChapterData, book.name, chapter);
 
-    this.pauseOrResumeBibleChapterVoice(key, text, `${book.name} ${chapter}`);
+    if (this.isBibleAudioPlaying) {
+        this.stopBibleChapterVoice();
+    } else {
+        this.startBibleChapterVoice(key, text, `${book.name} ${chapter}`);
+    }
 },
 
 renderBibleReading: async function() {
@@ -8543,6 +8489,23 @@ renderBibleReading: async function() {
 
     const previousDisabled = requestedChapter <= 1;
     const nextDisabled = requestedChapter >= requestedBook.chapters;
+
+    const canAccessRemote = canAccessRemoteBibleVersions();
+    const versionSelectorHtml = canAccessRemote ? `
+        <div class="bible-version-select-wrapper">
+            <button
+                id="bible-version-button"
+                class="bible-version-button"
+                type="button"
+                data-action="open-bible-version-picker"
+                aria-label="Seleccionar versión bíblica. Versión actual: ${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}"
+            >
+                ${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))} ▼
+            </button>
+        </div>
+    ` : `
+        <div class="bible-reader-version">${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}</div>
+    `;
 
     const renderReaderShell = (bodyHtml) => `
         <div class="${this.getBibleReaderClassNames()}">
@@ -8600,7 +8563,7 @@ renderBibleReading: async function() {
                     ‹
                 </button>
 
-                <div class="bible-reader-version">Reina-Valera 1909</div>
+                ${versionSelectorHtml}
 
                 <button
                     class="bible-reader-nav-btn"
@@ -8618,6 +8581,7 @@ renderBibleReading: async function() {
             ${this.renderBibleReaderContextBar(requestedBook.name, requestedChapter)}
             ${this.renderBibleReadingSettingsPanel()}
             ${this.renderBibleReaderPicker()}
+            ${this.renderBibleVersionPicker()}
         </div>
     `;
 
@@ -8640,10 +8604,15 @@ renderBibleReading: async function() {
         }
 
         this.currentBibleChapterData = chapterData;
+        const readingDateKey = createBibleReadingKey(
+            chapterData.versionId,
+            requestedBookId,
+            requestedChapter
+        );
 
         this.$content.innerHTML = renderReaderShell(`
             <div class="bible-reader-content">
-                <div class="reading-text-shell" data-reading-date="bible-${requestedBookId}-${requestedChapter}">
+                <div class="reading-text-shell" data-reading-date="${this.escapeHtml(readingDateKey)}">
                     <div class="reading-text bible-api-content selection-surface">
                         ${this.renderBibleChapterVoiceControl(requestedBook.name, requestedChapter)}
                         ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
@@ -8679,13 +8648,17 @@ renderBibleReading: async function() {
             </div>
         `);
 
-        this.restoreHighlightsInDOMForVerses(`bible-${requestedBookId}-${requestedChapter}`);
+        this.restoreHighlightsInDOMForVerses(readingDateKey);
 
         if (this.targetVerse) {
             this.scrollToTargetVerse();
         }
     } catch (error) {
-        console.error('Error cargando capítulo bíblico:', error);
+        const isOffline = error?.code === 'BIBLE_OFFLINE' || navigator.onLine === false;
+
+        if (!isOffline) {
+            console.error('Error cargando capítulo bíblico:', error);
+        }
 
         if (
             this.currentView !== 'bible-reading' ||
@@ -8695,13 +8668,33 @@ renderBibleReading: async function() {
             return;
         }
 
+        const isRemote = this.currentBibleVersion !== 'rv1909';
+
+        let errorMessage = error?.message || 'Intenta nuevamente más tarde.';
+        let actionButtonHtml = `
+            <button class="btn-primary" type="button" data-action="back-to-bible-books" style="margin-top: 20px;">
+                Elegir otro libro
+            </button>
+        `;
+
+        if (isRemote) {
+            if (isOffline) {
+                errorMessage = 'Esta versión requiere conexión a internet.';
+            } else {
+                errorMessage = 'Esta versión no está disponible temporalmente.';
+            }
+            actionButtonHtml = `
+                <button class="btn-primary" type="button" data-action="revert-to-rv1909" style="margin-top: 20px;">
+                    Volver a Reina-Valera 1909
+                </button>
+            `;
+        }
+
         this.$content.innerHTML = renderReaderShell(`
             <div class="empty-state">
                 <h3>⚠️ No se pudo cargar el capítulo</h3>
-                <p>${this.escapeHtml(error?.message || 'Intenta nuevamente más tarde.')}</p>
-                <button class="btn-primary" type="button" data-action="back-to-bible-books" style="margin-top: 20px;">
-                    Elegir otro libro
-                </button>
+                <p>${this.escapeHtml(errorMessage)}</p>
+                ${actionButtonHtml}
             </div>
         `);
     }
@@ -9953,9 +9946,9 @@ renderStats: function() {
                 <div class="setting-card">
                     <h3>🔔 Notificaciones</h3>
                     <div class="setting-item">
-                        <label>⏰ Recordatorio diario</label>
+                        <label>⏰ Recordatorio diario<br><small id="reminder-time-hint">Las notificaciones se programan en intervalos de 5 minutos.</small></label>
                         <div class="setting-control">
-                            <input type="time" id="reminder-time" value="${this.settings.reminderTime}" class="time-input">
+                            <input type="time" id="reminder-time" value="${this.settings.reminderTime}" step="300" aria-describedby="reminder-time-hint" class="time-input">
                             <button id="test-notification" class="btn-secondary">Probar push remoto</button>
                         </div>
                     </div>
@@ -10036,9 +10029,9 @@ if (reminderTime) {
     reminderTime.addEventListener('change', async (e) => {
         const nextReminderTime = String(e.target.value || '');
 
-        if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(nextReminderTime)) {
+        if (!/^([01][0-9]|2[0-3]):[0-5][05]$/.test(nextReminderTime)) {
             e.target.value = this.settings.reminderTime;
-            this.showToast('Selecciona una hora válida.');
+            this.showToast('Selecciona una hora en intervalos de 5 minutos.');
             return;
         }
 
@@ -10447,30 +10440,38 @@ sendTestPushNotification: async function() {
 },
 
 enableNotificationsFlow: async function() {
-    if (!('Notification' in window)) {
+    const isNativeAndroid = !!(
+        window.Capacitor &&
+        typeof window.Capacitor.getPlatform === 'function' &&
+        window.Capacitor.getPlatform() === 'android'
+    );
+
+    if (!isNativeAndroid && !('Notification' in window)) {
         this.showToast('Este dispositivo no soporta notificaciones');
         return false;
     }
 
-    if (!('serviceWorker' in navigator)) {
+    if (!isNativeAndroid && !('serviceWorker' in navigator)) {
         this.showToast('Este dispositivo no soporta Service Worker');
         return false;
     }
 
-    if (isIOSDevice() && !isRunningAsInstalledPWA()) {
+    if (!isNativeAndroid && isIOSDevice() && !isRunningAsInstalledPWA()) {
         this.showToast('En iPhone, instala la app en pantalla de inicio');
         return false;
     }
 
-    let permission = Notification.permission;
+    if (!isNativeAndroid) {
+        let permission = Notification.permission;
 
-    if (permission !== 'granted') {
-        permission = await Notification.requestPermission();
-    }
+        if (permission !== 'granted') {
+            permission = await Notification.requestPermission();
+        }
 
-    if (permission !== 'granted') {
-        this.showToast('No se concedió permiso para notificaciones');
-        return false;
+        if (permission !== 'granted') {
+            this.showToast('No se concedió permiso para notificaciones');
+            return false;
+        }
     }
 
     const ok = await this.initPushNotifications();
@@ -10490,7 +10491,10 @@ enableNotificationsFlow: async function() {
         await this.savePushToken(savedToken);
     }
 
-    this.setupPushListeners();
+    if (!isNativeAndroid) {
+        this.setupPushListeners();
+    }
+
     this.showToast('Notificaciones activadas');
     return true;
 },
@@ -10500,6 +10504,74 @@ enableNotificationsFlow: async function() {
     // ========================================
 initPushNotifications: async function() {
     console.log('[App] Iniciando Push Notifications...');
+
+    const isNativeAndroid = !!(
+        window.Capacitor &&
+        typeof window.Capacitor.getPlatform === 'function' &&
+        window.Capacitor.getPlatform() === 'android'
+    );
+
+    if (isNativeAndroid) {
+        try {
+            const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
+
+            if (!PushNotifications) {
+                console.warn('[App] Plugin PushNotifications no disponible');
+                return false;
+            }
+
+            let permStatus = await PushNotifications.checkPermissions();
+
+            if (permStatus.receive !== 'granted') {
+                permStatus = await PushNotifications.requestPermissions();
+            }
+
+            if (permStatus.receive !== 'granted') {
+                console.warn('[App] Permiso Android de notificaciones no concedido');
+                return false;
+            }
+
+            await PushNotifications.removeAllListeners();
+
+            await PushNotifications.addListener('registration', async (token) => {
+                const tokenValue = String(token?.value || '').trim();
+
+                if (!tokenValue) {
+                    console.warn('[App] Token FCM Android vacío');
+                    return;
+                }
+
+                console.log('[App] Token FCM Android obtenido correctamente');
+                localStorage.setItem('su-voz-fcm-token', tokenValue);
+
+                if (this.currentUser) {
+                    await this.savePushToken(tokenValue);
+                }
+            });
+
+            await PushNotifications.addListener('registrationError', (error) => {
+                console.error('[App] Error registrando Push Android:', error);
+            });
+
+            await PushNotifications.addListener('pushNotificationReceived', (notification) => {
+                console.log('[App] Push Android recibida:', notification);
+            });
+
+            await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
+                console.log('[App] Push Android abierta:', notification);
+                const url = notification?.notification?.data?.url || notification?.notification?.data?.click_action;
+                if (url && typeof window.navigateTo === 'function') {
+                    window.navigateTo(url);
+                }
+            });
+
+            await PushNotifications.register();
+            return true;
+        } catch (error) {
+            console.error('[App] Error inicializando Push Android:', error);
+            return false;
+        }
+    }
 
     if (!window.firebaseMessaging || typeof window.fcmGetToken !== 'function') {
         console.warn('[App] Notificaciones no soportadas');
@@ -11315,30 +11387,7 @@ getVerseStrongTokens: function(bookId, chapter, verse) {
     // ========================================
 bindEvents: function() {
 document.addEventListener('click', (e) => {
-    const miniVoiceToggle = e.target.closest('#bibleChapterMiniPlayer [data-action="bible-chapter-voice-toggle"]');
 
-    if (miniVoiceToggle) {
-        e.preventDefault();
-        const key = miniVoiceToggle.getAttribute('data-key');
-        const reference = miniVoiceToggle.getAttribute('data-reference') || '';
-        const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
-        const text = this.getCleanBibleChapterVoiceText(
-            this.currentBibleChapterData,
-            book?.name || 'Biblia',
-            Number(this.selectedBibleChapter)
-        );
-
-        this.pauseOrResumeBibleChapterVoice(key, text, reference);
-        return;
-    }
-
-    const miniVoiceStop = e.target.closest('#bibleChapterMiniPlayer [data-action="bible-chapter-voice-stop"]');
-
-    if (miniVoiceStop) {
-        e.preventDefault();
-        this.stopBibleChapterVoice();
-        return;
-    }
 
     const closeStrong = e.target.closest('[data-action="close-strong-sheet"]');
 
@@ -11467,7 +11516,14 @@ document.addEventListener('click', (e) => {
     const versionBtn = e.target.closest('[data-version]');
 
     if (versionBtn) {
-        this.currentVersion = versionBtn.getAttribute('data-version');
+        const selectedVersion = versionBtn.getAttribute('data-version');
+        const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
+        if (REMOTE_BIBLE_IDS.includes(String(selectedVersion).toLowerCase()) && !canAccessRemoteBibleVersions()) {
+            this.showToast('No tienes permisos para acceder a esta versión.');
+            return;
+        }
+
+        this.currentVersion = selectedVersion;
         localStorage.setItem('current-version', this.currentVersion);
 
         document.querySelectorAll('.version-btn').forEach(btn => {
@@ -11737,6 +11793,15 @@ if (strongFilterBtn) {
     return;
 }
 
+const revertToRv1909Btn = e.target.closest('[data-action="revert-to-rv1909"]');
+if (revertToRv1909Btn) {
+    this.currentBibleVersion = 'rv1909';
+    localStorage.setItem('current-bible-version', 'rv1909');
+    this.showToast('Versión restablecida a RV1909');
+    this.handleRoute().catch(err => console.error('[Route] Error al restablecer versión:', err));
+    return;
+}
+
 const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
 if (backToBibleBooksBtn) {
     this.stopBibleChapterVoice(true);
@@ -11759,6 +11824,41 @@ if (openBibleReaderPickerBtn) {
 const closeBibleReaderPickerBtn = e.target.closest('[data-action="close-bible-reader-picker"]');
 if (closeBibleReaderPickerBtn || e.target.classList?.contains('bible-picker-sheet')) {
     this.closeBibleReaderPicker();
+    return;
+}
+
+const openBibleVersionPickerBtn = e.target.closest('[data-action="open-bible-version-picker"]');
+if (openBibleVersionPickerBtn) {
+    this.openBibleVersionPicker();
+    return;
+}
+
+const closeBibleVersionPickerBtn = e.target.closest('[data-action="close-version-picker"]');
+if (closeBibleVersionPickerBtn || e.target.classList?.contains('version-picker-sheet')) {
+    this.closeBibleVersionPicker();
+    return;
+}
+
+const selectVersionOptionBtn = e.target.closest('[data-action="select-version-option"]');
+if (selectVersionOptionBtn) {
+    const versionId = selectVersionOptionBtn.getAttribute('data-version-id');
+    const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
+    if (REMOTE_BIBLE_IDS.includes(versionId) && !canAccessRemoteBibleVersions()) {
+        this.showToast('No tienes permisos para acceder a esta versión.');
+        this.closeBibleVersionPicker();
+        return;
+    }
+
+    this.currentBibleVersion = versionId;
+    localStorage.setItem('current-bible-version', this.currentBibleVersion);
+
+    this.closeBibleVersionPicker();
+
+    this.handleRoute().catch(error => {
+        console.error('[Route] Error cambiando versión:', error);
+    });
+
+    this.showToast(`Versión cambiada a ${this.getBibleVersionLabel(this.currentBibleVersion)}`);
     return;
 }
 
@@ -12040,22 +12140,19 @@ if (dailyReadingVoiceStopBtn) {
 
 const bibleChapterVoiceToggleBtn = e.target.closest('[data-action="bible-chapter-voice-toggle"]');
 if (bibleChapterVoiceToggleBtn) {
-    const key = bibleChapterVoiceToggleBtn.getAttribute('data-key');
-    const reference = bibleChapterVoiceToggleBtn.getAttribute('data-reference') || '';
-    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
-    const text = this.getCleanBibleChapterVoiceText(
-        this.currentBibleChapterData,
-        book?.name || 'Biblia',
-        Number(this.selectedBibleChapter)
-    );
-
-    this.pauseOrResumeBibleChapterVoice(key, text, reference);
-    return;
-}
-
-const bibleChapterVoiceStopBtn = e.target.closest('[data-action="bible-chapter-voice-stop"]');
-if (bibleChapterVoiceStopBtn) {
-    this.stopBibleChapterVoice();
+    if (this.isBibleAudioPlaying) {
+        this.stopBibleChapterVoice();
+    } else {
+        const key = bibleChapterVoiceToggleBtn.getAttribute('data-key');
+        const reference = bibleChapterVoiceToggleBtn.getAttribute('data-reference') || '';
+        const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+        const text = this.getCleanBibleChapterVoiceText(
+            this.currentBibleChapterData,
+            book?.name || 'Biblia',
+            Number(this.selectedBibleChapter)
+        );
+        this.startBibleChapterVoice(key, text, reference);
+    }
     return;
 }
 
