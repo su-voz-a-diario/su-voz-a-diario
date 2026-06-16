@@ -605,39 +605,7 @@ this.initAuth().then(async () => {
     try {
         if (!this.currentUser?.uid) {
             console.warn('[Community] Badge omitido: no hay usuario autenticado');
-            setBibleAdminState(false);
             return;
-        }
-
-        let isAdmin = false;
-        try {
-            const getIdTokenResult = window.firebaseFns?.getIdTokenResult;
-            if (this.currentUser) {
-                const tokenResult = typeof getIdTokenResult === 'function'
-                    ? await getIdTokenResult(this.currentUser, true)
-                    : await this.currentUser.getIdTokenResult(true);
-                isAdmin = tokenResult?.claims?.bibleAdmin === true;
-            }
-        } catch (authErr) {
-            console.warn('[Auth] Error al verificar claims de bibleAdmin:', authErr);
-        }
-
-        setBibleAdminState(isAdmin);
-
-        if (isAdmin) {
-            if (this.currentView === 'bible-reading') {
-                this.handleRoute().catch(err => console.error('[Route] Error al refrescar versión remota para administrador:', err));
-            }
-        } else {
-            const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
-            if (REMOTE_BIBLE_IDS.includes(String(this.currentBibleVersion).toLowerCase())) {
-                console.warn('[Auth] Acceso denegado a versión remota. Restableciendo a RV1909.');
-                this.currentBibleVersion = 'rv1909';
-                localStorage.setItem('current-bible-version', 'rv1909');
-                if (this.currentView === 'bible-reading') {
-                    this.handleRoute().catch(err => console.error('[Route] Error al restablecer versión:', err));
-                }
-            }
         }
 
         await this.subscribeToCommunityActivity();
@@ -8490,8 +8458,7 @@ renderBibleReading: async function() {
     const previousDisabled = requestedChapter <= 1;
     const nextDisabled = requestedChapter >= requestedBook.chapters;
 
-    const canAccessRemote = canAccessRemoteBibleVersions();
-    const versionSelectorHtml = canAccessRemote ? `
+    const versionSelectorHtml = `
         <div class="bible-version-select-wrapper">
             <button
                 id="bible-version-button"
@@ -8503,8 +8470,6 @@ renderBibleReading: async function() {
                 ${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))} ▼
             </button>
         </div>
-    ` : `
-        <div class="bible-reader-version">${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}</div>
     `;
 
     const renderReaderShell = (bodyHtml) => `
@@ -11513,15 +11478,8 @@ document.addEventListener('click', (e) => {
         this.changeFontSize(-0.05);
     }
 
-    const versionBtn = e.target.closest('[data-version]');
-
     if (versionBtn) {
         const selectedVersion = versionBtn.getAttribute('data-version');
-        const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
-        if (REMOTE_BIBLE_IDS.includes(String(selectedVersion).toLowerCase()) && !canAccessRemoteBibleVersions()) {
-            this.showToast('No tienes permisos para acceder a esta versión.');
-            return;
-        }
 
         this.currentVersion = selectedVersion;
         localStorage.setItem('current-version', this.currentVersion);
@@ -11842,12 +11800,6 @@ if (closeBibleVersionPickerBtn || e.target.classList?.contains('version-picker-s
 const selectVersionOptionBtn = e.target.closest('[data-action="select-version-option"]');
 if (selectVersionOptionBtn) {
     const versionId = selectVersionOptionBtn.getAttribute('data-version-id');
-    const REMOTE_BIBLE_IDS = ['nbla', 'nvi', 'biblia-libre'];
-    if (REMOTE_BIBLE_IDS.includes(versionId) && !canAccessRemoteBibleVersions()) {
-        this.showToast('No tienes permisos para acceder a esta versión.');
-        this.closeBibleVersionPicker();
-        return;
-    }
 
     this.currentBibleVersion = versionId;
     localStorage.setItem('current-bible-version', this.currentBibleVersion);

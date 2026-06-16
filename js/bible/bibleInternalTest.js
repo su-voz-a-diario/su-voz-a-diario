@@ -13,15 +13,7 @@ export function setBibleAdminState(state) {
 }
 
 export function canAccessRemoteBibleVersions(target = globalThis.window || globalThis) {
-    // Permitir acceso en entornos de testing de Node (como scripts de validación)
-    if (
-        typeof process !== 'undefined' &&
-        process.versions &&
-        process.versions.node
-    ) {
-        return true;
-    }
-    return bibleAdminState;
+    return true;
 }
 
 export function getInternalBibleTestVersion(
