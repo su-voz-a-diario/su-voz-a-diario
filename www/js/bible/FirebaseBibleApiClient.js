@@ -59,11 +59,36 @@ export class FirebaseBibleApiClient extends BibleApiClient {
     }
 
     async call(operation, payload) {
+        const projectId = globalThis.window?.firebaseApp?.options?.projectId || 'su-voz-a-diario-v2-f3a87';
+        const callableName = CALLABLE_NAMES[operation] || operation;
+        const targetedUrl = `https://${this.region}-${projectId}.cloudfunctions.net/${callableName}`;
+
+        console.log(`[FirebaseBibleApiClient] Iniciando llamada remota:`, {
+            operation,
+            versionId: payload?.versionId,
+            bookId: payload?.bookId,
+            chapter: payload?.chapter,
+            targetedUrl,
+            payload
+        });
+
         try {
             const callable = await this.getCallable(operation);
             const response = await callable(payload);
+
+            console.log(`[FirebaseBibleApiClient] Respuesta recibida exitosamente para ${operation}:`, response);
             return response?.data ?? response;
         } catch (error) {
+            console.error(`[FirebaseBibleApiClient] Error en llamada remota ${operation}:`, {
+                message: error?.message,
+                code: error?.code,
+                status: error?.status,
+                details: error?.details,
+                stack: error?.stack,
+                targetedUrl,
+                errorObject: error
+            });
+
             if (error instanceof BibleProviderError) throw error;
 
             const code = FIREBASE_ERROR_CODES[error?.code] ||
@@ -85,10 +110,22 @@ export class FirebaseBibleApiClient extends BibleApiClient {
             return this.callables.get(operation);
         }
 
-        await Promise.resolve(this.firebaseReady?.());
+        console.log(`[FirebaseBibleApiClient] Obteniendo callable para ${operation}. Verificando inicialización de Firebase...`);
+
+        const readyPromise = this.firebaseReady?.();
+        console.log(`[FirebaseBibleApiClient] Estado de window.suVozFirebaseReady:`, readyPromise);
+        await Promise.resolve(readyPromise);
+
         const firebaseFns = this.getFirebaseFns?.();
         const firebaseApp = this.getFirebaseApp?.();
         const firebaseAuth = this.getFirebaseAuth?.();
+
+        console.log(`[FirebaseBibleApiClient] Módulos de Firebase disponibles:`, {
+            hasGetFunctions: typeof firebaseFns?.getFunctions === 'function',
+            hasHttpsCallable: typeof firebaseFns?.httpsCallable === 'function',
+            hasFirebaseApp: !!firebaseApp,
+            hasFirebaseAuth: !!firebaseAuth
+        });
 
         if (
             !firebaseFns?.getFunctions ||
@@ -103,6 +140,11 @@ export class FirebaseBibleApiClient extends BibleApiClient {
             );
         }
 
+        console.log(`[FirebaseBibleApiClient] Usuario actual de Auth:`, {
+            uid: firebaseAuth.currentUser?.uid,
+            isAnonymous: firebaseAuth.currentUser?.isAnonymous
+        });
+
         if (!firebaseAuth.currentUser) {
             if (typeof firebaseFns.signInAnonymously !== 'function') {
                 throw new BibleProviderError(
@@ -112,7 +154,14 @@ export class FirebaseBibleApiClient extends BibleApiClient {
                 );
             }
 
-            await firebaseFns.signInAnonymously(firebaseAuth);
+            console.log(`[FirebaseBibleApiClient] No hay usuario autenticado. Iniciando signInAnonymously...`);
+            try {
+                await firebaseFns.signInAnonymously(firebaseAuth);
+                console.log(`[FirebaseBibleApiClient] Autenticación anónima completada con éxito. UID:`, firebaseAuth.currentUser?.uid);
+            } catch (authErr) {
+                console.error(`[FirebaseBibleApiClient] Error durante signInAnonymously:`, authErr);
+                throw authErr;
+            }
         }
 
         const functions = firebaseFns.getFunctions(firebaseApp, this.region);

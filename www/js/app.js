@@ -8621,9 +8621,19 @@ renderBibleReading: async function() {
     } catch (error) {
         const isOffline = error?.code === 'BIBLE_OFFLINE' || navigator.onLine === false;
 
-        if (!isOffline) {
-            console.error('Error cargando capítulo bíblico:', error);
-        }
+        console.error('[renderBibleReading] Excepción capturada al cargar capítulo:', {
+            error,
+            message: error?.message,
+            code: error?.code,
+            stack: error?.stack,
+            details: error?.details,
+            firebaseCode: error?.details?.firebaseCode || error?.code,
+            proxyCode: error?.details?.proxyCode,
+            currentBibleVersion: this.currentBibleVersion,
+            requestedBookId,
+            requestedChapter,
+            isOffline
+        });
 
         if (
             this.currentView !== 'bible-reading' ||

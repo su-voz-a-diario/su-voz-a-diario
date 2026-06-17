@@ -322,7 +322,16 @@ export class RemoteBibleProvider {
     }
 
     async requestOperation(operation, payload) {
+        console.log(`[RemoteBibleProvider] Solicitando operación remota:`, {
+            operation,
+            versionId: payload?.versionId,
+            bookId: payload?.bookId,
+            chapter: payload?.chapter,
+            payload
+        });
+
         if (!this.isOnline()) {
+            console.warn(`[RemoteBibleProvider] Offline detectado antes de iniciar la operación.`);
             throw new BibleProviderError(
                 BIBLE_ERROR_CODES.OFFLINE,
                 'No hay conexión a internet para consultar esta Biblia.',
@@ -339,6 +348,7 @@ export class RemoteBibleProvider {
         const clientMethod = this.client?.[clientMethodNames[operation]];
 
         if (typeof clientMethod !== 'function' && typeof this.request !== 'function') {
+            console.warn(`[RemoteBibleProvider] Cliente no configurado correctamente para la operación ${operation}.`);
             throw new BibleProviderError(
                 BIBLE_ERROR_CODES.PROVIDER_NOT_CONFIGURED,
                 'El proveedor remoto todavía no está configurado.',
@@ -353,6 +363,7 @@ export class RemoteBibleProvider {
 
         const timeoutPromise = new Promise((resolve, reject) => {
             timeoutId = setTimeout(() => {
+                console.warn(`[RemoteBibleProvider] Operación remota ${operation} excedió el timeout de ${this.timeoutMs}ms.`);
                 controller?.abort();
                 reject(new BibleProviderError(
                     BIBLE_ERROR_CODES.TIMEOUT,
@@ -363,22 +374,32 @@ export class RemoteBibleProvider {
         });
 
         try {
-            return await Promise.race([
+            const response = await Promise.race([
                 Promise.resolve(
                     typeof clientMethod === 'function'
                         ? clientMethod.call(this.client, {
                             ...payload,
                             signal: controller?.signal
-                        })
+                         })
                         : this.request({
                             operation,
                             ...payload,
                             signal: controller?.signal
-                        })
+                         })
                 ),
                 timeoutPromise
             ]);
+
+            console.log(`[RemoteBibleProvider] Operación remota ${operation} completada con éxito:`, response);
+            return response;
         } catch (error) {
+            console.error(`[RemoteBibleProvider] Error capturado en requestOperation para ${operation}:`, {
+                message: error?.message,
+                code: error?.code,
+                stack: error?.stack,
+                errorObject: error
+            });
+
             if (isBibleProviderError(error)) throw error;
 
             if (error instanceof TypeError || this.isOnline() === false) {
