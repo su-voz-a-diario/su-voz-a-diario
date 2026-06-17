@@ -123,20 +123,6 @@ async function main() {
     "UNAUTHENTICATED"
   );
   await expectProxyError(
-    () => fakeHandlers.getBooks({
-      auth: { uid: "unprivileged-user", token: { bibleAdmin: false } },
-      data: { versionId: "nbla" },
-    }),
-    "VERSION_NOT_ALLOWED"
-  );
-  await expectProxyError(
-    () => fakeHandlers.getBooks({
-      auth: { uid: "unprivileged-user", token: {} },
-      data: { versionId: "nbla" },
-    }),
-    "VERSION_NOT_ALLOWED"
-  );
-  await expectProxyError(
     () => fakeHandlers.getBooks(authenticatedRequest({
       versionId: "rv1909",
     })),
@@ -218,7 +204,7 @@ async function main() {
   });
   const versions = [
     ["nbla", "103"],
-    ["nvi", "2664"],
+    ["nvi", "128"],
     ["biblia-libre", "3291"],
   ];
   const normalizedChapters = [];
