@@ -75,6 +75,12 @@ const RV1909_BOOK_MAP = Object.freeze({
     jud: 'jd',
     rev: 're'
 });
+const RV1909_CANONICAL_BOOK_MAP = Object.freeze(
+    Object.fromEntries(
+        Object.entries(RV1909_BOOK_MAP)
+            .map(([bookId, sourceBookId]) => [sourceBookId, bookId])
+    )
+);
 
 export class LocalRv1909Provider {
     constructor({
@@ -115,6 +121,12 @@ export class LocalRv1909Provider {
             });
 
         return this.loadPromise;
+    }
+
+    getCanonicalBookId(sourceBookId) {
+        return RV1909_CANONICAL_BOOK_MAP[
+            String(sourceBookId || '').trim().toLowerCase()
+        ] || '';
     }
 
     async getChapter(bookId, chapterNumber) {

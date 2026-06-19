@@ -8694,6 +8694,10 @@ body.bible-version-picker-open .bottom-nav {
     -webkit-backdrop-filter: blur(18px);
 }
 
+.bible-reader-context-bar.has-audio-stop {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 .bible-reader-tool {
     min-width: 0;
     min-height: 46px;
@@ -9706,6 +9710,12 @@ body.dark-mode .bible-testament-tabs {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
 }
 
+.bible-search-modern .bible-search-input::-webkit-search-cancel-button,
+.bible-search-modern .bible-search-input::-webkit-search-decoration {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 .bible-search-modern .bible-search-input:focus {
     outline: none;
     border-color: var(--accent);
@@ -9724,6 +9734,18 @@ body.dark-mode .bible-testament-tabs {
     font-size: 1.25rem;
     font-weight: 700;
     cursor: pointer;
+}
+
+.bible-search-modern .bible-search-clear[hidden] {
+    display: none;
+}
+
+.bible-search-modern .bible-search-index-note {
+    margin: 9px 4px 0;
+    color: var(--text-muted);
+    font-size: 0.78rem;
+    font-weight: 500;
+    line-height: 1.45;
 }
 
 .bible-search-modern .bible-search-filters {

@@ -468,11 +468,14 @@ const App = {
     bibleSearchQuery: '',
     bibleSearchResults: [],
     bibleSearchLoading: false,
+    bibleSearchError: '',
+    bibleSearchRequestId: 0,
     bibleSearchTotal: 0,
     bibleSearchTotalPages: 0,
     bibleSearchPage: 1,
     bibleSearchPageSize: 20,
     searchTimeout: null,
+    bibleSearchComposing: false,
     targetVerse: null,
     bibleSearchFilter: 'all', // 'all', 'old', 'new'
     bibleReaderPickerOpen: false,
@@ -511,6 +514,9 @@ const App = {
     bibleChapterVoice: {
         utterance: null,
         status: 'idle',
+        verses: [],
+        currentVerseIndex: 0,
+        executionToken: null,
         key: null,
         reference: null
     },
@@ -5681,26 +5687,32 @@ renderDailyReadingVoiceControl: function(reading) {
     `;
 },
 
-getCleanBibleChapterVoiceText: function(chapterData, bookName, chapterNumber) {
-    if (!chapterData?.content) return '';
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = chapterData.content;
-
-    const verses = Array.from(tempDiv.querySelectorAll('.verse-text'))
-        .map(verse => (verse.textContent || '')
-            .replace(/\s+/g, ' ')
-            .replace(/\s+([,.;:!?])/g, '$1')
-            .trim())
-        .filter(Boolean);
+getBibleChapterVoiceVerses: function(chapterData, bookName, chapterNumber) {
+    if (!Array.isArray(chapterData?.verses)) return [];
 
     const chapterTitle = `${bookName} capítulo ${chapterNumber}.`;
 
-    return [chapterTitle, verses.join(' ')]
-        .filter(Boolean)
-        .join(' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+    return chapterData.verses
+        .map((verse, index) => {
+            const text = String(verse?.text || '')
+                .replace(/\s+/g, ' ')
+                .replace(/\s+([,.;:!?])/g, '$1')
+                .trim();
+
+            if (!text) return null;
+
+            return {
+                number: Number(verse.number) || index + 1,
+                text,
+                spokenText: index === 0 ? `${chapterTitle} ${text}` : text
+            };
+        })
+        .filter(Boolean);
+},
+
+getBibleChapterVoiceStatus: function(key = null) {
+    if (key && this.bibleChapterVoice.key !== key) return 'idle';
+    return this.bibleChapterVoice.status || 'idle';
 },
 
 renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
@@ -5714,10 +5726,16 @@ renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
 
     const key = `${bookName}-${chapterNumber}`;
     const reference = `${bookName} ${chapterNumber}`;
-    const isReading = this.isBibleAudioPlaying;
-    const label = isReading ? 'Detener capítulo' : 'Escuchar capítulo';
-    const icon = isReading ? 'stop' : 'play';
-    const ariaLabel = isReading ? 'Detener capítulo en voz alta' : 'Escuchar capítulo en voz alta';
+    const status = this.getBibleChapterVoiceStatus(key);
+    const isPlaying = status === 'playing';
+    const isPaused = status === 'paused';
+    const label = isPlaying
+        ? 'Pausar capítulo'
+        : (isPaused ? 'Reanudar capítulo' : 'Escuchar capítulo');
+    const icon = isPlaying ? 'pause' : 'play';
+    const ariaLabel = isPlaying
+        ? 'Pausar capítulo en voz alta'
+        : (isPaused ? 'Reanudar capítulo en voz alta' : 'Escuchar capítulo en voz alta');
 
     return `
         <div class="daily-reading-voice" data-bible-voice-key="${this.escapeHtml(key)}">
@@ -5732,81 +5750,46 @@ renderBibleChapterVoiceControl: function(bookName, chapterNumber) {
                 <span class="daily-reading-voice-icon daily-reading-voice-icon-${icon}" aria-hidden="true"></span>
                 <span class="daily-reading-voice-label">${label}</span>
             </button>
+            ${isPlaying || isPaused ? `
+                <button
+                    class="daily-reading-voice-stop"
+                    type="button"
+                    data-action="bible-chapter-voice-stop"
+                    aria-label="Detener capítulo en voz alta"
+                    title="Detener"
+                >
+                    <span aria-hidden="true"></span>
+                </button>
+            ` : ''}
         </div>
     `;
 },
 
-startBibleChapterVoice: async function(key, text, reference = '') {
-    const cleanText = (text || '').replace(/\s+/g, ' ').trim();
-    if (!cleanText) return;
-
-    this.stopDailyReadingVoice(true);
-    this.stopBibleChapterVoice(true);
-
-    this.isBibleAudioPlaying = true;
-    this.bibleChapterVoice = { utterance: null, status: 'speaking', key, reference };
-    this.updateBibleChapterVoiceUI();
-
-    if (this.isNativeTextToSpeechAvailable()) {
-        try {
-            await this.speakWithNativeTextToSpeech(cleanText);
-        } catch (error) {
-            console.warn('[Bible Voice] Error iniciando lectura nativa:', error);
-        }
-
-        this.isBibleAudioPlaying = false;
-        this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
-        this.updateBibleChapterVoiceUI();
-        return;
-    }
-
-    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-        this.showToast('La lectura en voz alta no está disponible en este navegador');
-        this.isBibleAudioPlaying = false;
-        this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
-        this.updateBibleChapterVoiceUI();
-        return;
-    }
-
-    try {
-        const utterance = new SpeechSynthesisUtterance(cleanText);
-        const voices = window.speechSynthesis.getVoices();
-        const spanishVoice = this.selectSpanishVoice(voices);
-
-        if (spanishVoice) utterance.voice = spanishVoice;
-        utterance.lang = spanishVoice?.lang || 'es-MX';
-        utterance.rate = 0.92;
-        utterance.pitch = 1;
-
-        utterance.onend = () => {
-            if (this.bibleChapterVoice.utterance !== utterance) return;
-
-            this.isBibleAudioPlaying = false;
-            this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
-            this.updateBibleChapterVoiceUI();
-        };
-
-        utterance.onerror = (error) => {
-            if (this.bibleChapterVoice.utterance !== utterance) return;
-
-            console.warn('[Bible Voice] No se pudo leer el capítulo:', error);
-            this.isBibleAudioPlaying = false;
-            this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
-            this.updateBibleChapterVoiceUI();
-        };
-
-        this.bibleChapterVoice = { utterance, status: 'speaking', key, reference };
-        window.speechSynthesis.speak(utterance);
-        this.updateBibleChapterVoiceUI();
-    } catch (error) {
-        console.warn('[Bible Voice] Error iniciando lectura:', error);
-        this.isBibleAudioPlaying = false;
-        this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
-        this.updateBibleChapterVoiceUI();
-    }
+createBibleChapterVoiceToken: function() {
+    return {
+        id: Symbol('bible-chapter-voice'),
+        cancelWait: null
+    };
 },
 
-stopBibleChapterVoice: function(silent = false) {
+isBibleChapterVoiceTokenActive: function(token) {
+    return !!token
+        && this.bibleChapterVoice.executionToken === token
+        && this.bibleChapterVoice.status === 'playing';
+},
+
+invalidateBibleChapterVoiceToken: function() {
+    const token = this.bibleChapterVoice.executionToken;
+
+    if (token?.cancelWait) {
+        token.cancelWait();
+        token.cancelWait = null;
+    }
+
+    this.bibleChapterVoice.executionToken = null;
+},
+
+stopBibleChapterSpeechEngine: function(silent = false) {
     if (this.isNativeTextToSpeechAvailable()) {
         this.stopNativeTextToSpeech();
     }
@@ -5815,12 +5798,190 @@ stopBibleChapterVoice: function(silent = false) {
         try {
             window.speechSynthesis.cancel();
         } catch (error) {
-            if (!silent) console.warn('[Bible Voice] No se pudo detener el capítulo:', error);
+            if (!silent) console.warn('[Bible Voice] No se pudo detener el motor:', error);
         }
     }
+},
 
+speakBibleChapterVerse: async function(verse, token) {
+    if (!this.isBibleChapterVoiceTokenActive(token)) return false;
+
+    const text = String(verse?.spokenText || verse?.text || '').trim();
+    if (!text) return true;
+
+    let speechPromise;
+
+    if (this.isNativeTextToSpeechAvailable()) {
+        const plugin = window.Capacitor.Plugins.TextToSpeech;
+        speechPromise = plugin.speak({
+            text,
+            lang: 'es-MX',
+            rate: 0.92,
+            pitch: 1.0,
+            volume: 1.0,
+            category: 'ambient',
+            queueStrategy: 0
+        }).then(
+            () => ({ type: 'completed' }),
+            error => ({ type: 'error', error })
+        );
+    } else {
+        if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+            throw new Error('La lectura en voz alta no está disponible en este navegador.');
+        }
+
+        const utterance = new SpeechSynthesisUtterance(text);
+        const voices = window.speechSynthesis.getVoices();
+        const spanishVoice = this.selectSpanishVoice(voices);
+
+        if (spanishVoice) utterance.voice = spanishVoice;
+        utterance.lang = spanishVoice?.lang || 'es-MX';
+        utterance.rate = 0.92;
+        utterance.pitch = 1;
+
+        this.bibleChapterVoice.utterance = utterance;
+
+        speechPromise = new Promise(resolve => {
+            utterance.onend = () => resolve({ type: 'completed' });
+            utterance.onerror = error => resolve({ type: 'error', error });
+            window.speechSynthesis.speak(utterance);
+        });
+    }
+
+    let cancelWait = null;
+    const cancellationPromise = new Promise(resolve => {
+        cancelWait = () => resolve({ type: 'cancelled' });
+        token.cancelWait = cancelWait;
+    });
+    const result = await Promise.race([speechPromise, cancellationPromise]);
+
+    if (token.cancelWait === cancelWait) {
+        token.cancelWait = null;
+    }
+
+    if (result.type === 'error') {
+        if (!this.isBibleChapterVoiceTokenActive(token)) return false;
+        throw result.error;
+    }
+
+    return result.type === 'completed' && this.isBibleChapterVoiceTokenActive(token);
+},
+
+playBibleChapterVoiceSequence: async function(token) {
+    try {
+        while (this.isBibleChapterVoiceTokenActive(token)) {
+            const index = this.bibleChapterVoice.currentVerseIndex;
+            const verse = this.bibleChapterVoice.verses[index];
+
+            if (!verse) break;
+
+            const completed = await this.speakBibleChapterVerse(verse, token);
+            if (!completed || !this.isBibleChapterVoiceTokenActive(token)) return;
+
+            this.bibleChapterVoice.currentVerseIndex = index + 1;
+        }
+
+        if (!this.isBibleChapterVoiceTokenActive(token)) return;
+
+        this.isBibleAudioPlaying = false;
+        this.bibleChapterVoice = {
+            utterance: null,
+            status: 'idle',
+            verses: [],
+            currentVerseIndex: 0,
+            executionToken: null,
+            key: null,
+            reference: null
+        };
+        this.updateBibleChapterVoiceUI();
+    } catch (error) {
+        if (!this.isBibleChapterVoiceTokenActive(token)) return;
+
+        console.warn('[Bible Voice] No se pudo leer el capítulo:', error);
+        this.showToast('No se pudo continuar la lectura en voz alta');
+        this.stopBibleChapterVoice(true);
+    }
+},
+
+startBibleChapterVoice: function(key, verses, reference = '') {
+    if (!Array.isArray(verses) || !verses.length) return;
+
+    this.stopDailyReadingVoice(true);
+    this.stopBibleChapterVoice(true);
+
+    const token = this.createBibleChapterVoiceToken();
+    this.isBibleAudioPlaying = true;
+    this.bibleChapterVoice = {
+        utterance: null,
+        status: 'playing',
+        verses: verses.map(verse => ({ ...verse })),
+        currentVerseIndex: 0,
+        executionToken: token,
+        key,
+        reference
+    };
+    this.updateBibleChapterVoiceUI();
+    this.playBibleChapterVoiceSequence(token);
+},
+
+pauseBibleChapterVoice: function() {
+    if (this.bibleChapterVoice.status !== 'playing') return;
+
+    this.invalidateBibleChapterVoiceToken();
+    this.stopBibleChapterSpeechEngine(true);
     this.isBibleAudioPlaying = false;
-    this.bibleChapterVoice = { utterance: null, status: 'idle', key: null, reference: null };
+    this.bibleChapterVoice.utterance = null;
+    this.bibleChapterVoice.status = 'paused';
+    this.updateBibleChapterVoiceUI();
+},
+
+resumeBibleChapterVoice: function() {
+    if (
+        this.bibleChapterVoice.status !== 'paused'
+        || !this.bibleChapterVoice.verses.length
+    ) {
+        return;
+    }
+
+    const token = this.createBibleChapterVoiceToken();
+    this.bibleChapterVoice.executionToken = token;
+    this.bibleChapterVoice.status = 'playing';
+    this.bibleChapterVoice.utterance = null;
+    this.isBibleAudioPlaying = true;
+    this.updateBibleChapterVoiceUI();
+    this.playBibleChapterVoiceSequence(token);
+},
+
+toggleBibleChapterVoice: function(key, verses, reference = '') {
+    const status = this.getBibleChapterVoiceStatus(key);
+
+    if (status === 'playing') {
+        this.pauseBibleChapterVoice();
+        return;
+    }
+
+    if (status === 'paused') {
+        this.resumeBibleChapterVoice();
+        return;
+    }
+
+    this.startBibleChapterVoice(key, verses, reference);
+},
+
+stopBibleChapterVoice: function(silent = false) {
+    this.invalidateBibleChapterVoiceToken();
+    this.bibleChapterVoice.status = 'stopped';
+    this.stopBibleChapterSpeechEngine(silent);
+    this.isBibleAudioPlaying = false;
+    this.bibleChapterVoice = {
+        utterance: null,
+        status: 'idle',
+        verses: [],
+        currentVerseIndex: 0,
+        executionToken: null,
+        key: null,
+        reference: null
+    };
     this.updateBibleChapterVoiceUI();
 },
 
@@ -5831,29 +5992,44 @@ updateBibleChapterVoiceUI: function() {
         const mainBtn = control.querySelector('[data-action="bible-chapter-voice-toggle"]');
 
         if (mainBtn) {
-            const isReading = this.isBibleAudioPlaying;
+            const key = control.getAttribute('data-bible-voice-key');
+            const status = this.getBibleChapterVoiceStatus(key);
+            const isPlaying = status === 'playing';
+            const isPaused = status === 'paused';
             const icon = mainBtn.querySelector('.daily-reading-voice-icon');
             const label = mainBtn.querySelector('.daily-reading-voice-label');
 
             if (icon) {
-                icon.className = `daily-reading-voice-icon daily-reading-voice-icon-${isReading ? 'stop' : 'play'}`;
+                icon.className = `daily-reading-voice-icon daily-reading-voice-icon-${isPlaying ? 'pause' : 'play'}`;
             }
 
             if (label) {
-                label.textContent = isReading
-                    ? 'Detener capítulo'
-                    : 'Escuchar capítulo';
+                label.textContent = isPlaying
+                    ? 'Pausar capítulo'
+                    : (isPaused ? 'Reanudar capítulo' : 'Escuchar capítulo');
             }
 
             mainBtn.setAttribute(
                 'aria-label',
-                isReading
-                    ? 'Detener capítulo en voz alta'
-                    : 'Escuchar capítulo en voz alta'
+                isPlaying
+                    ? 'Pausar capítulo en voz alta'
+                    : (isPaused ? 'Reanudar capítulo en voz alta' : 'Escuchar capítulo en voz alta')
             );
 
             const currentStopBtn = control.querySelector('[data-action="bible-chapter-voice-stop"]');
-            if (currentStopBtn) {
+            if ((isPlaying || isPaused) && !currentStopBtn) {
+                control.insertAdjacentHTML('beforeend', `
+                    <button
+                        class="daily-reading-voice-stop"
+                        type="button"
+                        data-action="bible-chapter-voice-stop"
+                        aria-label="Detener capítulo en voz alta"
+                        title="Detener"
+                    >
+                        <span aria-hidden="true"></span>
+                    </button>
+                `);
+            } else if (!isPlaying && !isPaused && currentStopBtn) {
                 currentStopBtn.remove();
             }
         }
@@ -6883,22 +7059,34 @@ extractChapterVerse: function(result) {
     };
 },
 
-renderBibleSearch: function() {
+renderBibleSearchResults: function() {
     const hasResults = this.bibleSearchResults.length > 0;
     const isLoading = this.bibleSearchLoading;
+    const searchError = String(this.bibleSearchError || '').trim();
     const hasQuery = this.bibleSearchQuery && this.bibleSearchQuery.trim().length >= 2;
-
-    let resultsHtml = '';
+    const versionLabel = this.getBibleVersionLabel(this.currentBibleVersion);
 
     if (isLoading) {
-        resultsHtml = `
+        return `
             <div class="bible-search-loading" id="bible-search-results-container">
                 <div class="spinner"></div>
                 <p>Buscando en la Biblia...</p>
             </div>
         `;
-    } else if (hasResults) {
-        resultsHtml = `
+    }
+
+    if (searchError) {
+        return `
+            <div class="bible-search-placeholder bible-search-empty" id="bible-search-results-container" role="alert">
+                <div class="bible-search-icon">⚠</div>
+                <h3>No se pudo completar la búsqueda</h3>
+                <p>${this.escapeHtml(searchError)}</p>
+            </div>
+        `;
+    }
+
+    if (hasResults) {
+        return `
             <div class="bible-search-results-head" id="bible-search-results-container">
                 <div class="bible-search-stats">
                     ${this.bibleSearchTotal} resultado${this.bibleSearchTotal === 1 ? '' : 's'} para “${this.escapeHtml(this.bibleSearchQuery)}”
@@ -6939,31 +7127,36 @@ renderBibleSearch: function() {
 
             ${this.renderBiblePagination()}
         `;
-    } else if (hasQuery) {
-        resultsHtml = `
+    }
+
+    if (hasQuery) {
+        return `
             <div class="bible-search-placeholder bible-search-empty" id="bible-search-results-container">
                 <div class="bible-search-icon">⌕</div>
                 <h3>No encontramos resultados</h3>
                 <p>No encontramos resultados. Prueba con otra palabra o referencia.</p>
             </div>
         `;
-    } else {
-        resultsHtml = `
-            <div class="bible-search-placeholder bible-search-start" id="bible-search-results-container">
-                <div class="bible-search-icon">⌕</div>
-                <h3>Empieza con una referencia o tema</h3>
-                <p>Busca por cita, palabra clave o tema bíblico en la Reina-Valera 1909.</p>
-
-                <div class="bible-search-suggestions">
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Juan 3:16">Juan 3:16</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Salmo 23">Salmo 23</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="gracia">gracia</button>
-                    <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="pacto">pacto</button>
-                </div>
-            </div>
-        `;
     }
 
+    return `
+        <div class="bible-search-placeholder bible-search-start" id="bible-search-results-container">
+            <div class="bible-search-icon">⌕</div>
+            <h3>Empieza con una referencia o tema</h3>
+            <p>Las referencias se abren en ${this.escapeHtml(versionLabel)}. Las búsquedas por palabra usan RV1909.</p>
+
+            <div class="bible-search-suggestions">
+                <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Juan 3:16">Juan 3:16</button>
+                <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="Salmo 23">Salmo 23</button>
+                <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="gracia">gracia</button>
+                <button class="suggestion-tag" type="button" data-action="search-suggestion" data-query="pacto">pacto</button>
+            </div>
+        </div>
+    `;
+},
+
+renderBibleSearch: function() {
+    const versionLabel = this.getBibleVersionLabel(this.currentBibleVersion);
     return `
         <div class="bible-search-view bible-search-modern">
             <div class="bible-search-hero">
@@ -6976,7 +7169,7 @@ renderBibleSearch: function() {
                         ← Biblia
                     </button>
 
-                    <span>RV1909</span>
+                    <span>${this.escapeHtml(versionLabel)}</span>
                 </div>
 
                 <h2>Buscar en la Biblia</h2>
@@ -6997,17 +7190,20 @@ renderBibleSearch: function() {
                         inputmode="search"
                     />
 
-                    ${this.bibleSearchQuery ? `
-                        <button
-                            class="bible-search-clear"
-                            type="button"
-                            data-action="clear-search"
-                            aria-label="Limpiar búsqueda"
-                        >
-                            ×
-                        </button>
-                    ` : ''}
+                    <button
+                        class="bible-search-clear"
+                        type="button"
+                        data-action="clear-search"
+                        aria-label="Limpiar búsqueda"
+                        ${this.bibleSearchQuery ? '' : 'hidden'}
+                    >
+                        ×
+                    </button>
                 </div>
+
+                <p class="bible-search-index-note">
+                    Las búsquedas de palabras se realizan sobre RV1909. Los resultados pueden abrirse en cualquier versión disponible.
+                </p>
 
                 <div class="bible-search-filters">
                     <button
@@ -7039,8 +7235,8 @@ renderBibleSearch: function() {
                 </div>
             </div>
 
-            <div class="bible-search-results-shell">
-                ${resultsHtml}
+            <div class="bible-search-results-shell" id="bible-search-results-shell">
+                ${this.renderBibleSearchResults()}
             </div>
         </div>
     `;
@@ -7095,155 +7291,53 @@ tokenizeBibleText: function(text) {
 },
 
 loadLocalBibleSearchData: async function() {
-    await this.buildSearchIndexFromAPI();
-},
-    
-buildSearchIndexFromAPI: async function() {
     if (this.bibleSearchIndexReady) return;
 
-    this.bibleSearchIndex = new Map();
-    this.bibleSearchVerseMap = new Map();
-
-    const books = this.bibleBooks.map((book, index) => ({
-        ...book,
-        bookOrder: index + 1
-    }));
-
-    for (const book of books) {
-        for (let chapter = 1; chapter <= book.chapters; chapter++) {
-            try {
-                const chapterData = await getBibleChapter(book.id, chapter);
-                const verses = this.extractVersesFromBibleHtml(chapterData?.content || '');
-
-                for (const verse of verses) {
-                    const verseNumber = Number(verse.number);
-
-                    if (!verse.text || !verseNumber) continue;
-
-                    const verseObj = {
-                        id: `${book.id}.${chapter}.${verseNumber}`,
-                        bookId: book.id,
-                        bookName: book.name,
-                        testament: this.getTestamentFromBookId(book.id),
-                        bookOrder: book.bookOrder,
-                        chapter,
-                        verse: verseNumber,
-                        text: verse.text
-                    };
-
-                    this.bibleSearchVerseMap.set(verseObj.id, verseObj);
-
-                    const words = new Set(this.tokenizeBibleText(verse.text));
-
-                    for (const word of words) {
-                        if (!this.bibleSearchIndex.has(word)) {
-                            this.bibleSearchIndex.set(word, []);
-                        }
-                        this.bibleSearchIndex.get(word).push(verseObj.id);
-                    }
-                }
-            } catch (error) {
-                console.warn('Error cargando índice bíblico:', book.id, chapter, error);
-            }
-        }
-    }
-
-    this.bibleSearchIndexReady = true;
-},
-
-extractVersesFromBibleHtml: function(htmlContent) {
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent || '';
-
-    const verseItems = Array.from(tempDiv.querySelectorAll('.verse-item'));
-
-    if (verseItems.length) {
-        return verseItems
-            .map(item => {
-                const number =
-                    item.getAttribute('data-verse-number') ||
-                    item.querySelector('.verse-number')?.textContent ||
-                    '';
-
-                const text =
-                    item.getAttribute('data-verse-full') ||
-                    item.getAttribute('data-verse-text') ||
-                    item.querySelector('.verse-text')?.textContent ||
-                    item.textContent ||
-                    '';
-
-                return {
-                    number: this.normalizeBibleText(number),
-                    text: this.normalizeBibleText(text)
-                };
-            })
-            .filter(verse => verse.number && verse.text);
-    }
-
+    const bible = await localRv1909Provider.loadBible();
     const verses = [];
-    let currentVerse = null;
 
-    const pushCurrentVerse = () => {
-        if (!currentVerse) return;
+    bible.forEach((sourceBook, sourceBookIndex) => {
+        const bookId = localRv1909Provider.getCanonicalBookId(sourceBook?.abbrev);
+        const book = this.bibleBooks.find(item => item.id === bookId);
 
-        const cleanNumber = this.normalizeBibleText(currentVerse.number);
-        const cleanText = this.normalizeBibleText(currentVerse.text);
-
-        if (cleanNumber && cleanText) {
-            verses.push({
-                number: cleanNumber,
-                text: cleanText
+        if (!bookId || !book || !Array.isArray(sourceBook?.chapters)) {
+            console.warn('[BibleSearch] Libro local omitido del índice', {
+                sourceBookIndex,
+                abbreviation: sourceBook?.abbrev
             });
-        }
-
-        currentVerse = null;
-    };
-
-    const processNode = (node) => {
-        if (!node) return;
-
-        if (node.nodeType === Node.TEXT_NODE) {
-            if (currentVerse) {
-                currentVerse.text += node.textContent || '';
-            }
             return;
         }
 
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        sourceBook.chapters.forEach((chapterVerses, chapterIndex) => {
+            if (!Array.isArray(chapterVerses)) return;
 
-        if (this.isBibleTitleNode(node)) {
-            pushCurrentVerse();
-            return;
-        }
+            chapterVerses.forEach((text, verseIndex) => {
+                const normalizedText = String(text || '').trim();
 
-        const classList = Array.from(node.classList || []);
-        const isVerseMarker =
-            classList.includes('v') ||
-            classList.includes('verse-number') ||
-            node.hasAttribute('data-verse') ||
-            /^v\d*$/i.test(node.className || '');
+                if (!normalizedText) return;
 
-        if (isVerseMarker) {
-            pushCurrentVerse();
+                verses.push({
+                    id: `${bookId}.${chapterIndex + 1}.${verseIndex + 1}`,
+                    bookId,
+                    bookName: book.name,
+                    testament: this.getTestamentFromBookId(bookId),
+                    bookOrder: this.bibleBooks.indexOf(book) + 1,
+                    chapter: chapterIndex + 1,
+                    verse: verseIndex + 1,
+                    text: normalizedText
+                });
+            });
+        });
+    });
 
-            currentVerse = {
-                number:
-                    node.getAttribute('data-verse') ||
-                    node.textContent ||
-                    '',
-                text: ''
-            };
+    this.bibleSearchData = verses;
+    this.buildLocalBibleSearchIndex();
+    this.bibleSearchIndexReady = true;
 
-            return;
-        }
-
-        Array.from(node.childNodes).forEach(child => processNode(child));
-    };
-
-    Array.from(tempDiv.childNodes).forEach(node => processNode(node));
-    pushCurrentVerse();
-
-    return verses;
+    console.info('[BibleSearch] Índice local listo', {
+        versionId: RV1909_VERSION_ID,
+        verseCount: verses.length
+    });
 },
 
 buildLocalBibleSearchIndex: function() {
@@ -7330,6 +7424,8 @@ resetBibleSearchState: function() {
     this.bibleSearchQuery = '';
     this.bibleSearchResults = [];
     this.bibleSearchLoading = false;
+    this.bibleSearchError = '';
+    this.bibleSearchRequestId += 1;
     this.bibleSearchTotal = 0;
     this.bibleSearchTotalPages = 0;
     this.bibleSearchPage = 1;
@@ -7391,68 +7487,105 @@ renderBiblePagination: function() {
 performBibleSearch: async function(query, resetPage = true) {
     const inputQuery = String(query || '');
     const normalizedQuery = inputQuery.trim();
+    const activeVersionId = String(this.currentBibleVersion || RV1909_VERSION_ID)
+        .trim()
+        .toLowerCase();
+    const requestId = this.bibleSearchRequestId;
     this.bibleSearchQuery = inputQuery;
+    this.bibleSearchError = '';
 
     if (resetPage) {
         this.bibleSearchPage = 1;
     }
 
     if (!normalizedQuery || normalizedQuery.length < 2) {
-    this.bibleSearchResults = [];
-    this.bibleSearchLoading = false;
-    this.bibleSearchTotal = 0;
-    this.bibleSearchTotalPages = 0;
-    this.bibleSearchPage = 1;
-    this.updateBibleSearchResults();
-    return;
-}
+        this.bibleSearchResults = [];
+        this.bibleSearchLoading = false;
+        this.bibleSearchError = '';
+        this.bibleSearchTotal = 0;
+        this.bibleSearchTotalPages = 0;
+        this.bibleSearchPage = 1;
+        this.updateBibleSearchResults();
+        return;
+    }
+
+    const referenceQuery = this.parseBibleReferenceQuery(normalizedQuery);
+
+    if (referenceQuery) {
+        this.bibleSearchLoading = false;
+        this.bibleSearchResults = [];
+        this.bibleSearchTotal = 0;
+        this.bibleSearchTotalPages = 0;
+
+        console.info('[BibleSearch] Referencia detectada', {
+            query: normalizedQuery,
+            versionId: activeVersionId,
+            reference: referenceQuery,
+            indexLoaded: this.bibleSearchIndexReady
+        });
+
+        this.navigateToVerse(
+            referenceQuery.bookId,
+            referenceQuery.chapter,
+            referenceQuery.verse
+        );
+        return;
+    }
 
     this.bibleSearchLoading = true;
     this.updateBibleSearchResults();
 
+    console.info('[BibleSearch] Inicio', {
+        query: normalizedQuery,
+        searchVersionId: RV1909_VERSION_ID,
+        activeVersionId,
+        source: 'local',
+        page: this.bibleSearchPage
+    });
+
     try {
         await this.loadLocalBibleSearchData();
+        const allMatches = this.searchLocalBible(
+            normalizedQuery,
+            this.bibleSearchFilter
+        );
 
-        const referenceQuery = this.parseBibleReferenceQuery(normalizedQuery);
-        const allMatches = referenceQuery
-            ? this.searchBibleReference(referenceQuery, this.bibleSearchFilter)
-            : this.searchLocalBible(normalizedQuery, this.bibleSearchFilter);
+        if (requestId !== this.bibleSearchRequestId) return;
+
+        console.info('[BibleSearch] Respuesta', {
+            query: normalizedQuery,
+            searchVersionId: RV1909_VERSION_ID,
+            activeVersionId,
+            source: 'local',
+            resultCount: allMatches.length,
+            results: allMatches
+        });
 
         this.applyBibleSearchPagination(allMatches);
     } catch (error) {
-        console.error('Error en búsqueda bíblica local:', error);
+        if (requestId !== this.bibleSearchRequestId) return;
+
+        console.error('[BibleSearch] Error', {
+            query: normalizedQuery,
+            searchVersionId: RV1909_VERSION_ID,
+            activeVersionId,
+            source: 'local',
+            message: error?.message,
+            code: error?.code,
+            details: error?.details,
+            error
+        });
         this.bibleSearchResults = [];
         this.bibleSearchTotal = 0;
         this.bibleSearchTotalPages = 0;
-        this.showToast('Error al buscar localmente en la Biblia');
+        this.bibleSearchError = 'No se pudo completar la búsqueda local. Intenta de nuevo.';
+        this.showToast(this.bibleSearchError);
     } finally {
+        if (requestId !== this.bibleSearchRequestId) return;
+
         this.bibleSearchLoading = false;
         this.updateBibleSearchResults();
     }
-},
-
-searchBibleReference: function(reference, filter = this.bibleSearchFilter) {
-    if (!reference?.bookId || !reference.chapter) return [];
-
-    const book = this.bibleBooks.find(item => item.id === reference.bookId);
-
-    if (!book) return [];
-
-    const testament = this.getTestamentFromBookId(book.id);
-
-    if (filter !== 'all' && filter !== testament) {
-        return [];
-    }
-
-    const chapterPrefix = `${book.id}.${Number(reference.chapter)}.`;
-
-    return Array.from(this.bibleSearchVerseMap.values())
-        .filter(verse => {
-            if (!String(verse.id || '').startsWith(chapterPrefix)) return false;
-            if (reference.verse) return Number(verse.verse) === Number(reference.verse);
-            return true;
-        })
-        .sort((a, b) => Number(a.verse) - Number(b.verse));
 },
 
 goToBibleSearchPage: function(page) {
@@ -7462,6 +7595,7 @@ goToBibleSearchPage: function(page) {
     if (targetPage < 1 || targetPage > this.bibleSearchTotalPages) return;
 
     this.bibleSearchPage = targetPage;
+    this.bibleSearchRequestId += 1;
     this.performBibleSearch(this.bibleSearchQuery, false);
 
     requestAnimationFrame(() => {
@@ -7488,12 +7622,21 @@ setBibleSearchFilter: function(filter) {
         return;
     }
 
+    this.bibleSearchRequestId += 1;
     this.performBibleSearch(this.bibleSearchQuery, true);
 },
 
 clearBibleSearch: function() {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = null;
+    this.bibleSearchComposing = false;
     this.bibleSearchFilter = 'all';
     this.resetBibleSearchState();
+    const searchInput = document.getElementById('bible-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+        searchInput.focus();
+    }
     this.updateFilterButtonsUI();
     this.updateBibleSearchResults();
 },
@@ -7507,34 +7650,42 @@ updateFilterButtonsUI: function() {
     });
 },
 
+updateBibleSearchClearButton: function() {
+    const clearButton = this.$content?.querySelector('.bible-search-clear');
+
+    if (clearButton) {
+        clearButton.hidden = !this.bibleSearchQuery;
+    }
+},
+
+scheduleBibleSearch: function(query) {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+        this.searchTimeout = null;
+
+        if (this.currentView !== 'bible-search') return;
+        if (this.bibleSearchComposing) return;
+        this.performBibleSearch(query);
+    }, 300);
+},
+
 updateBibleSearchResults: function() {
     if (this.currentView !== 'bible-search' || !this.$content) return;
+    if (this.bibleSearchComposing) return;
 
-    const activeElement = document.activeElement;
-    const isSearchInput = activeElement && activeElement.id === 'bible-search-input';
-    const cursorPosition = isSearchInput ? activeElement.selectionStart : null;
+    const resultsShell = document.getElementById('bible-search-results-shell');
 
-    this.$content.innerHTML = this.renderBibleSearch();
-
-    if (isSearchInput) {
-        const searchInput = document.getElementById('bible-search-input');
-
-        if (searchInput) {
-            searchInput.focus();
-
-            const safePosition = Math.min(
-                cursorPosition ?? this.bibleSearchQuery.length,
-                searchInput.value.length
-            );
-
-            searchInput.setSelectionRange(safePosition, safePosition);
-        }
+    if (resultsShell) {
+        resultsShell.innerHTML = this.renderBibleSearchResults();
     }
+
+    this.updateBibleSearchClearButton();
 },
 
 navigateToVerse: function(apiBookId, chapter, verse) {
     // Convertir ID de API a nuestro ID
-    const ourBookId = this.bibleApiIdMap[apiBookId.toUpperCase()] || apiBookId.toLowerCase();
+    const rawBookId = String(apiBookId || '');
+    const ourBookId = this.bibleApiIdMap[rawBookId.toUpperCase()] || rawBookId.toLowerCase();
     
     // Verificar que el libro existe
     const book = this.bibleBooks.find(b => b.id === ourBookId);
@@ -7545,8 +7696,11 @@ navigateToVerse: function(apiBookId, chapter, verse) {
     }
     
     this.selectedBibleBook = ourBookId;
-    this.selectedBibleChapter = parseInt(chapter);
-    this.targetVerse = parseInt(verse);
+    this.selectedBibleChapter = Number.parseInt(chapter, 10);
+    const targetVerse = Number.parseInt(verse, 10);
+    this.targetVerse = Number.isInteger(targetVerse) && targetVerse > 0
+        ? targetVerse
+        : null;
     this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
     
     // Navegar directamente a bible-reading
@@ -8255,15 +8409,20 @@ closeBibleVersionPicker: function() {
 },
 
 renderBibleReaderContextBar: function(bookName, chapterNumber) {
-    const isReading = this.isBibleAudioPlaying;
-    const audioLabel = isReading ? 'Stop' : 'Audio';
-    const audioIcon = isReading ? '■' : '▶';
-    const audioAriaLabel = isReading ? 'Detener audio del capítulo' : 'Escuchar capítulo';
+    const key = `${bookName}-${chapterNumber}`;
+    const status = this.getBibleChapterVoiceStatus(key);
+    const isPlaying = status === 'playing';
+    const isPaused = status === 'paused';
+    const audioLabel = isPlaying ? 'Pausa' : (isPaused ? 'Reanudar' : 'Audio');
+    const audioIcon = isPlaying ? 'Ⅱ' : '▶';
+    const audioAriaLabel = isPlaying
+        ? 'Pausar audio del capítulo'
+        : (isPaused ? 'Reanudar audio del capítulo' : 'Escuchar capítulo');
 
     return `
-        <div class="bible-reader-context-bar" role="toolbar" aria-label="Accesos rápidos del lector bíblico">
+        <div class="bible-reader-context-bar ${isPlaying || isPaused ? 'has-audio-stop' : ''}" role="toolbar" aria-label="Accesos rápidos del lector bíblico">
             <button
-                class="bible-reader-tool ${isReading ? 'is-active' : ''}"
+                class="bible-reader-tool ${isPlaying || isPaused ? 'is-active' : ''}"
                 type="button"
                 data-action="reader-context-audio"
                 aria-label="${audioAriaLabel}"
@@ -8271,6 +8430,17 @@ renderBibleReaderContextBar: function(bookName, chapterNumber) {
                 <span class="bible-reader-tool-icon" aria-hidden="true">${audioIcon}</span>
                 <span>${audioLabel}</span>
             </button>
+            ${isPlaying || isPaused ? `
+                <button
+                    class="bible-reader-tool"
+                    type="button"
+                    data-action="reader-context-audio-stop"
+                    aria-label="Detener audio del capítulo"
+                >
+                    <span class="bible-reader-tool-icon" aria-hidden="true">■</span>
+                    <span>Detener</span>
+                </button>
+            ` : ''}
             <button
                 class="bible-reader-tool"
                 type="button"
@@ -8432,13 +8602,13 @@ toggleBibleChapterVoiceFromContext: function() {
     }
 
     const key = `${book.name}-${chapter}`;
-    const text = this.getCleanBibleChapterVoiceText(this.currentBibleChapterData, book.name, chapter);
+    const verses = this.getBibleChapterVoiceVerses(
+        this.currentBibleChapterData,
+        book.name,
+        chapter
+    );
 
-    if (this.isBibleAudioPlaying) {
-        this.stopBibleChapterVoice();
-    } else {
-        this.startBibleChapterVoice(key, text, `${book.name} ${chapter}`);
-    }
+    this.toggleBibleChapterVoice(key, verses, `${book.name} ${chapter}`);
 },
 
 renderBibleReading: async function() {
@@ -11609,10 +11779,15 @@ if (openStrongDictionaryBtn) {
 
 const openSearchBtn = e.target.closest('[data-action="open-bible-search"]');
 if (openSearchBtn) {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = null;
+    this.bibleSearchComposing = false;
     this.bibleSearchFilter = 'all';
     this.bibleSearchQuery = '';
     this.bibleSearchResults = [];
     this.bibleSearchLoading = false;
+    this.bibleSearchError = '';
+    this.bibleSearchRequestId += 1;
     this.bibleSearchTotal = 0;
     this.bibleSearchTotalPages = 0;
     this.bibleSearchPage = 1;
@@ -11624,6 +11799,18 @@ if (openSearchBtn) {
 const suggestionTag = e.target.closest('[data-action="search-suggestion"]');
 if (suggestionTag) {
     const query = suggestionTag.getAttribute('data-query') || suggestionTag.textContent.trim();
+    const searchInput = document.getElementById('bible-search-input');
+
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = null;
+    this.bibleSearchRequestId += 1;
+    this.bibleSearchQuery = query;
+
+    if (searchInput) {
+        searchInput.value = query;
+    }
+
+    this.updateBibleSearchClearButton();
     this.performBibleSearch(query, true);
     return;
 }
@@ -11692,6 +11879,12 @@ if (bibleMemoryPassageBtn) {
 const readerContextAudioBtn = e.target.closest('[data-action="reader-context-audio"]');
 if (readerContextAudioBtn) {
     this.toggleBibleChapterVoiceFromContext();
+    return;
+}
+
+const readerContextAudioStopBtn = e.target.closest('[data-action="reader-context-audio-stop"]');
+if (readerContextAudioStopBtn) {
+    this.stopBibleChapterVoice();
     return;
 }
 
@@ -12103,19 +12296,21 @@ if (dailyReadingVoiceStopBtn) {
 
 const bibleChapterVoiceToggleBtn = e.target.closest('[data-action="bible-chapter-voice-toggle"]');
 if (bibleChapterVoiceToggleBtn) {
-    if (this.isBibleAudioPlaying) {
-        this.stopBibleChapterVoice();
-    } else {
-        const key = bibleChapterVoiceToggleBtn.getAttribute('data-key');
-        const reference = bibleChapterVoiceToggleBtn.getAttribute('data-reference') || '';
-        const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
-        const text = this.getCleanBibleChapterVoiceText(
-            this.currentBibleChapterData,
-            book?.name || 'Biblia',
-            Number(this.selectedBibleChapter)
-        );
-        this.startBibleChapterVoice(key, text, reference);
-    }
+    const key = bibleChapterVoiceToggleBtn.getAttribute('data-key');
+    const reference = bibleChapterVoiceToggleBtn.getAttribute('data-reference') || '';
+    const book = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
+    const verses = this.getBibleChapterVoiceVerses(
+        this.currentBibleChapterData,
+        book?.name || 'Biblia',
+        Number(this.selectedBibleChapter)
+    );
+    this.toggleBibleChapterVoice(key, verses, reference);
+    return;
+}
+
+const bibleChapterVoiceStopBtn = e.target.closest('[data-action="bible-chapter-voice-stop"]');
+if (bibleChapterVoiceStopBtn) {
+    this.stopBibleChapterVoice();
     return;
 }
 
@@ -12651,11 +12846,40 @@ if (navItem) {
 // ✅ NUEVO: Búsqueda en la Biblia
 if (e.target.id === 'bible-search-input') {
     const query = e.target.value;
+    this.bibleSearchRequestId += 1;
+    this.bibleSearchQuery = query;
+    this.bibleSearchError = '';
     clearTimeout(this.searchTimeout);
-    this.searchTimeout = setTimeout(() => {
-        this.performBibleSearch(query);
-    }, 300);
+
+    if (e.isComposing || this.bibleSearchComposing) {
+        this.searchTimeout = null;
+        return;
+    }
+
+    this.updateBibleSearchClearButton();
+    this.scheduleBibleSearch(query);
 }          
+});
+
+        this.$content.addEventListener('compositionstart', (e) => {
+    if (e.target.id !== 'bible-search-input') return;
+
+    this.bibleSearchComposing = true;
+    this.bibleSearchRequestId += 1;
+    this.bibleSearchQuery = e.target.value;
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = null;
+});
+
+        this.$content.addEventListener('compositionend', (e) => {
+    if (e.target.id !== 'bible-search-input') return;
+
+    this.bibleSearchComposing = false;
+    this.bibleSearchRequestId += 1;
+    this.bibleSearchQuery = e.target.value;
+    this.bibleSearchError = '';
+    this.updateBibleSearchClearButton();
+    this.scheduleBibleSearch(e.target.value);
 });
 
         this.$content.addEventListener('change', (e) => {
