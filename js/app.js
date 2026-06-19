@@ -560,6 +560,10 @@ verseImageSource: 'home',
 currentSelectionColorDraft: null,
 _savedScrollY: null, 
 pushListenersReady: false,
+_nativePushActionListenersReady: false,
+_nativePushRegistrationListenersReady: false,
+_pushRouteReady: false,
+_pendingPushHash: null,
 themeListenerReady: false,
 _selectionPanelEventsBound: false,
 _authInitPromise: null,
@@ -602,9 +606,18 @@ this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
 this.setupAndroidBackButton();
+this.setupNativePushActionListeners();
 await this.loadData();
 
 await this.handleRoute();
+this._pushRouteReady = true;
+
+if (this._pendingPushHash) {
+    const pendingPushHash = this._pendingPushHash;
+    this._pendingPushHash = null;
+    await this.navigateToPushHash(pendingPushHash);
+}
+
 this.updateStreakUI();
 
 this.initAuth().then(async () => {
@@ -10647,6 +10660,99 @@ enableNotificationsFlow: async function() {
     // ========================================
     // PUSH NOTIFICATIONS (NUEVO)
     // ========================================
+setupNativePushActionListeners: function() {
+    const isNativeAndroid = !!(
+        window.Capacitor &&
+        typeof window.Capacitor.getPlatform === 'function' &&
+        window.Capacitor.getPlatform() === 'android'
+    );
+
+    if (!isNativeAndroid || this._nativePushActionListenersReady) return;
+
+    const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
+
+    if (!PushNotifications?.addListener) {
+        console.warn('[Push][listeners] Plugin PushNotifications no disponible');
+        return;
+    }
+
+    this._nativePushActionListenersReady = true;
+    console.log('[Push][listeners] Registrando listeners nativos de apertura');
+
+    Promise.all([
+        PushNotifications.addListener('pushNotificationReceived', (notification) => {
+            console.log('[Push][received]', notification);
+        }),
+        PushNotifications.addListener('pushNotificationActionPerformed', (event) => {
+            this.handlePushNavigation(event);
+        })
+    ]).catch(error => {
+        this._nativePushActionListenersReady = false;
+        console.error('[Push][listeners] No se pudieron registrar:', error);
+    });
+},
+
+getPushHashFromEvent: function(event) {
+    const notification = event?.notification || {};
+    const notificationData = notification?.data;
+    const rawUrl = typeof notificationData === 'string'
+        ? notificationData
+        : notificationData?.url
+            || (typeof notification === 'string' ? notification : '')
+            || notification?.url
+            || notification?.link
+            || '';
+
+    if (!rawUrl) return '#home';
+
+    try {
+        const normalizedUrl = String(rawUrl).trim();
+        const hash = normalizedUrl.startsWith('#')
+            ? normalizedUrl
+            : normalizedUrl.startsWith('/#')
+                ? normalizedUrl.slice(1)
+                : new URL(normalizedUrl, window.location.origin).hash;
+
+        if (!hash || hash === '#today') return '#home';
+        return hash.startsWith('#') ? hash : '#home';
+    } catch (error) {
+        console.warn('[Push][route] URL inválida; se abrirá Inicio:', rawUrl);
+        return '#home';
+    }
+},
+
+handlePushNavigation: function(event) {
+    console.log('[Push][tap]', event);
+
+    const hash = this.getPushHashFromEvent(event);
+    console.log('[Push][route]', {
+        url: event?.notification?.data?.url || null,
+        hash,
+        ready: this._pushRouteReady
+    });
+
+    if (!this._pushRouteReady) {
+        this._pendingPushHash = hash;
+        return;
+    }
+
+    this.navigateToPushHash(hash).catch(error => {
+        console.error('[Push][navigate] No se pudo completar la navegación:', error);
+    });
+},
+
+navigateToPushHash: async function(hash) {
+    const targetHash = hash || '#home';
+
+    console.log('[Push][navigate]', {
+        from: window.location.hash || '#home',
+        to: targetHash
+    });
+
+    history.pushState(null, '', targetHash);
+    await this.handleRoute();
+},
+
 initPushNotifications: async function() {
     console.log('[App] Iniciando Push Notifications...');
 
@@ -10676,39 +10782,36 @@ initPushNotifications: async function() {
                 return false;
             }
 
-            await PushNotifications.removeAllListeners();
+            this.setupNativePushActionListeners();
 
-            await PushNotifications.addListener('registration', async (token) => {
-                const tokenValue = String(token?.value || '').trim();
+            if (!this._nativePushRegistrationListenersReady) {
+                this._nativePushRegistrationListenersReady = true;
 
-                if (!tokenValue) {
-                    console.warn('[App] Token FCM Android vacío');
-                    return;
+                try {
+                    await PushNotifications.addListener('registration', async (token) => {
+                        const tokenValue = String(token?.value || '').trim();
+
+                        if (!tokenValue) {
+                            console.warn('[App] Token FCM Android vacío');
+                            return;
+                        }
+
+                        console.log('[App] Token FCM Android obtenido correctamente');
+                        localStorage.setItem('su-voz-fcm-token', tokenValue);
+
+                        if (this.currentUser) {
+                            await this.savePushToken(tokenValue);
+                        }
+                    });
+
+                    await PushNotifications.addListener('registrationError', (error) => {
+                        console.error('[App] Error registrando Push Android:', error);
+                    });
+                } catch (error) {
+                    this._nativePushRegistrationListenersReady = false;
+                    throw error;
                 }
-
-                console.log('[App] Token FCM Android obtenido correctamente');
-                localStorage.setItem('su-voz-fcm-token', tokenValue);
-
-                if (this.currentUser) {
-                    await this.savePushToken(tokenValue);
-                }
-            });
-
-            await PushNotifications.addListener('registrationError', (error) => {
-                console.error('[App] Error registrando Push Android:', error);
-            });
-
-            await PushNotifications.addListener('pushNotificationReceived', (notification) => {
-                console.log('[App] Push Android recibida:', notification);
-            });
-
-            await PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-                console.log('[App] Push Android abierta:', notification);
-                const url = notification?.notification?.data?.url || notification?.notification?.data?.click_action;
-                if (url && typeof window.navigateTo === 'function') {
-                    window.navigateTo(url);
-                }
-            });
+            }
 
             await PushNotifications.register();
             return true;

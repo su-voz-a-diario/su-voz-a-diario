@@ -268,7 +268,6 @@ async function sendNotification(db, recipients, data) {
           channelId: "default",
           sound: "default",
           tag: data.tag || "su-voz-notification",
-          clickAction: "OPEN_APP",
         },
       },
       webpush: {
