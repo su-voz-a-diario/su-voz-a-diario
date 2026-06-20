@@ -194,6 +194,8 @@ const tokenizedText = window.App?.tokenizeVerseText(
  * Funcionalidades: Rachas, Estadísticas, Notificaciones, PWA, Backup
  */
 
+const DAILY_READING_VERSIONS = Object.freeze(['rvr60', 'ntv', 'tla']);
+
 const App = {
     // ========================================
     // DATOS Y ESTADO
@@ -586,9 +588,11 @@ _lastAuthError: null,
     this.loadBibleReadingSettings();
     localStorage.removeItem('su-voz-last-reminder-date');
        
-    const savedVersion = localStorage.getItem('current-version');
-    if (savedVersion) {
+    const savedVersion = String(localStorage.getItem('current-version') || '').trim().toLowerCase();
+    if (DAILY_READING_VERSIONS.includes(savedVersion)) {
         this.currentVersion = savedVersion;
+    } else if (savedVersion) {
+        localStorage.setItem('current-version', this.currentVersion);
     }
 
     const savedBibleVersion = localStorage.getItem('current-bible-version');
@@ -5259,6 +5263,62 @@ renderViewHeader: function(title, subtitle = '', meta = '') {
         </section>
     `;
 },
+
+renderDailyVersionSelector: function() {
+    const versions = [
+        {
+            id: 'rvr60',
+            label: 'RVR60',
+            icon: `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m3.5 8 4.25 3.25L12 5l4.25 6.25L20.5 8l-1.35 9H4.85L3.5 8Z"></path>
+                    <path d="M5 19h14"></path>
+                </svg>
+            `
+        },
+        {
+            id: 'ntv',
+            label: 'NTV',
+            icon: `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 3.75h9.5L19 7.25v13H6a2 2 0 0 1-2-2V5.75a2 2 0 0 1 2-2Z"></path>
+                    <path d="M15 3.75v4h4M8 12h7M8 16h7"></path>
+                </svg>
+            `
+        },
+        {
+            id: 'tla',
+            label: 'TLA',
+            icon: `
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3.5 5.5A3.5 3.5 0 0 1 7 4h5v15H7a3.5 3.5 0 0 0-3.5 1.5v-15Z"></path>
+                    <path d="M20.5 5.5A3.5 3.5 0 0 0 17 4h-5v15h5a3.5 3.5 0 0 1 3.5 1.5v-15Z"></path>
+                </svg>
+            `
+        }
+    ];
+
+    return `
+        <div class="reading-version-selector" role="group" aria-label="Versión de la lectura diaria">
+            ${versions.map(version => {
+                const isActive = version.id === this.currentVersion;
+
+                return `
+                    <button
+                        class="reading-version-pill version-btn${isActive ? ' active' : ''}"
+                        type="button"
+                        data-version="${version.id}"
+                        aria-label="Leer en versión ${version.label}"
+                        aria-pressed="${isActive}"
+                    >
+                        <span class="reading-version-icon">${version.icon}</span>
+                        <span>${version.label}</span>
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    `;
+},
     
     // ========================================
     // NAVEGACIÓN Y RENDERIZADO
@@ -5451,10 +5511,9 @@ this.currentView = view;
 this.updateNavUI();
     
     document.querySelectorAll('.version-btn').forEach(btn => {
-        btn.classList.toggle(
-            'active',
-            btn.getAttribute('data-version') === this.currentVersion
-        );
+        const isActive = btn.getAttribute('data-version') === this.currentVersion;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
     });
     
     this.$content.classList.remove('fade-in');
@@ -5538,6 +5597,19 @@ getHomeViewingDate: function() {
     return this.homeViewingDate || this.getTodayDateStr();
 },
 
+getDailyReadingText: function(reading, version = this.currentVersion) {
+    if (!reading) return '';
+
+    const versions = reading.versions || {};
+    const selectedText = versions[version];
+
+    if (typeof selectedText === 'string' && selectedText.trim()) {
+        return selectedText;
+    }
+
+    return versions.rvr60 || versions.ntv || reading.text || '';
+},
+
 changeHomeDay: async function(direction) {
     const currentDate = this.getHomeViewingDate();
     const currentIndex = this.getReadingIndexByDate(currentDate);
@@ -5556,7 +5628,7 @@ changeHomeDay: async function(direction) {
 getCleanDailyReadingText: function(reading, rawText = '') {
     if (!reading) return '';
 
-    const sourceText = rawText || reading.versions?.[this.currentVersion] || reading.text || '';
+    const sourceText = rawText || this.getDailyReadingText(reading);
     const tempDiv = document.createElement('div');
 
     tempDiv.innerHTML = sourceText
@@ -6751,7 +6823,7 @@ restoreCalendarPosition: function() {
         
         // Construir la vista con el pergamino incluido
         const dateFormatted = this.formatDateEs(reading.date);
-        const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
+        const readingText = this.getDailyReadingText(reading);
 
         // Video intro (si aplica)
         const showIntroVideo = shouldShowIntroVideo(reading.date);
@@ -6762,7 +6834,7 @@ restoreCalendarPosition: function() {
         const hasPrev = currentIndex > 0;
         const hasNext = currentIndex >= 0 && currentIndex < this.data.length - 1;
         const isRealToday = reading && reading.date === this.getTodayDateStr();
-        const readingLabel = isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día';
+        const readingLabel = isRealToday ? 'Su voz hoy' : 'Su voz este día';
 
         this.$content.innerHTML = `
 
@@ -6778,6 +6850,7 @@ restoreCalendarPosition: function() {
             ${introVideoHtml}
 
             <div class="reading-card">
+                ${this.renderDailyVersionSelector()}
                 <div class="section-title">${readingLabel}</div>
                 <h2 class="reading-reference">${reading.reference}</h2>
                 ${this.renderDailyReadingVoiceControl(reading)}
@@ -6877,7 +6950,7 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
         }
         
         const dateFormatted = this.formatDateEs(reading.date);
-        const readingText = reading.versions?.[this.currentVersion] || reading.text || '';
+        const readingText = this.getDailyReadingText(reading);
 
        const showIntroVideo = shouldShowIntroVideo(reading.date);
        const introVideoConfig = showIntroVideo ? getIntroVideoConfig(reading.date) : null;
@@ -6891,7 +6964,7 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
         const hasNext = currentIndex >= 0 && currentIndex < this.data.length - 1;
         const isRealToday = reading && reading.date === this.getTodayDateStr();
         const readingLabel = isHome
-            ? (isRealToday ? '📖 Su voz hoy' : '📖 Su voz este día')
+            ? (isRealToday ? 'Su voz hoy' : 'Su voz este día')
             : '📖 Su voz este día';
         
         this.$content.innerHTML = `
@@ -6909,6 +6982,7 @@ rerenderCurrentReadingView: async function(dateStr = null, force = false) {
     ${introVideoHtml}
     
                 <div class="reading-card">
+                    ${isHome ? this.renderDailyVersionSelector() : ''}
                     <div class="section-title">${readingLabel}</div>
                     <h2 class="reading-reference">${reading.reference}</h2>
                     ${isHome ? this.renderDailyReadingVoiceControl(reading) : ''}
@@ -11765,11 +11839,15 @@ document.addEventListener('click', (e) => {
     if (versionBtn) {
         const selectedVersion = versionBtn.getAttribute('data-version');
 
+        if (!DAILY_READING_VERSIONS.includes(selectedVersion)) return;
+
         this.currentVersion = selectedVersion;
         localStorage.setItem('current-version', this.currentVersion);
 
         document.querySelectorAll('.version-btn').forEach(btn => {
-            btn.classList.toggle('active', btn.getAttribute('data-version') === this.currentVersion);
+            const isActive = btn.getAttribute('data-version') === this.currentVersion;
+            btn.classList.toggle('active', isActive);
+            btn.setAttribute('aria-pressed', String(isActive));
         });
 
         this.handleRoute().catch(error => {
@@ -12341,7 +12419,7 @@ const noteSection = e.target.closest('.note-section');
             const reading = await this.getReadingByDate(date);
 
         if (reading) {
-        const rawHtml = reading.versions?.[this.currentVersion] || reading.text || '';
+        const rawHtml = this.getDailyReadingText(reading);
 
         const cleanText = rawHtml
             .replace(/<\/p>\s*<p>/g, '\n\n')

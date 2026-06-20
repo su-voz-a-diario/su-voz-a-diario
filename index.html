@@ -51,11 +51,11 @@
 
     <title>Su voz a diario</title>
 
-    <link rel="manifest" href="./manifest.json?v=89">
+    <link rel="manifest" href="./manifest.json?v=91">
     <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
     <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
-    <link rel="stylesheet" href="./css/styles.css?v=89">
+    <link rel="stylesheet" href="./css/styles.css?v=91">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -132,10 +132,6 @@
         <div class="dropdown-section">
             <button class="dropdown-btn" data-action="font-decrease">A−</button>
             <button class="dropdown-btn" data-action="font-increase">A+</button>
-        </div>
-        <div class="dropdown-section">
-            <button class="dropdown-btn version-btn active" data-version="rvr60">RVR60</button>
-            <button class="dropdown-btn version-btn" data-version="ntv">NTV</button>
         </div>
         <div class="dropdown-section">
             <button id="theme-toggle" class="dropdown-btn" title="Cambiar tema">🌙</button>
@@ -534,7 +530,7 @@
 })();
 </script>
 
-<script type="module" src="js/app.js?v=89"></script>
+<script type="module" src="js/app.js?v=91"></script>
 
 <script>
 (function () {
@@ -555,7 +551,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
-                const appVersion = 'v89';
+                const appVersion = 'v91';
                 const versionKey = 'su-voz-app-version';
                 const versionReloadKey = `su-voz-version-guard-reloaded-${appVersion}`;
                 const swReloadKey = `su-voz-sw-reloaded-${appVersion}`;
@@ -572,7 +568,7 @@
                     );
                 };
 
-                const registration = await navigator.serviceWorker.register('./sw.js?v=89', {
+                const registration = await navigator.serviceWorker.register('./sw.js?v=91', {
                     scope: './'
                 });
 
