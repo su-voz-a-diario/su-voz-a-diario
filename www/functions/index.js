@@ -1,10 +1,13 @@
 "use strict";
 
 const { getApps, initializeApp } = require("firebase-admin/app");
-const { FieldValue, getFirestore } = require("firebase-admin/firestore");
+const { FieldValue, getFirestore, Timestamp } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
 const { logger } = require("firebase-functions");
-const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const {
+  onDocumentCreated,
+  onDocumentWritten,
+} = require("firebase-functions/v2/firestore");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const {
@@ -154,7 +157,7 @@ async function getActiveRecipientsByUid(db, uids) {
   return recipientsByUid;
 }
 
-async function sendCommunityBadgeUpdates(db, updates) {
+async function sendCommunityBadgeUpdates(db, updates, context = {}) {
   if (!updates.length) {
     return {
       usersWithActivity: 0,
@@ -196,9 +199,12 @@ async function sendCommunityBadgeUpdates(db, updates) {
     const result = await sendNotification(db, recipients, {
       type: "community-badge",
       badgeCount: String(badgeCount),
+      postId: context.postId || "",
       title: "Su Voz a Diario",
       body: "Hay nueva actividad en Comunidad.",
-      url: "https://suvoz.app/#community",
+      url: context.postId
+        ? `https://suvoz.app/#community/${encodeURIComponent(context.postId)}`
+        : "https://suvoz.app/#community",
       tag: "community-activity",
     });
 
@@ -208,6 +214,49 @@ async function sendCommunityBadgeUpdates(db, updates) {
   }
 
   return totals;
+}
+
+async function updateCommunityPostActivity(db, postId, candidateTimestamp) {
+  if (typeof postId !== "string" || postId.length === 0) {
+    return false;
+  }
+
+  const activityTimestamp = candidateTimestamp instanceof Timestamp
+    ? candidateTimestamp
+    : Timestamp.now();
+  const postRef = db.collection("communityPosts").doc(postId);
+
+  return db.runTransaction(async (transaction) => {
+    const postSnapshot = await transaction.get(postRef);
+
+    if (!postSnapshot.exists) {
+      return false;
+    }
+
+    const currentTimestamp = postSnapshot.get("lastActivityAt");
+    if (
+      currentTimestamp instanceof Timestamp &&
+      currentTimestamp.toMillis() >= activityTimestamp.toMillis()
+    ) {
+      return false;
+    }
+
+    transaction.update(postRef, {
+      lastActivityAt: activityTimestamp,
+    });
+    return true;
+  });
+}
+
+function hasNewCommunityReaction(before, after) {
+  const beforeReactions = before?.reactions || {};
+  const afterReactions = after?.reactions || {};
+
+  return ["useful", "thanks"].some(
+    (reaction) =>
+      afterReactions[reaction] === true &&
+      beforeReactions[reaction] !== true
+  );
 }
 
 async function deleteInvalidTokens(db, documents) {
@@ -397,11 +446,18 @@ exports.countNewCommunityPost = onDocumentCreated(
   async (event) => {
     const post = event.data?.data();
     const db = getFirestore();
+    await updateCommunityPostActivity(
+      db,
+      event.params.postId,
+      post?.createdAt || event.data?.createTime
+    );
     const updates = await incrementCommunityForAllUsers(
       db,
       post?.ownerUid
     );
-    const pushResult = await sendCommunityBadgeUpdates(db, updates);
+    const pushResult = await sendCommunityBadgeUpdates(db, updates, {
+      postId: event.params.postId,
+    });
 
     logger.info("Actividad de publicación contabilizada.", {
       postId: event.params.postId,
@@ -420,13 +476,19 @@ exports.countNewCommunityReply = onDocumentCreated(
   async (event) => {
     const reply = event.data?.data();
     const db = getFirestore();
+    await updateCommunityPostActivity(
+      db,
+      reply?.postId,
+      reply?.createdAt || event.data?.createTime
+    );
     const postOwnerUid = await getCommunityPostOwner(db, reply?.postId);
     const update = postOwnerUid !== reply?.ownerUid
       ? await incrementUserActivity(db, postOwnerUid)
       : null;
     const pushResult = await sendCommunityBadgeUpdates(
       db,
-      update ? [update] : []
+      update ? [update] : [],
+      { postId: reply?.postId }
     );
 
     logger.info("Actividad de respuesta contabilizada.", {
@@ -440,13 +502,24 @@ exports.countNewCommunityReply = onDocumentCreated(
   }
 );
 
-exports.countNewCommunityReaction = onDocumentCreated(
+exports.countNewCommunityReaction = onDocumentWritten(
   {
     document: "communityReactions/{reactionId}",
     region: "us-central1",
   },
   async (event) => {
-    const reaction = event.data?.data();
+    const before = event.data?.before?.exists
+      ? event.data.before.data()
+      : null;
+    const after = event.data?.after?.exists
+      ? event.data.after.data()
+      : null;
+
+    if (!after || !hasNewCommunityReaction(before, after)) {
+      return;
+    }
+
+    const reaction = after;
     const db = getFirestore();
     const postOwnerUid = await getCommunityPostOwner(db, reaction?.postId);
     const update = postOwnerUid !== reaction?.userId
@@ -454,7 +527,8 @@ exports.countNewCommunityReaction = onDocumentCreated(
       : null;
     const pushResult = await sendCommunityBadgeUpdates(
       db,
-      update ? [update] : []
+      update ? [update] : [],
+      { postId: reaction?.postId }
     );
 
     logger.info("Actividad de reacción contabilizada.", {

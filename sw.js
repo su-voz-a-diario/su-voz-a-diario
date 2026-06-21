@@ -1,4 +1,4 @@
-const APP_VERSION = 'v91';
+const APP_VERSION = 'v92';
 const CACHE_NAME = `su-voz-${APP_VERSION}`;
 const DYNAMIC_CACHE = `su-voz-dynamic-${APP_VERSION}`;
 const OFFICIAL_ORIGIN = 'https://suvoz.app';
@@ -6,9 +6,9 @@ const OFFICIAL_ORIGIN = 'https://suvoz.app';
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './manifest.json?v=91',
-  './css/styles.css?v=91',
-  './js/app.js?v=91',
+  './manifest.json?v=92',
+  './css/styles.css?v=92',
+  './js/app.js?v=92',
   './js/core/constants.js',
   './js/core/defaults.js',
   './js/bible/bibleModel.js',
@@ -272,7 +272,8 @@ async function handleCommunityBadgeMessage(data) {
     data: {
       url: data?.url || './#community',
       type: 'community-badge',
-      badgeCount: data?.badgeCount || '0'
+      badgeCount: data?.badgeCount || '0',
+      postId: data?.postId || ''
     },
     tag: data?.tag || 'community-activity',
     renotify: false,

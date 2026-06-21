@@ -7,6 +7,7 @@
     "firebase:emulators": "firebase emulators:start --only functions,firestore",
     "firebase:deploy:functions": "firebase deploy --only functions",
     "firebase:deploy:rules": "firebase deploy --only firestore:rules",
+    "community:migrate:last-activity": "npm --prefix functions run migrate:community:last-activity --",
     "import:tla": "node scripts/import-tla-readings.mjs",
     "test:tla": "node scripts/validate-tla-readings.mjs",
     "test:bible-phase3": "node scripts/validate-bible-phase3.mjs",

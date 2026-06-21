@@ -109,6 +109,7 @@ const deleteDoc = (...args) => getFirebaseFunction('deleteDoc')(...args);
 const doc = (dbArg, ...args) => getFirebaseFunction('doc')(dbArg || window.firebaseDb, ...args);
 const setDoc = (...args) => getFirebaseFunction('setDoc')(...args);
 const getDoc = (...args) => getFirebaseFunction('getDoc')(...args);
+const getDocFromServer = (...args) => getFirebaseFunction('getDocFromServer')(...args);
 const onSnapshot = (...args) => getFirebaseFunction('onSnapshot')(...args);
 const signInAnonymously = (authArg, ...args) => getFirebaseFunction('signInAnonymously')(authArg || window.firebaseAuth, ...args);
 const onAuthStateChanged = (authArg, ...args) => getFirebaseFunction('onAuthStateChanged')(authArg || window.firebaseAuth, ...args);
@@ -503,6 +504,12 @@ const App = {
     replyDrafts: {},
     replyCharLimit: 300,
     communityPageSize: 20,
+    communityMode: 'recent',
+    communityCutoff: null,
+    communityServerNow: null,
+    communityTargetPostId: null,
+    communityTargetReplyId: null,
+    communityFeedStates: null,
     communityLastVisible: null,
     communityHasMorePosts: true,
     communityLoadingMore: false,
@@ -530,9 +537,8 @@ const App = {
     selectedStatsDate: null,
 
      // ✅ NUEVAS PROPIEDADES PARA OPTIMIZACIÓN
-    communityCache: null,           // Para caché de posts
-    communityScrollTop: 0,          // Para guardar scroll
-    shouldScrollToLastPost: false,  // Para controlar scroll al último post
+    communityCache: null,           // Alias del estado activo de Comunidad
+    communityScrollTop: 0,          // Para guardar scroll al salir de Comunidad
   
     
     // Sistema de rachas
@@ -1792,11 +1798,114 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
     return `su-voz-note-${dateStr}`;
     },
 
-   async getCommunityPosts(options = {}) {
+ensureCommunityCutoff: async function() {
+    if (this.communityCutoff) return this.communityCutoff;
+    if (!this.currentUser?.uid) {
+        throw new Error('No se pudo obtener la hora de Comunidad sin usuario');
+    }
+
+    const clockRef = doc(db, 'communityClock', this.currentUser.uid);
+    await setDoc(clockRef, {
+        requestedAt: serverTimestamp()
+    });
+
+    const clockSnapshot = await getDocFromServer(clockRef);
+    const requestedAt = clockSnapshot.data()?.requestedAt;
+
+    if (!requestedAt || typeof requestedAt.toMillis !== 'function') {
+        throw new Error('Firestore no devolvió una referencia de tiempo válida');
+    }
+
+    this.communityServerNow = requestedAt;
+    this.communityCutoff = new Date(
+        requestedAt.toMillis() - (15 * 24 * 60 * 60 * 1000)
+    );
+
+    deleteDoc(clockRef).catch(error => {
+        console.warn('[Community] No se pudo limpiar la referencia temporal:', error);
+    });
+
+    return this.communityCutoff;
+},
+
+getCommunityCutoff: function() {
+    if (!this.communityCutoff) {
+        throw new Error('La referencia temporal de Comunidad no está inicializada');
+    }
+
+    return this.communityCutoff;
+},
+
+ensureCommunityFeedStates: function() {
+    if (!this.communityFeedStates) {
+        const createState = () => ({
+            posts: [],
+            lastVisible: null,
+            hasMore: true,
+            loadingMore: false,
+            loaded: false,
+            timestamp: 0
+        });
+
+        this.communityFeedStates = {
+            recent: createState(),
+            history: createState()
+        };
+    }
+
+    return this.communityFeedStates;
+},
+
+getCommunityFeedState: function(mode = this.communityMode) {
+    const normalizedMode = mode === 'history' ? 'history' : 'recent';
+    return this.ensureCommunityFeedStates()[normalizedMode];
+},
+
+syncCommunityLegacyState: function() {
+    const state = this.getCommunityFeedState();
+    this.communityCache = state;
+    this.communityLastVisible = state.lastVisible;
+    this.communityHasMorePosts = state.hasMore;
+    this.communityLoadingMore = state.loadingMore;
+    this.communityPostsLoaded = state.loaded;
+},
+
+getCommunityTimestampMillis: function(value) {
+    if (!value) return 0;
+    if (typeof value.toMillis === 'function') return value.toMillis();
+    if (typeof value.seconds === 'number') return value.seconds * 1000;
+    if (value instanceof Date) return value.getTime();
+    const parsed = new Date(value).getTime();
+    return Number.isFinite(parsed) ? parsed : 0;
+},
+
+getCommunityModeForPost: function(post) {
+    const activityMillis = this.getCommunityTimestampMillis(
+        post?.lastActivityAt || post?.createdAt
+    );
+    return activityMillis >= this.getCommunityCutoff().getTime()
+        ? 'recent'
+        : 'history';
+},
+
+sortCommunityPostsByActivity: function(posts) {
+    return [...posts].sort((a, b) => {
+        const activityDifference =
+            this.getCommunityTimestampMillis(b.lastActivityAt || b.createdAt) -
+            this.getCommunityTimestampMillis(a.lastActivityAt || a.createdAt);
+
+        return activityDifference || String(b.id || '').localeCompare(String(a.id || ''));
+    });
+},
+
+async getCommunityPosts(options = {}) {
     try {
         const pageSize = options.pageSize || this.communityPageSize || 20;
+        const mode = options.mode === 'history' ? 'history' : 'recent';
+        const cutoff = this.getCommunityCutoff();
         const constraints = [
-            orderBy("createdAt", "desc")
+            where("lastActivityAt", mode === 'history' ? "<" : ">=", cutoff),
+            orderBy("lastActivityAt", "desc")
         ];
 
         if (options.startAfterDoc) {
@@ -1807,7 +1916,6 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
 
         const q = query(collection(db, "communityPosts"), ...constraints);
         const snapshot = await getDocs(q);
-
         const posts = snapshot.docs.map(docSnap => ({
             id: docSnap.id,
             ...docSnap.data()
@@ -1841,95 +1949,87 @@ deleteSelectionNoteEntry: function(dateStr, selectedText) {
 getCommunityPostsCached: async function(options = {}) {
     const CACHE_DURATION = 30000; // 30 segundos de caché
     const now = Date.now();
+    const mode = options.mode === 'history' ? 'history' : this.communityMode;
+    const state = this.getCommunityFeedState(mode);
 
     if (!this.currentUser?.uid) {
         throw new Error('Auth no disponible: falta currentUser.uid');
     }
     
     if (!options.forceRefresh &&
-        this.communityCache &&
-        this.communityCache.posts &&
+        state.loaded &&
+        state.posts &&
         (
-            (now - this.communityCache.timestamp) < CACHE_DURATION ||
-            this.communityCache.posts.length > this.communityPageSize
+            (now - state.timestamp) < CACHE_DURATION ||
+            state.posts.length > this.communityPageSize
         )) {
         console.log('[Community] Usando caché de posts');
-        this.communityLastVisible = this.communityCache.lastVisible || null;
-        this.communityHasMorePosts = Boolean(this.communityCache.hasMore);
-        this.communityPostsLoaded = true;
-        return this.communityCache.posts;
+        this.syncCommunityLegacyState();
+        return state.posts;
     }
     
     console.log('[Community] Cargando primera página desde Firestore');
     const page = await this.getCommunityPosts({
-        pageSize: this.communityPageSize
+        pageSize: this.communityPageSize,
+        mode
     });
 
     if (page.firebaseUnavailable) {
-        this.communityPostsLoaded = false;
+        state.loaded = false;
+        this.syncCommunityLegacyState();
         throw new Error('Firebase no disponible para cargar Comunidad');
     }
 
-    const posts = page.posts;
-
-    this.communityLastVisible = page.lastVisible;
-    this.communityHasMorePosts = page.hasMore;
-    this.communityPostsLoaded = true;
-    this.communityCache = {
-        posts,
-        lastVisible: page.lastVisible,
-        hasMore: page.hasMore,
-        timestamp: now
-    };
-    return posts;
+    state.posts = page.posts;
+    state.lastVisible = page.lastVisible;
+    state.hasMore = page.hasMore;
+    state.loaded = true;
+    state.timestamp = now;
+    this.syncCommunityLegacyState();
+    return state.posts;
 },
 
 loadMoreCommunityPosts: async function() {
-    if (this.communityLoadingMore || !this.communityHasMorePosts) {
-        return this.communityCache?.posts || [];
+    const state = this.getCommunityFeedState();
+
+    if (state.loadingMore || !state.hasMore) {
+        return state.posts;
     }
 
-    this.communityLoadingMore = true;
+    state.loadingMore = true;
+    this.syncCommunityLegacyState();
 
     try {
-        if (!this.communityPostsLoaded || !this.communityCache?.posts) {
+        if (!state.loaded) {
             await this.getCommunityPostsCached();
         }
 
-        if (!this.communityLastVisible) {
-            this.communityHasMorePosts = false;
-            if (this.communityCache) {
-                this.communityCache.hasMore = false;
-            }
-            return this.communityCache?.posts || [];
+        if (!state.lastVisible) {
+            state.hasMore = false;
+            return state.posts;
         }
 
         const page = await this.getCommunityPosts({
             pageSize: this.communityPageSize,
-            startAfterDoc: this.communityLastVisible
+            startAfterDoc: state.lastVisible,
+            mode: this.communityMode
         });
 
-        const existingPosts = this.communityCache?.posts || [];
+        const existingPosts = state.posts || [];
         const existingIds = new Set(existingPosts.map(post => post.id));
         const nextPosts = page.posts.filter(post => !existingIds.has(post.id));
-        const posts = [...existingPosts, ...nextPosts];
-
-        this.communityLastVisible = page.lastVisible || this.communityLastVisible;
-        this.communityHasMorePosts = page.hasMore;
-        this.communityPostsLoaded = true;
-        this.communityCache = {
-            posts,
-            lastVisible: this.communityLastVisible,
-            hasMore: this.communityHasMorePosts,
-            timestamp: Date.now()
-        };
-
-        return posts;
+        state.posts = [...existingPosts, ...nextPosts];
+        state.lastVisible = page.lastVisible || state.lastVisible;
+        state.hasMore = page.hasMore;
+        state.loaded = true;
+        state.timestamp = Date.now();
+        return state.posts;
     } catch (error) {
         console.error('[Community] Error cargando más posts:', error);
-        return this.communityCache?.posts || [];
+        return state.posts;
     } finally {
-        this.communityLoadingMore = false;
+        state.loadingMore = false;
+        this.syncCommunityLegacyState();
     }
 },
 
@@ -1949,12 +2049,22 @@ getCommunityPostIdBatches: function(posts, batchSize = 10) {
 },
 
 // Invalidar caché (llamar después de publicar/eliminar)
-invalidateCommunityCache: function() {
-    this.communityCache = null;
-    this.communityLastVisible = null;
-    this.communityHasMorePosts = true;
-    this.communityLoadingMore = false;
-    this.communityPostsLoaded = false;
+invalidateCommunityCache: function(mode = null) {
+    const states = this.ensureCommunityFeedStates();
+    const modes = mode ? [mode === 'history' ? 'history' : 'recent'] : ['recent', 'history'];
+
+    modes.forEach(targetMode => {
+        states[targetMode] = {
+            posts: [],
+            lastVisible: null,
+            hasMore: true,
+            loadingMore: false,
+            loaded: false,
+            timestamp: 0
+        };
+    });
+
+    this.syncCommunityLegacyState();
     console.log('[Community] Caché invalidada');
 },
 
@@ -1973,17 +2083,123 @@ restoreCommunityScrollPosition: function() {
     }
 },
 
-// Scroll al último post (más reciente)
-scrollToLastPost: function() {
-    setTimeout(() => {
-        const posts = document.querySelectorAll('.community-card');
-        if (posts.length > 0) {
-            const newestPost = posts[0];
-            newestPost.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            console.log('[Community] Scroll al post más reciente');
+captureCommunityViewportAnchor: function() {
+    const cards = [...document.querySelectorAll('.community-card[data-post-id]')];
+    const anchor = cards.find(card => card.getBoundingClientRect().bottom > 0);
+
+    if (!anchor) {
+        return {
+            postId: null,
+            top: 0,
+            scrollY: window.scrollY || window.pageYOffset || 0
+        };
+    }
+
+    return {
+        postId: anchor.dataset.postId || null,
+        top: anchor.getBoundingClientRect().top,
+        scrollY: window.scrollY || window.pageYOffset || 0
+    };
+},
+
+restoreCommunityViewportAnchor: function(anchor) {
+    if (!anchor) return;
+
+    requestAnimationFrame(() => {
+        const element = anchor.postId
+            ? document.querySelector(`.community-card[data-post-id="${CSS.escape(anchor.postId)}"]`)
+            : null;
+
+        if (!element) {
+            window.scrollTo(0, anchor.scrollY || 0);
+            return;
         }
-        this.shouldScrollToLastPost = false;
-    }, 150);
+
+        const difference = element.getBoundingClientRect().top - anchor.top;
+        window.scrollBy(0, difference);
+    });
+},
+
+focusCommunityTarget: function(postId, replyId = null, highlight = false) {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            const selector = replyId
+                ? `.community-reply-item[data-reply-id="${CSS.escape(replyId)}"]`
+                : `.community-card[data-post-id="${CSS.escape(postId)}"]`;
+            const target = document.querySelector(selector);
+            const card = document.querySelector(
+                `.community-card[data-post-id="${CSS.escape(postId)}"]`
+            );
+
+            if (!target) return;
+
+            target.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
+
+            if (highlight && card) {
+                card.classList.add('is-notification-highlight');
+                window.setTimeout(() => {
+                    card.classList.remove('is-notification-highlight');
+                }, 4200);
+            }
+        });
+    });
+},
+
+prepareCommunityTargetPost: async function(postId) {
+    if (!postId) return null;
+
+    const snapshot = await getDoc(doc(db, 'communityPosts', postId));
+    if (!snapshot.exists()) return null;
+
+    const post = {
+        id: snapshot.id,
+        ...snapshot.data()
+    };
+    const mode = this.getCommunityModeForPost(post);
+    this.communityMode = mode;
+    const state = this.getCommunityFeedState(mode);
+
+    if (!state.posts.some(item => item.id === post.id)) {
+        state.posts = this.sortCommunityPostsByActivity([post, ...state.posts]);
+    }
+
+    this.syncCommunityLegacyState();
+    return post;
+},
+
+promoteCommunityPostAfterReply: function(postId) {
+    const states = this.ensureCommunityFeedStates();
+    const sourcePost = [...states.recent.posts, ...states.history.posts]
+        .find(post => post.id === postId);
+
+    if (!sourcePost) return;
+
+    const promotedPost = {
+        ...sourcePost,
+        lastActivityAt: this.communityServerNow || sourcePost.lastActivityAt
+    };
+
+    states.history.posts = states.history.posts.filter(post => post.id !== postId);
+
+    if (states.recent.loaded) {
+        states.recent.posts = this.sortCommunityPostsByActivity([
+            promotedPost,
+            ...states.recent.posts.filter(post => post.id !== postId)
+        ]);
+        states.recent.timestamp = Date.now();
+        this.communityMode = 'recent';
+    } else {
+        states.history.posts = this.sortCommunityPostsByActivity([
+            sourcePost,
+            ...states.history.posts
+        ]);
+        this.communityMode = 'history';
+    }
+
+    this.syncCommunityLegacyState();
 },
 
 async addCommunityPost(post) {
@@ -2003,11 +2219,12 @@ async addCommunityPost(post) {
             createdAt: serverTimestamp()
         };
 
-        await addDoc(collection(db, "communityPosts"), safePost);
-        return true;
+        safePost.lastActivityAt = serverTimestamp();
+        const createdPost = await addDoc(collection(db, "communityPosts"), safePost);
+        return { success: true, id: createdPost.id };
     } catch (error) {
         console.error("Error guardando post:", error);
-        return false;
+        return { success: false };
     }
 },
 
@@ -2122,13 +2339,13 @@ async addCommunityReply(reply) {
             return { success: false, message: `Máximo ${this.replyCharLimit} caracteres` };
         }
 
-        await addDoc(collection(db, "communityReplies"), {
+        const createdReply = await addDoc(collection(db, "communityReplies"), {
             ...reply,
             text: cleanText,
             createdAt: serverTimestamp()
         });
 
-        return { success: true };
+        return { success: true, id: createdReply.id };
     } catch (error) {
         console.error("Error guardando respuesta:", error);
         return { success: false, message: 'No se pudo guardar la respuesta' };
@@ -2324,7 +2541,7 @@ renderReplyBlock: function(post, replies = []) {
                 <div class="community-reply-list">
                     <div class="community-reply-list-title">Conversación edificante</div>
                     ${replies.map(reply => `
-                        <div class="community-reply-item">
+                        <div class="community-reply-item" data-reply-id="${this.escapeHtml(reply.id)}">
                             <div class="community-reply-meta">
                                 ${this.escapeHtml(reply.name || 'Anónimo')} · ${this.escapeHtml(this.formatCommunityDateLabel(reply.date || ''))}
                             </div>
@@ -5542,7 +5759,29 @@ this.updateNavUI();
 } else if (view === 'calendar') {
     this.renderCalendar();
 } else if (view === 'community') {
-    await this.renderCommunity();
+    if (oldView !== 'community') {
+        this.communityCutoff = null;
+        this.communityServerNow = null;
+        this.communityFeedStates = null;
+        this.syncCommunityLegacyState();
+    }
+
+    let notificationPostId = null;
+    if (param) {
+        try {
+            notificationPostId = decodeURIComponent(param);
+        } catch (error) {
+            console.warn('[Community] Identificador de notificación inválido:', param);
+        }
+    }
+    if (notificationPostId) {
+        this.communityTargetPostId = notificationPostId;
+    }
+    await this.renderCommunity({
+        targetPostId: notificationPostId,
+        highlightTarget: Boolean(notificationPostId),
+        restoreSavedScroll: !notificationPostId
+    });
     await this.markCommunityAsSeen();
 } else if (view === 'stats') {
     this.renderStats();
@@ -9389,6 +9628,12 @@ renderCommunityLoadError: function(error) {
     const todayReading = this.getReadingMetadataByDate(todayStr);
     const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
     const showSkeleton = options.showSkeleton !== false;
+    const viewportAnchor = options.preserveAnchor
+        ? this.captureCommunityViewportAnchor()
+        : null;
+    const targetPostId = options.targetPostId || this.communityTargetPostId || null;
+    const targetReplyId = options.targetReplyId || this.communityTargetReplyId || null;
+    let targetPost = null;
     
     // Mostrar skeleton loading mientras carga
     if (showSkeleton) {
@@ -9421,6 +9666,20 @@ renderCommunityLoadError: function(error) {
 
         const communityTimeout = 25000;
 
+        await this.withTimeout(
+            this.ensureCommunityCutoff(),
+            communityTimeout,
+            'No se pudo obtener la hora de referencia de Comunidad'
+        );
+
+        if (targetPostId && options.skipTargetLookup !== true) {
+            targetPost = await this.withTimeout(
+                this.prepareCommunityTargetPost(targetPostId),
+                communityTimeout,
+                'No se pudo localizar la publicación de Comunidad'
+            );
+        }
+
         posts = await this.withTimeout(
             this.getCommunityPostsCached({
                 forceRefresh: options.forceRefresh === true
@@ -9428,6 +9687,13 @@ renderCommunityLoadError: function(error) {
             communityTimeout,
             'La consulta de Comunidad tardó demasiado'
         );
+
+        if (targetPost && !posts.some(post => post.id === targetPost.id)) {
+            posts = this.sortCommunityPostsByActivity([targetPost, ...posts]);
+            const state = this.getCommunityFeedState();
+            state.posts = posts;
+            this.syncCommunityLegacyState();
+        }
 
         [reactionSummary, repliesSummary] = await this.withTimeout(
             Promise.all([
@@ -9452,7 +9718,8 @@ renderCommunityLoadError: function(error) {
         return;
     } finally {
         if (!loadingCompleted && !options.preserveOnError) {
-            this.communityPostsLoaded = false;
+            this.getCommunityFeedState().loaded = false;
+            this.syncCommunityLegacyState();
         }
     }
 
@@ -9588,8 +9855,15 @@ const highlightedPost = posts.length ? posts
 
             <div class="community-feed-heading">
                 <div>
-                    <h3>Ecos de su voz</h3>
+                    <h3>${this.communityMode === 'history' ? 'Publicaciones anteriores' : 'Ecos de su voz'}</h3>
                 </div>
+                <button
+                    class="community-history-toggle"
+                    type="button"
+                    data-action="toggle-community-history"
+                >
+                    ${this.communityMode === 'history' ? 'Volver a recientes' : 'Ver publicaciones anteriores'}
+                </button>
             </div>
 
             <div class="community-feed">
@@ -9602,7 +9876,7 @@ const highlightedPost = posts.length ? posts
                     const authorInitial = (displayAuthorName.trim().charAt(0) || 'S').toUpperCase();
 
                     return `
-                        <div class="community-card community-voice-card">
+                        <div class="community-card community-voice-card" data-post-id="${this.escapeHtml(post.id)}">
                             <div class="community-post-header">
                                 <div class="community-avatar ${isAnonymous ? 'is-anonymous' : 'has-name'}" aria-hidden="true">
                                     ${this.escapeHtml(authorInitial)}
@@ -9639,9 +9913,17 @@ const highlightedPost = posts.length ? posts
                 }).join('') : `
                     <div class="community-empty-state">
                         <div class="community-empty-icon" aria-hidden="true">+</div>
-                        <div class="community-empty-title">Sé la primera persona en compartir lo que Dios te habló en esta lectura.</div>
+                        <div class="community-empty-title">${
+                            this.communityMode === 'history'
+                                ? 'Todavía no hay publicaciones anteriores.'
+                                : 'Sé la primera persona en compartir lo que Dios te habló en esta lectura.'
+                        }</div>
                         <div class="community-empty-text">
-                            Comparte cómo escuchaste su voz en esta lectura.
+                            ${
+                                this.communityMode === 'history'
+                                    ? 'Aquí aparecerán las conversaciones cuya última respuesta tenga más de 15 días.'
+                                    : 'Comparte cómo escuchaste su voz en esta lectura.'
+                            }
                         </div>
                     </div>
                 `}
@@ -9666,10 +9948,17 @@ const highlightedPost = posts.length ? posts
         </div>
     `;
     
-    // Restaurar o posicionar scroll según corresponda
-    if (this.shouldScrollToLastPost) {
-        this.scrollToLastPost();
-    } else {
+    if (targetPostId) {
+        this.focusCommunityTarget(
+            targetPostId,
+            targetReplyId,
+            options.highlightTarget === true
+        );
+        this.communityTargetPostId = null;
+        this.communityTargetReplyId = null;
+    } else if (viewportAnchor) {
+        this.restoreCommunityViewportAnchor(viewportAnchor);
+    } else if (options.restoreSavedScroll === true) {
         this.restoreCommunityScrollPosition();
     }
 },
@@ -10672,28 +10961,32 @@ sendTestPushNotification: async function() {
 },
 
 enableNotificationsFlow: async function() {
-    const isNativeAndroid = !!(
+    const nativePlatform = (
         window.Capacitor &&
         typeof window.Capacitor.getPlatform === 'function' &&
-        window.Capacitor.getPlatform() === 'android'
+        window.Capacitor.isNativePlatform?.()
+    ) ? window.Capacitor.getPlatform() : null;
+    const isNativeMobile = (
+        nativePlatform === 'android' ||
+        nativePlatform === 'ios'
     );
 
-    if (!isNativeAndroid && !('Notification' in window)) {
+    if (!isNativeMobile && !('Notification' in window)) {
         this.showToast('Este dispositivo no soporta notificaciones');
         return false;
     }
 
-    if (!isNativeAndroid && !('serviceWorker' in navigator)) {
+    if (!isNativeMobile && !('serviceWorker' in navigator)) {
         this.showToast('Este dispositivo no soporta Service Worker');
         return false;
     }
 
-    if (!isNativeAndroid && isIOSDevice() && !isRunningAsInstalledPWA()) {
+    if (!isNativeMobile && isIOSDevice() && !isRunningAsInstalledPWA()) {
         this.showToast('En iPhone, instala la app en pantalla de inicio');
         return false;
     }
 
-    if (!isNativeAndroid) {
+    if (!isNativeMobile) {
         let permission = Notification.permission;
 
         if (permission !== 'granted') {
@@ -10723,7 +11016,7 @@ enableNotificationsFlow: async function() {
         await this.savePushToken(savedToken);
     }
 
-    if (!isNativeAndroid) {
+    if (!isNativeMobile) {
         this.setupPushListeners();
     }
 
@@ -10735,13 +11028,17 @@ enableNotificationsFlow: async function() {
     // PUSH NOTIFICATIONS (NUEVO)
     // ========================================
 setupNativePushActionListeners: function() {
-    const isNativeAndroid = !!(
+    const nativePlatform = (
         window.Capacitor &&
         typeof window.Capacitor.getPlatform === 'function' &&
-        window.Capacitor.getPlatform() === 'android'
+        window.Capacitor.isNativePlatform?.()
+    ) ? window.Capacitor.getPlatform() : null;
+    const isNativeMobile = (
+        nativePlatform === 'android' ||
+        nativePlatform === 'ios'
     );
 
-    if (!isNativeAndroid || this._nativePushActionListenersReady) return;
+    if (!isNativeMobile || this._nativePushActionListenersReady) return;
 
     const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
 
@@ -10769,6 +11066,9 @@ setupNativePushActionListeners: function() {
 getPushHashFromEvent: function(event) {
     const notification = event?.notification || {};
     const notificationData = notification?.data;
+    const notificationPostId = typeof notificationData === 'object'
+        ? notificationData?.postId
+        : null;
     const rawUrl = typeof notificationData === 'string'
         ? notificationData
         : notificationData?.url
@@ -10776,6 +11076,10 @@ getPushHashFromEvent: function(event) {
             || notification?.url
             || notification?.link
             || '';
+
+    if (!rawUrl && notificationPostId) {
+        return `#community/${encodeURIComponent(notificationPostId)}`;
+    }
 
     if (!rawUrl) return '#home';
 
@@ -10830,13 +11134,17 @@ navigateToPushHash: async function(hash) {
 initPushNotifications: async function() {
     console.log('[App] Iniciando Push Notifications...');
 
-    const isNativeAndroid = !!(
+    const nativePlatform = (
         window.Capacitor &&
         typeof window.Capacitor.getPlatform === 'function' &&
-        window.Capacitor.getPlatform() === 'android'
+        window.Capacitor.isNativePlatform?.()
+    ) ? window.Capacitor.getPlatform() : null;
+    const isNativeMobile = (
+        nativePlatform === 'android' ||
+        nativePlatform === 'ios'
     );
 
-    if (isNativeAndroid) {
+    if (isNativeMobile) {
         try {
             const PushNotifications = window.Capacitor?.Plugins?.PushNotifications;
 
@@ -10852,7 +11160,7 @@ initPushNotifications: async function() {
             }
 
             if (permStatus.receive !== 'granted') {
-                console.warn('[App] Permiso Android de notificaciones no concedido');
+                console.warn(`[App] Permiso ${nativePlatform} de notificaciones no concedido`);
                 return false;
             }
 
@@ -10866,11 +11174,11 @@ initPushNotifications: async function() {
                         const tokenValue = String(token?.value || '').trim();
 
                         if (!tokenValue) {
-                            console.warn('[App] Token FCM Android vacío');
+                            console.warn(`[App] Token FCM ${nativePlatform} vacío`);
                             return;
                         }
 
-                        console.log('[App] Token FCM Android obtenido correctamente');
+                        console.log(`[App] Token FCM ${nativePlatform} obtenido correctamente`);
                         localStorage.setItem('su-voz-fcm-token', tokenValue);
 
                         if (this.currentUser) {
@@ -10879,7 +11187,7 @@ initPushNotifications: async function() {
                     });
 
                     await PushNotifications.addListener('registrationError', (error) => {
-                        console.error('[App] Error registrando Push Android:', error);
+                        console.error(`[App] Error registrando Push ${nativePlatform}:`, error);
                     });
                 } catch (error) {
                     this._nativePushRegistrationListenersReady = false;
@@ -10890,7 +11198,7 @@ initPushNotifications: async function() {
             await PushNotifications.register();
             return true;
         } catch (error) {
-            console.error('[App] Error inicializando Push Android:', error);
+            console.error(`[App] Error inicializando Push ${nativePlatform}:`, error);
             return false;
         }
     }
@@ -12611,14 +12919,27 @@ if (retryCommunityBtn) {
 
 const loadMoreCommunityBtn = e.target.closest('[data-action="load-more-community-posts"]');
 if (loadMoreCommunityBtn) {
-    this.saveCommunityScrollPosition();
     loadMoreCommunityBtn.disabled = true;
     loadMoreCommunityBtn.textContent = 'Cargando...';
 
     await this.loadMoreCommunityPosts();
 
-    this.renderCommunity({ showSkeleton: false }).catch(error => {
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveAnchor: true
+    }).catch(error => {
         console.error('[Community] Error cargando más ecos:', error);
+    });
+    return;
+}
+
+const toggleCommunityHistoryBtn = e.target.closest('[data-action="toggle-community-history"]');
+if (toggleCommunityHistoryBtn) {
+    this.communityMode = this.communityMode === 'history' ? 'recent' : 'history';
+    this.syncCommunityLegacyState();
+    this.scrollWindowInstantly(0);
+    this.renderCommunity({ showSkeleton: false }).catch(error => {
+        console.error('[Community] Error cambiando de sección:', error);
     });
     return;
 }
@@ -12691,14 +13012,12 @@ if (publishCommunityBtn) {
         ownerUid: this.currentUser.uid
     };
 
-    const success = await this.addCommunityPost(newPost);
+    const result = await this.addCommunityPost(newPost);
 
-    if (!success) {
+    if (!result.success) {
         this.showToast('No se pudo compartir lo que Dios te habló');
         return;
     }
-
-    this.shouldScrollToLastPost = true;  // Esto hará que al recargar vaya al nuevo post
 
     if ('vibrate' in navigator) {
         navigator.vibrate(30);
@@ -12724,10 +13043,13 @@ if (publishCommunityBtn) {
         composerButton.textContent = 'Compartir lo que Dios me habló';
     }
 
+    this.communityMode = 'recent';
+    this.invalidateCommunityCache('recent');
     this.renderCommunity({
         showSkeleton: false,
         preserveOnError: true,
-        forceRefresh: true
+        forceRefresh: true,
+        targetPostId: result.id
     }).catch(error => {
         console.warn('[Community] No se pudo sincronizar la publicación en segundo plano:', error);
     });
@@ -12765,7 +13087,10 @@ const toggleReplyBtn = e.target.closest('[data-action="toggle-reply-form"]');
 if (toggleReplyBtn) {
     const postId = toggleReplyBtn.getAttribute('data-post-id');
     this.toggleReplyForm(postId);
-    this.renderCommunity().catch(error => {
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveAnchor: true
+    }).catch(error => {
         console.error('[Community] Error actualizando formulario de respuesta:', error);
     });
     return;
@@ -12776,7 +13101,10 @@ if (cancelReplyBtn) {
     const postId = cancelReplyBtn.getAttribute('data-post-id');
     this.openReplyPostId = null;
     this.clearReplyDraft(postId);
-    this.renderCommunity().catch(error => {
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveAnchor: true
+    }).catch(error => {
         console.error('[Community] Error cerrando formulario de respuesta:', error);
     });
     return;
@@ -12811,7 +13139,8 @@ if (publishReplyBtn) {
     }
 
     this.clearReplyDraft(postId);
-    this.openReplyPostId = null;
+    this.openReplyPostId = postId;
+    this.promoteCommunityPostAfterReply(postId);
     this.showToast('Respuesta publicada');
 
     publishReplyBtn.closest('.community-reply-form')?.remove();
@@ -12819,7 +13148,9 @@ if (publishReplyBtn) {
     this.renderCommunity({
         showSkeleton: false,
         preserveOnError: true,
-        forceRefresh: true
+        targetPostId: postId,
+        targetReplyId: result.id,
+        skipTargetLookup: true
     }).catch(error => {
         console.warn('[Community] No se pudo sincronizar la respuesta en segundo plano:', error);
     });
@@ -12861,6 +13192,8 @@ if (communityReactionBtn) {
     }
 
     const wasActive = communityReactionBtn.classList.contains('is-active');
+    const reactionScrollX = window.scrollX || window.pageXOffset || 0;
+    const reactionScrollY = window.scrollY || window.pageYOffset || 0;
 
     this.setReactionButtonLoading(communityReactionBtn, true);
 
@@ -12882,6 +13215,10 @@ if (communityReactionBtn) {
         this.showToast('No se pudo guardar la reacción');
     } finally {
         this.setReactionButtonLoading(communityReactionBtn, false);
+        window.scrollTo(reactionScrollX, reactionScrollY);
+        requestAnimationFrame(() => {
+            window.scrollTo(reactionScrollX, reactionScrollY);
+        });
     }
 
     return;
