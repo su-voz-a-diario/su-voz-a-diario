@@ -37,7 +37,8 @@ import {
     isRunningAsInstalledPWA,
     isIOSDevice,
     isAndroidDevice,
-    getPlatformLabel
+    getPlatformLabel,
+    resolveKeyboardViewportState
 } from './utils/platform.js';
 
 import {
@@ -486,6 +487,9 @@ const App = {
     bibleReaderPickerBook: null,
     bibleVersionPickerOpen: false,
     bibleReadingSettingsOpen: false,
+    _bottomNavStateGuardBound: false,
+    _bottomNavStateObserver: null,
+    _bottomNavStateCheckScheduled: false,
     bibleReadingSettings: {
         textSize: 'normal',
         spacing: 'comfortable',
@@ -620,6 +624,7 @@ this.bindEvents();
 this.bindStrongNativeLongPress();
 this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
+this.bindBottomNavStateGuard();
 this.setupAndroidBackButton();
 this.setupNativePushActionListeners();
 this.bindCommunityDraftLifecycle();
@@ -840,83 +845,125 @@ cacheDOM: function() {
 
     this.$bottomNav = document.querySelector('.bottom-nav');
     this._keyboardHandlersBound = false;
-    this._baseViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+    this._viewportHeightBaselines = {};
+    this._keyboardViewportTimers = [];
+},
+
+isKeyboardInput: function(element) {
+    if (!element || element.disabled || element.readOnly) return false;
+    if (element.isContentEditable) return true;
+    if (element.tagName === 'TEXTAREA') return true;
+    if (element.tagName !== 'INPUT') return false;
+
+    return /^(text|search|url|email|tel|password|number|date|time|datetime-local|month|week)$/i
+        .test(element.type || 'text');
+},
+
+getViewportOrientationKey: function() {
+    const viewport = window.visualViewport;
+    const width = viewport?.width || window.innerWidth || document.documentElement.clientWidth;
+    const height = viewport?.height || window.innerHeight || document.documentElement.clientHeight;
+    return width > height ? 'landscape' : 'portrait';
+},
+
+getCurrentViewportHeight: function() {
+    return window.visualViewport?.height
+        || window.innerHeight
+        || document.documentElement.clientHeight
+        || 0;
+},
+
+clearKeyboardViewportTimers: function() {
+    (this._keyboardViewportTimers || []).forEach(timer => clearTimeout(timer));
+    this._keyboardViewportTimers = [];
+},
+
+scheduleKeyboardViewportUpdate: function(delays = [0, 120, 360]) {
+    this.clearKeyboardViewportTimers();
+    this._keyboardViewportTimers = delays.map(delay => setTimeout(() => {
+        this.updateKeyboardViewportState();
+    }, delay));
+},
+
+updateKeyboardViewportState: function({ forceRecalibration = false } = {}) {
+    const activeElement = document.activeElement;
+    const hasKeyboardFocus = this.isKeyboardInput(activeElement);
+    const currentHeight = this.getCurrentViewportHeight();
+    const orientationKey = this.getViewportOrientationKey();
+    const baselines = this._viewportHeightBaselines || (this._viewportHeightBaselines = {});
+    const virtualKeyboardHeight = Number(navigator.virtualKeyboard?.boundingRect?.height || 0);
+
+    if (!hasKeyboardFocus) {
+        document.body.classList.remove('keyboard-open');
+
+        if (currentHeight > 0) {
+            baselines[orientationKey] = forceRecalibration
+                ? currentHeight
+                : Math.max(baselines[orientationKey] || 0, currentHeight);
+        }
+
+        return false;
+    }
+
+    if (!baselines[orientationKey] && currentHeight > 0) {
+        baselines[orientationKey] = Math.max(currentHeight, window.innerHeight || 0);
+    }
+
+    const baselineHeight = baselines[orientationKey] || currentHeight;
+    const { keyboardOpen } = resolveKeyboardViewportState({
+        hasKeyboardFocus,
+        currentHeight,
+        baselineHeight,
+        virtualKeyboardHeight
+    });
+
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+    return keyboardOpen;
 },
 
 bindKeyboardViewportFix: function() {
-
     if (this._keyboardHandlersBound) return;
 
-    const updateKeyboardState = () => {
-
-        const currentHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-
-        const baseHeight = this._baseViewportHeight || currentHeight;
-
-        const keyboardOpen = (baseHeight - currentHeight) > 140;
-
-        document.body.classList.toggle('keyboard-open', keyboardOpen);
-
+    const updateKeyboardState = () => this.updateKeyboardViewportState();
+    const recalibrateAfterViewportChange = () => {
+        document.body.classList.remove('keyboard-open');
+        this.scheduleKeyboardViewportUpdate([80, 250, 500]);
     };
 
+    this.updateKeyboardViewportState({ forceRecalibration: true });
+
     if (window.visualViewport) {
-
         window.visualViewport.addEventListener('resize', updateKeyboardState);
-
         window.visualViewport.addEventListener('scroll', updateKeyboardState);
-
-    } else {
-
-        window.addEventListener('resize', updateKeyboardState);
-
     }
 
-    document.addEventListener('focusin', (e) => {
+    window.addEventListener('resize', updateKeyboardState);
+    window.addEventListener('orientationchange', recalibrateAfterViewportChange);
+    window.addEventListener('pageshow', () => {
+        this.scheduleKeyboardViewportUpdate([0, 180]);
+    });
 
-        const el = e.target;
-
-        const isTextInput =
-
-            el &&
-
-            (el.tagName === 'TEXTAREA' ||
-
-             (el.tagName === 'INPUT' && /text|search|url|email|tel|password/.test(el.type)));
-
-        if (isTextInput) {
-
-            document.body.classList.add('keyboard-open');
-
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            this.scheduleKeyboardViewportUpdate([0, 180, 420]);
         }
+    });
 
+    document.addEventListener('focusin', (event) => {
+        if (this.isKeyboardInput(event.target)) {
+            this.scheduleKeyboardViewportUpdate([0, 80, 220]);
+        }
     });
 
     document.addEventListener('focusout', () => {
-
-        setTimeout(() => {
-
-            const active = document.activeElement;
-
-            const stillTyping =
-
-                active &&
-
-                (active.tagName === 'TEXTAREA' ||
-
-                 (active.tagName === 'INPUT' && /text|search|url|email|tel|password/.test(active.type)));
-
-            if (!stillTyping) {
-
-                document.body.classList.remove('keyboard-open');
-
-            }
-
-        }, 120);
-
+        this.scheduleKeyboardViewportUpdate([0, 120, 300]);
     });
 
-    this._keyboardHandlersBound = true;
+    if (navigator.virtualKeyboard?.addEventListener) {
+        navigator.virtualKeyboard.addEventListener('geometrychange', updateKeyboardState);
+    }
 
+    this._keyboardHandlersBound = true;
 },
 
 showAprilMessageIfNeeded: function() {
@@ -5508,7 +5555,7 @@ if (this.$selectionShareImageBtn) {
     this.$selectionNote.addEventListener('focus', () => {
         this.selectionPanelLocked = true;
         this.expandSelectionPanelForNote(true);
-        document.body.classList.add('keyboard-open');
+        this.scheduleKeyboardViewportUpdate([0, 80, 220]);
     });
 
     this.$selectionNote.addEventListener('blur', () => {
@@ -5521,7 +5568,7 @@ if (this.$selectionShareImageBtn) {
             if (!stillInsidePanel) {
                 this.selectionPanelLocked = false;
                 this.expandSelectionPanelForNote(false);
-                document.body.classList.remove('keyboard-open');
+                this.scheduleKeyboardViewportUpdate([0, 120, 300]);
             }
         }, 180);
     });
@@ -5934,6 +5981,106 @@ renderDailyVersionSelector: function() {
             file: item.file || null
         };
     },
+
+isMountedAndVisible: function(element) {
+    if (!element?.isConnected || element.hidden) return false;
+
+    const styles = window.getComputedStyle(element);
+    return styles.display !== 'none' && styles.visibility !== 'hidden';
+},
+
+setBodyStateClass: function(className, enabled) {
+    const hasClass = document.body.classList.contains(className);
+    if (hasClass !== enabled) {
+        document.body.classList.toggle(className, enabled);
+    }
+},
+
+reconcileBottomNavVisibilityState: function() {
+    const versionPicker = document.getElementById('bible-version-picker-sheet');
+    const readerPicker = this.$content?.querySelector('.bible-picker-sheet:not(.version-picker-sheet)');
+    const versionPickerMounted = (
+        this.currentView === 'bible-reading' &&
+        this.bibleVersionPickerOpen &&
+        this.isMountedAndVisible(versionPicker)
+    );
+    const readerPickerMounted = (
+        this.currentView === 'bible-reading' &&
+        this.bibleReaderPickerOpen &&
+        this.isMountedAndVisible(readerPicker)
+    );
+
+    if (!versionPickerMounted) {
+        this.bibleVersionPickerOpen = false;
+        this.setBodyStateClass('bible-version-picker-open', false);
+    } else {
+        this.setBodyStateClass('bible-version-picker-open', true);
+    }
+
+    if (!readerPickerMounted) {
+        this.bibleReaderPickerOpen = false;
+        this.setBodyStateClass('bible-picker-open', false);
+    } else {
+        this.setBodyStateClass('bible-picker-open', true);
+    }
+},
+
+scheduleBottomNavStateCheck: function() {
+    if (this._bottomNavStateCheckScheduled) return;
+    this._bottomNavStateCheckScheduled = true;
+
+    queueMicrotask(() => {
+        this._bottomNavStateCheckScheduled = false;
+        this.reconcileBottomNavVisibilityState();
+    });
+},
+
+bindBottomNavStateGuard: function() {
+    if (this._bottomNavStateGuardBound || !window.MutationObserver) return;
+
+    const bodyClassObserver = new MutationObserver(() => {
+        this.scheduleBottomNavStateCheck();
+    });
+
+    bodyClassObserver.observe(document.body, {
+        attributes: true,
+        attributeFilter: ['class']
+    });
+
+    const contentObserver = new MutationObserver(() => {
+        this.scheduleBottomNavStateCheck();
+    });
+
+    contentObserver.observe(this.$content, {
+        childList: true,
+        subtree: true
+    });
+
+    this._bottomNavStateObserver = [bodyClassObserver, contentObserver];
+
+    window.addEventListener('pageshow', () => this.scheduleBottomNavStateCheck());
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) this.scheduleBottomNavStateCheck();
+    });
+
+    this._bottomNavStateGuardBound = true;
+    this.scheduleBottomNavStateCheck();
+},
+
+closeTransientBibleUI: function() {
+    this.bibleReaderPickerOpen = false;
+    this.bibleVersionPickerOpen = false;
+    this.bibleReadingSettingsOpen = false;
+
+    document.body.classList.remove(
+        'bible-picker-open',
+        'bible-version-picker-open'
+    );
+
+    this.$content?.querySelectorAll(
+        '.bible-picker-sheet, #bible-version-picker-sheet, .bible-reading-settings-panel'
+    ).forEach(element => element.remove());
+},
     
     navigate: function(view, param = null) {
         let path = `#${view}`;
@@ -5951,15 +6098,14 @@ renderDailyVersionSelector: function() {
     const param = parts[1] || null;
     const oldView = this.currentView;
 
+    this.closeTransientBibleUI();
+
     if (oldView === 'home' && view !== 'home') {
         this.stopDailyReadingVoice(true);
     }
 
     if (oldView === 'bible-reading' && view !== 'bible-reading') {
         this.stopBibleChapterVoice(true);
-        this.bibleReaderPickerOpen = false;
-        document.body.classList.remove('bible-picker-open');
-        this.bibleReadingSettingsOpen = false;
     }
 
     // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
@@ -6057,6 +6203,8 @@ this.updateNavUI();
     this.updateNavUI();
     await this.renderHome();
 }
+
+this.scheduleBottomNavStateCheck();
 },
     
 updateNavUI: function() {
@@ -8884,30 +9032,38 @@ renderBibleReaderPicker: function() {
 mountBibleReaderPicker: function() {
     if (!this.$content) return;
 
-    document.body.classList.toggle('bible-picker-open', this.bibleReaderPickerOpen);
-
-    const existing = this.$content.querySelector('.bible-picker-sheet');
+    const existing = this.$content.querySelector('.bible-picker-sheet:not(.version-picker-sheet)');
 
     if (existing) {
         existing.remove();
     }
 
-    if (!this.bibleReaderPickerOpen) return;
+    if (!this.bibleReaderPickerOpen) {
+        document.body.classList.remove('bible-picker-open');
+        this.scheduleBottomNavStateCheck();
+        return;
+    }
 
     const readerView = this.$content.querySelector('.bible-reader-view');
 
     if (readerView) {
         readerView.insertAdjacentHTML('beforeend', this.renderBibleReaderPicker());
+        document.body.classList.add('bible-picker-open');
         requestAnimationFrame(() => {
             const activeBook = this.$content?.querySelector('.bible-picker-book.is-active');
             activeBook?.scrollIntoView({ block: 'center', inline: 'nearest' });
+            this.scheduleBottomNavStateCheck();
         });
+    } else {
+        this.bibleReaderPickerOpen = false;
+        document.body.classList.remove('bible-picker-open');
     }
 },
 
 openBibleReaderPicker: function() {
     const currentBook = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
 
+    this.closeBibleVersionPicker();
     this.bibleReaderPickerOpen = true;
     this.bibleReaderPickerBook = null;
     this.bibleReaderPickerTestament = this.getTestamentFromBookId(currentBook?.id) === 'new' ? 'new' : 'old';
@@ -8964,22 +9120,30 @@ renderBibleVersionPicker: function() {
 mountBibleVersionPicker: function() {
     if (!this.$content) return;
 
-    document.body.classList.toggle('bible-version-picker-open', this.bibleVersionPickerOpen);
-
     const existing = this.$content.querySelector('#bible-version-picker-sheet');
     if (existing) {
         existing.remove();
     }
 
-    if (!this.bibleVersionPickerOpen) return;
+    if (!this.bibleVersionPickerOpen) {
+        document.body.classList.remove('bible-version-picker-open');
+        this.scheduleBottomNavStateCheck();
+        return;
+    }
 
     const readerView = this.$content.querySelector('.bible-reader-view');
     if (readerView) {
         readerView.insertAdjacentHTML('beforeend', this.renderBibleVersionPicker());
+        document.body.classList.add('bible-version-picker-open');
+        requestAnimationFrame(() => this.scheduleBottomNavStateCheck());
+    } else {
+        this.bibleVersionPickerOpen = false;
+        document.body.classList.remove('bible-version-picker-open');
     }
 },
 
 openBibleVersionPicker: function() {
+    this.closeBibleReaderPicker();
     this.bibleVersionPickerOpen = true;
     this.mountBibleVersionPicker();
 },
