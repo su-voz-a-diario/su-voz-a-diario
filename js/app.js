@@ -2261,7 +2261,11 @@ async addCommunityPost(post) {
         const validation = Sanitizer.validateText(post.text);
         if (!validation.valid) {
             this.showToast(validation.message);
-            return false;
+            return {
+                success: false,
+                code: 'validation-failed',
+                message: validation.message
+            };
         }
 
         const safePost = {
@@ -2270,15 +2274,29 @@ async addCommunityPost(post) {
             text: Sanitizer.sanitizeText(post.text),
             date: post.date,
             ownerUid: post.ownerUid,
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            lastActivityAt: serverTimestamp()
         };
 
-        safePost.lastActivityAt = serverTimestamp();
         const createdPost = await addDoc(collection(db, "communityPosts"), safePost);
         return { success: true, id: createdPost.id };
     } catch (error) {
-        console.error("Error guardando post:", error);
-        return { success: false };
+        const errorDetails = {
+            name: error?.name || null,
+            code: error?.code || null,
+            message: error?.message || String(error),
+            stack: error?.stack || null,
+            platform: window.Capacitor?.getPlatform?.() || 'web',
+            hasUser: Boolean(this.currentUser?.uid),
+            postFields: Object.keys(post || {})
+        };
+
+        console.error('[Community] Error creando communityPosts:', errorDetails, error);
+        return {
+            success: false,
+            code: errorDetails.code,
+            message: errorDetails.message
+        };
     }
 },
 

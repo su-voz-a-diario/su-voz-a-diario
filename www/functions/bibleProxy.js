@@ -51,13 +51,6 @@ function requireAuthenticatedUser(request) {
       "Debes iniciar sesión para consultar Biblias remotas."
     );
   }
-
-  if (request.auth.token?.bibleAdmin !== true) {
-    throw new BibleProxyError(
-      "VERSION_NOT_ALLOWED",
-      "No tienes permisos para acceder a Biblias remotas."
-    );
-  }
 }
 
 function requireObject(value, fieldName = "data") {

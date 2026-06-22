@@ -7,7 +7,7 @@ Functions. La AppKey de YouVersion se lee desde el Secret
 Versiones configuradas:
 
 - `nbla` -> YouVersion `103`
-- `nvi` -> YouVersion `2664`
+- `nvi` -> YouVersion `128`
 - `biblia-libre` -> YouVersion `3291`
 
 ## Callables
