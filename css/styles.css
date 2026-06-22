@@ -3626,6 +3626,24 @@ body.dark-mode .devotional-step-tab.active {
     margin-top: 2px;
 }
 
+.community-discard-draft {
+    grid-column: 1 / -1;
+    justify-self: center;
+    border: 0;
+    padding: 4px 8px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    font-weight: 650;
+}
+
+.community-discard-draft:hover {
+    color: var(--danger);
+    text-decoration: underline;
+}
+
 .community-actions {
     margin-top: 10px;
     display: flex;

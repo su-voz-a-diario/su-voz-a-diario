@@ -496,6 +496,11 @@ const App = {
     activeNoteField: null,
     homeViewingDate: null,
     communityFormOpen: false,
+    communityDraftState: null,
+    communityDraftSaveTimer: null,
+    communityDraftRestoredNoticePending: false,
+    communityDraftRestoredNoticeTimer: null,
+    communityDraftLifecycleBound: false,
     currentUser: null,
     communityUnreadCount: 0,
     _communityActivityUnsubscribe: null,
@@ -617,6 +622,7 @@ this.bindHeaderControlsToggle();
 this.bindKeyboardViewportFix();
 this.setupAndroidBackButton();
 this.setupNativePushActionListeners();
+this.bindCommunityDraftLifecycle();
 await this.loadData();
 
 await this.handleRoute();
@@ -735,6 +741,7 @@ console.log('[App] Inicialización completada');
 
         if (this.communityFormOpen) {
             this.communityFormOpen = false;
+            this.updateCommunityDraftState({ formOpen: false }, { immediate: true });
             this.handleRoute().catch(error => {
                 console.error('[Android Back] Error cerrando formulario de comunidad:', error);
             });
@@ -2380,26 +2387,272 @@ clearReplyDraft(postId) {
 },
 
 getCommunityDraftKey: function() {
+    return 'su-voz-community-draft-v2';
+},
+
+getCommunityLegacyDraftKey: function() {
     return 'su-voz-community-draft';
 },
 
-getCommunityDraft: function() {
-    return this.storage.get(this.getCommunityDraftKey(), '');
+getCommunityPreferencesKey: function() {
+    return 'su-voz-community-preferences-v1';
 },
 
-saveCommunityDraft: function(value) {
-    const draft = value || '';
+getDefaultCommunityPreferences: function() {
+    return {
+        version: 1,
+        isAnonymous: true,
+        name: ''
+    };
+},
 
-    if (!draft.trim()) {
-        this.clearCommunityDraft();
+getCommunityPreferences: function() {
+    const stored = this.storage.get(
+        this.getCommunityPreferencesKey(),
+        this.getDefaultCommunityPreferences()
+    );
+    const defaults = this.getDefaultCommunityPreferences();
+
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) {
+        return defaults;
+    }
+
+    return {
+        version: 1,
+        isAnonymous: stored.isAnonymous !== false,
+        name: typeof stored.name === 'string' ? stored.name.slice(0, 30) : ''
+    };
+},
+
+saveCommunityPreferences: function(updates = {}) {
+    const current = this.getCommunityPreferences();
+    const next = {
+        ...current,
+        ...updates,
+        version: 1
+    };
+
+    next.isAnonymous = next.isAnonymous !== false;
+    next.name = typeof next.name === 'string' ? next.name.slice(0, 30) : '';
+    this.storage.set(this.getCommunityPreferencesKey(), next);
+    return next;
+},
+
+getDefaultCommunityDraftState: function() {
+    const preferences = this.getCommunityPreferences();
+    return {
+        version: 2,
+        text: '',
+        isAnonymous: preferences.isAnonymous,
+        name: preferences.name,
+        formOpen: false,
+        readingDate: null,
+        reference: null,
+        updatedAt: null
+    };
+},
+
+normalizeCommunityDraftState: function(value) {
+    const defaults = this.getDefaultCommunityDraftState();
+
+    if (typeof value === 'string') {
+        return {
+            ...defaults,
+            text: value.slice(0, 1200),
+            formOpen: Boolean(value.trim())
+        };
+    }
+
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        return defaults;
+    }
+
+    return {
+        version: 2,
+        text: typeof value.text === 'string' ? value.text.slice(0, 1200) : '',
+        isAnonymous: value.isAnonymous !== false,
+        name: typeof value.name === 'string' ? value.name.slice(0, 30) : '',
+        formOpen: value.formOpen === true,
+        readingDate: typeof value.readingDate === 'string' ? value.readingDate : null,
+        reference: typeof value.reference === 'string' ? value.reference.slice(0, 100) : null,
+        updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : null
+    };
+},
+
+loadCommunityDraftState: function({ force = false } = {}) {
+    if (this.communityDraftState && !force) {
+        return this.communityDraftState;
+    }
+
+    let stored = this.storage.get(this.getCommunityDraftKey(), null);
+    const legacyDraft = this.storage.get(this.getCommunityLegacyDraftKey(), null);
+
+    if (!stored && typeof legacyDraft === 'string' && legacyDraft.trim()) {
+        stored = legacyDraft;
+        this.storage.remove(this.getCommunityLegacyDraftKey());
+    }
+
+    this.communityDraftState = this.normalizeCommunityDraftState(stored);
+    return this.communityDraftState;
+},
+
+getCommunityDraft: function() {
+    return this.loadCommunityDraftState().text;
+},
+
+hasCommunityDraftContent: function(draft = this.loadCommunityDraftState()) {
+    return Boolean(draft.text.trim());
+},
+
+persistCommunityDraftState: function({ force = false } = {}) {
+    if (this.communityDraftSaveTimer) {
+        clearTimeout(this.communityDraftSaveTimer);
+        this.communityDraftSaveTimer = null;
+    }
+
+    const draft = this.loadCommunityDraftState();
+    if (!force && !this.hasCommunityDraftContent(draft) && !draft.formOpen) {
         return;
     }
 
+    draft.updatedAt = new Date().toISOString();
     this.storage.set(this.getCommunityDraftKey(), draft);
+    this.saveCommunityPreferences({
+        isAnonymous: draft.isAnonymous,
+        name: draft.name
+    });
+},
+
+scheduleCommunityDraftSave: function() {
+    if (this.communityDraftSaveTimer) {
+        clearTimeout(this.communityDraftSaveTimer);
+    }
+
+    this.communityDraftSaveTimer = setTimeout(() => {
+        this.communityDraftSaveTimer = null;
+        this.persistCommunityDraftState({ force: true });
+    }, 350);
+},
+
+updateCommunityDraftState: function(updates = {}, { immediate = false } = {}) {
+    const draft = this.loadCommunityDraftState();
+    Object.assign(draft, updates);
+    draft.version = 2;
+
+    if (immediate) {
+        this.persistCommunityDraftState({ force: true });
+    } else {
+        this.scheduleCommunityDraftSave();
+    }
+
+    return draft;
+},
+
+restoreCommunityComposerState: function() {
+    const draft = this.loadCommunityDraftState({ force: true });
+    this.communityFormOpen = draft.formOpen;
+    draft.formOpen = this.communityFormOpen;
+    this.communityDraftRestoredNoticePending =
+        this.communityFormOpen && this.hasCommunityDraftContent(draft);
+
+    if (this.communityDraftRestoredNoticeTimer) {
+        clearTimeout(this.communityDraftRestoredNoticeTimer);
+        this.communityDraftRestoredNoticeTimer = null;
+    }
+},
+
+armCommunityDraftRestoredNoticeDismissal: function() {
+    if (!this.communityDraftRestoredNoticePending) return;
+
+    if (this.communityDraftRestoredNoticeTimer) {
+        clearTimeout(this.communityDraftRestoredNoticeTimer);
+    }
+
+    this.communityDraftRestoredNoticeTimer = setTimeout(() => {
+        this.communityDraftRestoredNoticePending = false;
+        this.communityDraftRestoredNoticeTimer = null;
+        document.querySelector('.community-draft-restored')?.remove();
+    }, 5000);
+},
+
+flushCommunityDraftFromDOM: function() {
+    const reflectionInput = document.getElementById('community-reflection');
+    const anonymousInput = document.getElementById('community-anonymous');
+    const nameInput = document.getElementById('community-name');
+
+    if (!reflectionInput && !anonymousInput && !nameInput && !this.communityDraftState) {
+        return;
+    }
+
+    const updates = {
+        formOpen: this.communityFormOpen
+    };
+
+    if (reflectionInput) updates.text = reflectionInput.value.slice(0, 1200);
+    if (anonymousInput) updates.isAnonymous = anonymousInput.checked;
+    if (nameInput) updates.name = nameInput.value.slice(0, 30);
+
+    this.updateCommunityDraftState(updates, { immediate: true });
+},
+
+bindCommunityDraftLifecycle: function() {
+    if (this.communityDraftLifecycleBound) return;
+    this.communityDraftLifecycleBound = true;
+
+    const flush = () => this.flushCommunityDraftFromDOM();
+
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flush();
+    });
+
+    const AppPlugin = this.getCapacitorPlugin('App');
+    const listenerPromise = AppPlugin?.addListener?.('appStateChange', ({ isActive }) => {
+        if (!isActive) flush();
+    });
+    listenerPromise?.catch?.(error => {
+        console.warn('[Community] No se pudo registrar persistencia nativa:', error);
+    });
+},
+
+discardCommunityDraft: function() {
+    if (this.communityDraftSaveTimer) {
+        clearTimeout(this.communityDraftSaveTimer);
+        this.communityDraftSaveTimer = null;
+    }
+
+    const preferences = this.getCommunityPreferences();
+    this.storage.remove(this.getCommunityDraftKey());
+    this.storage.remove(this.getCommunityLegacyDraftKey());
+    this.communityDraftState = {
+        ...this.getDefaultCommunityDraftState(),
+        isAnonymous: preferences.isAnonymous,
+        name: preferences.name,
+        formOpen: true
+    };
+    this.communityFormOpen = true;
+    this.communityDraftRestoredNoticePending = false;
+    if (this.communityDraftRestoredNoticeTimer) {
+        clearTimeout(this.communityDraftRestoredNoticeTimer);
+        this.communityDraftRestoredNoticeTimer = null;
+    }
 },
 
 clearCommunityDraft: function() {
+    if (this.communityDraftSaveTimer) {
+        clearTimeout(this.communityDraftSaveTimer);
+        this.communityDraftSaveTimer = null;
+    }
+
     this.storage.remove(this.getCommunityDraftKey());
+    this.storage.remove(this.getCommunityLegacyDraftKey());
+    this.communityDraftState = null;
+    this.communityDraftRestoredNoticePending = false;
+    if (this.communityDraftRestoredNoticeTimer) {
+        clearTimeout(this.communityDraftRestoredNoticeTimer);
+        this.communityDraftRestoredNoticeTimer = null;
+    }
 },
 
    getEmptyCommunityReactionState: function() {
@@ -5712,6 +5965,7 @@ renderDailyVersionSelector: function() {
     // ✅ GUARDAR SCROLL AL SALIR DE COMUNIDAD
     if (this.currentView === 'community' && view !== 'community') {
     this.saveCommunityScrollPosition();
+    this.flushCommunityDraftFromDOM();
     }
     
 this.hideSelectionPanel();
@@ -5760,6 +6014,7 @@ this.updateNavUI();
     this.renderCalendar();
 } else if (view === 'community') {
     if (oldView !== 'community') {
+        this.restoreCommunityComposerState();
         this.communityCutoff = null;
         this.communityServerNow = null;
         this.communityFeedStates = null;
@@ -9725,8 +9980,15 @@ renderCommunityLoadError: function(error) {
 
 if (this.currentView !== 'community') return;
 
-const communityDraft = this.communityFormOpen ? this.getCommunityDraft() : '';
-const hasCommunityDraft = Boolean(communityDraft.trim());
+const communityDraftState = this.loadCommunityDraftState();
+if (!communityDraftState.readingDate || !communityDraftState.reference) {
+    communityDraftState.readingDate = todayStr;
+    communityDraftState.reference = todayReference;
+}
+const communityDraft = this.communityFormOpen ? communityDraftState.text : '';
+const hasCommunityDraft = this.hasCommunityDraftContent(communityDraftState);
+const showCommunityDraftRestored =
+    this.communityDraftRestoredNoticePending && hasCommunityDraft;
 const highlightedPost = posts.length ? posts
     .map(post => {
         const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
@@ -9787,24 +10049,29 @@ const highlightedPost = posts.length ? posts
 
                     <div class="community-passage-context">
                         <span>Lectura de hoy</span>
-                        <strong>${this.escapeHtml(todayReference)}</strong>
+                        <strong>${this.escapeHtml(communityDraftState.reference || todayReference)}</strong>
                     </div>
 
                     <div class="community-form-group community-check-group">
                         <label class="community-check-label">
-                            <input type="checkbox" id="community-anonymous" checked>
+                            <input
+                                type="checkbox"
+                                id="community-anonymous"
+                                ${communityDraftState.isAnonymous ? 'checked' : ''}
+                            >
                             <span>Publicar como Anónimo</span>
                         </label>
                     </div>
 
-                    <div class="community-form-group community-name-group is-hidden">
+                    <div class="community-form-group community-name-group ${communityDraftState.isAnonymous ? 'is-hidden' : ''}">
                         <label class="community-label" for="community-name">Nombre</label>
                         <input
                             type="text"
                             class="community-input"
                             id="community-name"
-                            placeholder="Escribe tu nombre"
-                            disabled
+                            placeholder="${communityDraftState.isAnonymous ? 'Se publicará como Anónimo' : 'Escribe tu nombre'}"
+                            value="${this.escapeHtml(communityDraftState.name)}"
+                            ${communityDraftState.isAnonymous ? 'disabled' : ''}
                         >
                     </div>
 
@@ -9818,16 +10085,21 @@ const highlightedPost = posts.length ? posts
                         >${this.escapeHtml(communityDraft)}</textarea>
 
                         <div class="community-char-counter" id="community-char-counter">${communityDraft.length} / 1200</div>
-                        ${hasCommunityDraft ? '<div class="community-draft-restored">Borrador recuperado</div>' : ''}
+                        ${showCommunityDraftRestored ? '<div class="community-draft-restored" role="status">Se restauró tu borrador anterior.</div>' : ''}
                     </div>
 
                     <div class="community-form-actions">
                         <button class="btn-secondary" data-action="cancel-community-form">
-                            Cancelar
+                            Cerrar
                         </button>
                         <button class="btn-primary" data-action="publish-community-reflection">
                             Publicar
                         </button>
+                        ${hasCommunityDraft ? `
+                            <button class="community-discard-draft" type="button" data-action="discard-community-draft">
+                                Descartar borrador
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             ` : ''}
@@ -9947,6 +10219,10 @@ const highlightedPost = posts.length ? posts
             ` : ''}
         </div>
     `;
+
+    if (showCommunityDraftRestored) {
+        this.armCommunityDraftRestoredNoticeDismissal();
+    }
     
     if (targetPostId) {
         this.focusCommunityTarget(
@@ -12897,6 +13173,14 @@ if (statsOpenMomentBtn) {
 const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
 if (shareCommunityBtn) {
     this.communityFormOpen = !this.communityFormOpen;
+    const draft = this.loadCommunityDraftState();
+    const todayStr = this.getTodayDateStr();
+    const todayReading = this.getReadingMetadataByDate(todayStr);
+    this.updateCommunityDraftState({
+        formOpen: this.communityFormOpen,
+        readingDate: draft.readingDate || todayStr,
+        reference: draft.reference || todayReading?.reference || 'Lectura del día'
+    }, { immediate: true });
 
     if ('vibrate' in navigator) {
         navigator.vibrate(25);
@@ -12946,7 +13230,9 @@ if (toggleCommunityHistoryBtn) {
 
 const cancelCommunityBtn = e.target.closest('[data-action="cancel-community-form"]');
 if (cancelCommunityBtn) {
+    this.flushCommunityDraftFromDOM();
     this.communityFormOpen = false;
+    this.updateCommunityDraftState({ formOpen: false }, { immediate: true });
 
     if ('vibrate' in navigator) {
         navigator.vibrate(20);
@@ -12954,6 +13240,19 @@ if (cancelCommunityBtn) {
 
     this.handleRoute().catch(error => {
         console.error('[Route] Error actualizando comunidad:', error);
+    });
+    return;
+}
+
+const discardCommunityDraftBtn = e.target.closest('[data-action="discard-community-draft"]');
+if (discardCommunityDraftBtn) {
+    this.discardCommunityDraft();
+    this.showToast('Borrador descartado');
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveAnchor: true
+    }).catch(error => {
+        console.error('[Community] Error descartando borrador:', error);
     });
     return;
 }
@@ -12995,17 +13294,22 @@ if (publishCommunityBtn) {
     const displayName = isAnonymous
         ? 'Anónimo'
         : (Sanitizer.sanitizeUsername(typedName) || 'Anónimo');
+    this.saveCommunityPreferences({
+        isAnonymous,
+        name: typedName
+    });
 
     if (!this.currentUser) {
         this.showToast('No se pudo identificar al usuario');
         return;
     }
 
-    const todayStr = this.getTodayDateStr();
+    const draftState = this.loadCommunityDraftState();
+    const todayStr = draftState.readingDate || this.getTodayDateStr();
     const todayReading = this.getReadingMetadataByDate(todayStr);
 
     const newPost = {
-        reference: todayReading ? todayReading.reference : 'Lectura del día',
+        reference: draftState.reference || (todayReading ? todayReading.reference : 'Lectura del día'),
         name: displayName,
         text: reflectionText,
         date: todayStr,
@@ -13027,12 +13331,6 @@ if (publishCommunityBtn) {
     this.clearCommunityDraft();
 
     if (reflectionInput) reflectionInput.value = '';
-    if (nameInput) nameInput.value = '';
-    if (anonymousInput) anonymousInput.checked = true;
-    if (nameInput) {
-        nameInput.disabled = true;
-        nameInput.placeholder = 'Se publicará como Anónimo';
-    }
 
     this.showToast('Gracias por compartir lo que Dios te habló');
 
@@ -13335,7 +13633,10 @@ if (navItem) {
     }
 
     if (e.target.id === 'community-reflection') {
-        this.saveCommunityDraft(e.target.value);
+        this.updateCommunityDraftState({
+            text: e.target.value.slice(0, 1200),
+            formOpen: true
+        });
 
         const counter = document.getElementById('community-char-counter');
         if (!counter) return;
@@ -13359,6 +13660,14 @@ if (navItem) {
         if (currentLength >= 1200) {
             counter.classList.add('danger');
         }
+    }
+
+    if (e.target.id === 'community-name') {
+        const name = e.target.value.slice(0, 30);
+        this.updateCommunityDraftState({
+            name,
+            formOpen: true
+        });
     }
 
 // ✅ NUEVO: Búsqueda en la Biblia
@@ -13405,9 +13714,18 @@ if (e.target.id === 'bible-search-input') {
         const nameInput = document.getElementById('community-name');
         const nameGroup = nameInput?.closest('.community-name-group');
         if (!nameInput) return;
+        const isAnonymous = e.target.checked;
+        const savedPreferences = this.saveCommunityPreferences({
+            isAnonymous,
+            name: nameInput.value
+        });
+        this.updateCommunityDraftState({
+            isAnonymous,
+            name: savedPreferences.name,
+            formOpen: true
+        }, { immediate: true });
 
-        if (e.target.checked) {
-            nameInput.value = '';
+        if (isAnonymous) {
             nameInput.disabled = true;
             nameInput.placeholder = 'Se publicará como Anónimo';
             nameGroup?.classList.add('is-hidden');
