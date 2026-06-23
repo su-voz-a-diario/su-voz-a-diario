@@ -16,9 +16,11 @@ if (!sourcePath) {
 
 const targetPaths = [
     resolve('data/readings/2026-07.json'),
+    resolve('data/readings/julio-2026.json'),
     resolve('data/readings/2026-08.json'),
     resolve('data/readings.json'),
     resolve('www/data/readings/2026-07.json'),
+    resolve('www/data/readings/julio-2026.json'),
     resolve('www/data/readings/2026-08.json'),
     resolve('www/data/readings.json')
 ];
@@ -108,8 +110,10 @@ const importedReferences = new Set();
 
 for (const targetPath of targetPaths) {
     const targetReadings = JSON.parse(readFileSync(targetPath, 'utf8'));
-    const monthlyTargetMatch = targetPath.match(/\/(2026-(?:07|08))\.json$/u);
-    const targetMonth = monthlyTargetMatch?.[1] || '';
+    const monthlyTargetMatch = targetPath.match(/\/(2026-(?:07|08)|julio-2026)\.json$/u);
+    const targetMonth = monthlyTargetMatch?.[1] === 'julio-2026'
+        ? '2026-07'
+        : monthlyTargetMatch?.[1] || '';
 
     for (const sourceReading of dedupedSourceReadings) {
         const date = String(sourceReading?.date || '').trim();
@@ -125,7 +129,7 @@ for (const targetPath of targetPaths) {
         ));
 
         if (!targetReading) {
-            if (/\/2026-(07|08)\.json$/u.test(targetPath)) {
+            if (/\/(2026-(07|08)|julio-2026)\.json$/u.test(targetPath)) {
                 throw new Error(`No existe una lectura para ${date} ${reference} en ${targetPath}.`);
             }
 
