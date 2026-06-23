@@ -1,15 +1,59 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-const sourceReadings = JSON.parse(
-    readFileSync(`${process.env.HOME}/Downloads/miqueas_tla.json`, 'utf8')
-);
-const monthlyReadings = JSON.parse(readFileSync('data/readings/2026-06.json', 'utf8'));
-const aggregateReadings = JSON.parse(readFileSync('data/readings.json', 'utf8'));
+const parseSourceReadings = source => {
+    const trimmed = String(source || '').trim();
+
+    try {
+        const parsed = JSON.parse(trimmed);
+        return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+        const normalized = trimmed
+            .replace(/^\s*\[/u, '')
+            .replace(/\]\s*$/u, '')
+            .replace(/,\s*$/u, '');
+
+        return JSON.parse(`[${normalized}]`);
+    }
+};
+
+const dedupeByDateAndReference = readings => {
+    const deduped = [];
+    const byKey = new Map();
+
+    for (const reading of readings) {
+        const date = String(reading?.date || '').trim();
+        const reference = String(reading?.reference || '').trim();
+        const tlaText = String(reading?.versions?.tla || '').trim();
+        const key = `${date}|${reference}`;
+
+        assert.ok(date, 'Cada lectura fuente debe tener date.');
+        assert.ok(reference, 'Cada lectura fuente debe tener reference.');
+        assert.ok(tlaText, `${key} debe tener texto TLA.`);
+
+        if (byKey.has(key)) {
+            assert.equal(
+                String(byKey.get(key)?.versions?.tla || '').trim(),
+                tlaText,
+                `${key} aparece duplicada con textos TLA distintos.`
+            );
+            continue;
+        }
+
+        byKey.set(key, reading);
+        deduped.push(reading);
+    }
+
+    return deduped;
+};
+
+const sourceReadings = dedupeByDateAndReference(parseSourceReadings(
+    readFileSync(`${process.env.HOME}/Downloads/readings_tla_jul_aug_2026.json`, 'utf8')
+));
 const indexHtml = readFileSync('index.html', 'utf8');
 const appSource = readFileSync('js/app.js', 'utf8');
 
-assert.equal(sourceReadings.length, 10, 'El archivo de entrada debe contener 10 lecturas.');
+assert.equal(sourceReadings.length, 62, 'El archivo de entrada debe contener 62 lecturas únicas.');
 assert.equal(
     (indexHtml.match(/data-version="tla"/g) || []).length,
     0,
@@ -28,21 +72,48 @@ assert.match(
     'Las lecturas sin TLA deben conservar un fallback seguro.'
 );
 
-for (const sourceReading of sourceReadings) {
-    const monthlyReading = monthlyReadings.find(
-        reading => reading.reference === sourceReading.reference
-    );
-    const aggregateReading = aggregateReadings.find(
-        reading => reading.reference === sourceReading.reference
-    );
+const assertNoDuplicateDates = (readings, label) => {
+    const dates = readings.map(reading => reading.date);
+    assert.equal(new Set(dates).size, dates.length, `${label} contiene fechas duplicadas.`);
+};
 
-    assert.ok(monthlyReading, `Falta ${sourceReading.reference} en el archivo mensual.`);
-    assert.ok(aggregateReading, `Falta ${sourceReading.reference} en readings.json.`);
-    assert.match(monthlyReading.date, /^2026-06-(2[1-9]|30)$/);
-    assert.ok(monthlyReading.versions.rvr60, `${sourceReading.reference} perdió RVR60.`);
-    assert.ok(monthlyReading.versions.ntv, `${sourceReading.reference} perdió NTV.`);
-    assert.match(monthlyReading.versions.tla, /^<p><sup>\d+<\/sup> /);
-    assert.equal(monthlyReading.versions.tla, aggregateReading.versions.tla);
+const assertValidTlaHtml = (value, label) => {
+    assert.match(value, /^<p><sup>\d+<\/sup> /, `${label} debe iniciar con HTML de versículo.`);
+    assert.doesNotMatch(value, /<(?!\/?(p|sup)>)/, `${label} contiene etiquetas HTML inesperadas.`);
+};
+
+for (const root of ['data', 'www/data']) {
+    const aggregateReadings = JSON.parse(readFileSync(`${root}/readings.json`, 'utf8'));
+    const julyReadings = JSON.parse(readFileSync(`${root}/readings/2026-07.json`, 'utf8'));
+    const augustReadings = JSON.parse(readFileSync(`${root}/readings/2026-08.json`, 'utf8'));
+
+    assertNoDuplicateDates(julyReadings, `${root}/readings/2026-07.json`);
+    assertNoDuplicateDates(augustReadings, `${root}/readings/2026-08.json`);
+    assertNoDuplicateDates(aggregateReadings, `${root}/readings.json`);
+
+    assert.equal(julyReadings.length, 31, `${root}/readings/2026-07.json debe tener 31 lecturas.`);
+    assert.equal(augustReadings.length, 31, `${root}/readings/2026-08.json debe tener 31 lecturas.`);
+
+    for (const sourceReading of sourceReadings) {
+        const month = sourceReading.date.slice(0, 7);
+        const monthlyReadings = month === '2026-07' ? julyReadings : augustReadings;
+        const monthlyReading = monthlyReadings.find(reading => (
+            reading.date === sourceReading.date &&
+            reading.reference === sourceReading.reference
+        ));
+        const aggregateReading = aggregateReadings.find(reading => (
+            reading.date === sourceReading.date &&
+            reading.reference === sourceReading.reference
+        ));
+
+        assert.ok(monthlyReading, `Falta ${sourceReading.date} ${sourceReading.reference} en ${root}.`);
+        assert.ok(aggregateReading, `Falta ${sourceReading.date} ${sourceReading.reference} en ${root}/readings.json.`);
+        assert.ok(monthlyReading.versions.rvr60, `${sourceReading.reference} perdió RVR60.`);
+        assert.ok(monthlyReading.versions.ntv, `${sourceReading.reference} perdió NTV.`);
+        assert.equal(monthlyReading.versions.tla, sourceReading.versions.tla);
+        assert.equal(aggregateReading.versions.tla, sourceReading.versions.tla);
+        assertValidTlaHtml(monthlyReading.versions.tla, `${sourceReading.date} ${sourceReading.reference}`);
+    }
 }
 
-console.log('TLA validada: selector, preferencia, fallback y 10 lecturas importadas.');
+console.log('TLA validada: selector, preferencia, fallback y 62 lecturas de julio/agosto importadas.');
