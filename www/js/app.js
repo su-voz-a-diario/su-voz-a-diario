@@ -6270,6 +6270,59 @@ getDailyReadingText: function(reading, version = this.currentVersion) {
     return versions.rvr60 || versions.ntv || reading.text || '';
 },
 
+updateDailyVersionButtons: function() {
+    document.querySelectorAll('.version-btn').forEach(btn => {
+        const isActive = btn.getAttribute('data-version') === this.currentVersion;
+        btn.classList.toggle('active', isActive);
+        btn.setAttribute('aria-pressed', String(isActive));
+    });
+},
+
+updateVisibleDailyReadingText: async function() {
+    const shell = this.$content?.querySelector('.reading-text-shell[data-reading-date]');
+    const textContainer = shell?.querySelector('.reading-text');
+    const date = shell?.getAttribute('data-reading-date') || this.getHomeViewingDate();
+
+    if (!textContainer || !date) return false;
+
+    const reading = await this.getReadingByDate(date);
+    if (!reading) return false;
+
+    const readingText = this.getDailyReadingText(reading, this.currentVersion);
+    const scrollX = window.scrollX || window.pageXOffset || 0;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const restoreScroll = () => window.scrollTo(scrollX, scrollY);
+
+    this.stopDailyReadingVoice(true);
+    this.hideSelectionPanel();
+    this.clearVerseSelection();
+
+    textContainer.innerHTML = this.renderVerseText(readingText, reading.date);
+    this.restoreHighlightsInDOMForVerses(reading.date);
+    this.restoreSelectionNotesInDOM(reading.date);
+    this.updateDailyReadingVoiceUI();
+    restoreScroll();
+    requestAnimationFrame(restoreScroll);
+
+    return true;
+},
+
+handleDailyVersionChange: async function(selectedVersion) {
+    if (!DAILY_READING_VERSIONS.includes(selectedVersion)) return;
+
+    this.currentVersion = selectedVersion;
+    localStorage.setItem('current-version', this.currentVersion);
+    this.updateDailyVersionButtons();
+
+    const updated = await this.updateVisibleDailyReadingText();
+
+    if (!updated) {
+        console.warn('[Readings] No se pudo actualizar la lectura visible al cambiar versión.');
+    }
+
+    this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
+},
+
 changeHomeDay: async function(direction) {
     const currentDate = this.getHomeViewingDate();
     const currentIndex = this.getReadingIndexByDate(currentDate);
@@ -12605,22 +12658,11 @@ document.addEventListener('click', (e) => {
     if (versionBtn) {
         const selectedVersion = versionBtn.getAttribute('data-version');
 
-        if (!DAILY_READING_VERSIONS.includes(selectedVersion)) return;
-
-        this.currentVersion = selectedVersion;
-        localStorage.setItem('current-version', this.currentVersion);
-
-        document.querySelectorAll('.version-btn').forEach(btn => {
-            const isActive = btn.getAttribute('data-version') === this.currentVersion;
-            btn.classList.toggle('active', isActive);
-            btn.setAttribute('aria-pressed', String(isActive));
+        this.handleDailyVersionChange(selectedVersion).catch(error => {
+            console.error('[Readings] Error cambiando versión:', error);
         });
 
-        this.handleRoute().catch(error => {
-            console.error('[Route] Error cambiando versión:', error);
-        });
-
-        this.showToast(`Versión cambiada a ${this.currentVersion.toUpperCase()}`);
+        return;
     }
 });
         
