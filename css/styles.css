@@ -3057,26 +3057,11 @@ body.dark-mode .devotional-step-tab.active {
     flex: 0 0 auto;
 }
 
-.community-icon-btn,
 .community-rules-btn {
     border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
     cursor: pointer;
     font-family: var(--font-ui);
     font-weight: 800;
-}
-
-.community-icon-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 999px;
-    background: var(--accent);
-    color: #fff;
-    box-shadow: 0 7px 16px rgba(49, 130, 206, 0.22);
-    font-size: 1.6rem;
-    line-height: 1;
 }
 
 .community-rules-btn {
@@ -3898,12 +3883,6 @@ body.dark-mode .community-empty-icon {
 
     .community-hero-actions {
         gap: 6px;
-    }
-
-    .community-icon-btn {
-        width: 36px;
-        height: 36px;
-        font-size: 1.42rem;
     }
 
     .community-rules-btn {
@@ -8683,12 +8662,12 @@ body.dark-mode .view-hero {
 
 .bible-reader-subbar {
     display: grid;
-    grid-template-columns: 42px minmax(0, 1fr) 42px;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 
-    width: min(100%, 380px);
-    min-height: 44px;
+    width: min(100%, 420px);
+    min-height: 42px;
     margin: 0 auto;
     padding: 4px;
 
@@ -8701,8 +8680,8 @@ body.dark-mode .view-hero {
 }
 
 .bible-reader-nav-btn {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     padding: 0;
 
     display: inline-flex;
@@ -8733,19 +8712,6 @@ body.dark-mode .view-hero {
     cursor: not-allowed;
     box-shadow: none;
     transform: none;
-}
-
-.bible-reader-version {
-    min-width: 0;
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    white-space: nowrap;
-    overflow: hidden;
-    text-align: center;
-    text-overflow: ellipsis;
 }
 
 .bible-version-select-wrapper {
@@ -8834,42 +8800,6 @@ body.bible-version-picker-open .bottom-nav {
 .bible-reader-content {
     margin-top: 0;
     padding-bottom: calc(92px + env(safe-area-inset-bottom));
-}
-
-.bible-reader-bottom-nav {
-    display: none;
-    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-    align-items: center;
-    gap: 8px;
-    margin: 14px 0 2px;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 18px;
-    background: var(--surface-color);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
-}
-
-.bible-reader-bottom-btn {
-    min-height: 42px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background: var(--bg-color);
-    color: var(--text-main);
-    font-size: 0.86rem;
-    font-weight: 800;
-    cursor: pointer;
-    padding: 8px 10px;
-}
-
-.bible-reader-bottom-btn.primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-}
-
-.bible-reader-bottom-btn:disabled {
-    opacity: 0.38;
-    cursor: not-allowed;
 }
 
 .bible-reader-content .reading-text {
@@ -8995,7 +8925,7 @@ body.bible-version-picker-open .bottom-nav {
     z-index: 1180;
     width: min(calc(100vw - 16px), 560px);
     display: grid;
-    grid-template-columns: repeat(3, minmax(48px, 0.72fr)) minmax(58px, 0.76fr) minmax(168px, 1.72fr);
+    grid-template-columns: repeat(3, minmax(48px, 1fr));
     gap: 4px;
     padding: 5px;
     border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border-color));
@@ -9008,7 +8938,7 @@ body.bible-version-picker-open .bottom-nav {
 }
 
 .bible-reader-context-bar.has-audio-stop {
-    grid-template-columns: repeat(4, minmax(44px, 0.64fr)) minmax(56px, 0.68fr) minmax(168px, 1.68fr);
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
 }
 
 .bible-reader-tool {
@@ -9053,20 +8983,20 @@ body.bible-version-picker-open .bottom-nav {
 
 .bible-reader-version-switcher {
     min-width: 0;
-    min-height: 46px;
+    min-height: 34px;
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 3px;
     padding: 3px;
-    border-radius: 13px;
+    border-radius: 999px;
     background: color-mix(in srgb, var(--accent) 7%, transparent);
 }
 
 .bible-reader-version-chip {
     min-width: 0;
-    min-height: 40px;
+    min-height: 28px;
     border: 0;
-    border-radius: 10px;
+    border-radius: 999px;
     background: transparent;
     color: var(--text-muted);
     cursor: pointer;
@@ -9254,17 +9184,6 @@ body.dark-mode .bible-reader-title-btn {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-body.dark-mode .bible-reader-bottom-nav {
-    background: rgba(15, 17, 21, 0.98);
-    border-color: rgba(255, 255, 255, 0.08);
-    box-shadow: none;
-}
-
-body.dark-mode .bible-reader-bottom-btn {
-    background: #111827;
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
 body.dark-mode .bible-reader-content .reading-text {
     background: rgba(15, 17, 21, 0.98);
     border-color: rgba(255, 255, 255, 0.08);
@@ -9364,19 +9283,15 @@ body.dark-mode .bible-reading-focus-toggle.is-active {
     }
 
     .bible-reader-subbar {
-        grid-template-columns: 40px minmax(0, 1fr) 40px;
-        min-height: 48px;
+        grid-template-columns: 36px minmax(0, 1fr) 36px;
+        min-height: 42px;
         gap: 6px;
     }
 
     .bible-reader-nav-btn {
-        width: 40px;
-        height: 40px;
-        font-size: 1.75rem;
-    }
-
-    .bible-reader-version {
-        font-size: 0.64rem;
+        width: 34px;
+        height: 34px;
+        font-size: 1.55rem;
     }
 
     .bible-version-button {
@@ -9390,19 +9305,15 @@ body.dark-mode .bible-reading-focus-toggle.is-active {
         border-radius: 17px;
     }
 
-    .bible-reader-bottom-nav {
-        display: none;
-    }
-
     .bible-reader-context-bar {
         bottom: calc(74px + max(env(safe-area-inset-bottom), 0px));
         width: min(calc(100vw - 10px), 560px);
-        grid-template-columns: repeat(4, minmax(42px, 0.7fr)) minmax(148px, 1.65fr);
+        grid-template-columns: repeat(3, minmax(42px, 1fr));
         border-radius: 16px;
     }
 
     .bible-reader-context-bar.has-audio-stop {
-        grid-template-columns: repeat(5, minmax(38px, 0.58fr)) minmax(138px, 1.55fr);
+        grid-template-columns: repeat(4, minmax(38px, 1fr));
     }
 
     .bible-reader-tool {
@@ -9417,16 +9328,16 @@ body.dark-mode .bible-reading-focus-toggle.is-active {
     }
 
     .bible-reader-version-switcher {
-        min-height: 42px;
+        min-height: 34px;
         gap: 2px;
         padding: 2px;
-        border-radius: 11px;
+        border-radius: 999px;
     }
 
     .bible-reader-version-chip {
-        min-height: 38px;
+        min-height: 30px;
         font-size: 0.58rem;
-        border-radius: 9px;
+        border-radius: 999px;
     }
 
     .bible-reader-content .verse-item {

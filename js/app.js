@@ -9502,15 +9502,6 @@ renderBibleReaderContextBar: function(bookName, chapterNumber) {
                 <span>Buscar</span>
             </button>
             <button
-                class="bible-reader-tool"
-                type="button"
-                data-action="open-bible-reader-picker"
-                aria-label="Abrir selector de capítulos"
-            >
-                <span class="bible-reader-tool-icon" aria-hidden="true">☰</span>
-                <span>Capítulos</span>
-            </button>
-            <button
                 class="bible-reader-tool ${this.bibleReadingSettingsOpen ? 'is-active' : ''}"
                 type="button"
                 data-action="toggle-bible-reading-settings"
@@ -9520,7 +9511,6 @@ renderBibleReaderContextBar: function(bookName, chapterNumber) {
                 <span class="bible-reader-tool-icon" aria-hidden="true">Aa</span>
                 <span>Ajustes</span>
             </button>
-            ${this.renderBibleReaderVersionSwitcher()}
         </div>
     `;
 },
@@ -9878,7 +9868,7 @@ renderBibleReading: async function() {
                     ‹
                 </button>
 
-                <div class="bible-reader-version">${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}</div>
+                ${this.renderBibleReaderVersionSwitcher()}
 
                 <button
                     class="bible-reader-nav-btn"
@@ -10553,11 +10543,7 @@ renderCommunityFormCardHtml: function(options = {}) {
 },
 
 setCommunityShareButtonState: function(isOpen = this.communityFormOpen) {
-    const shareButton = this.$content?.querySelector('.community-icon-btn[data-action="share-community-reflection"]');
-    if (!shareButton) return;
-
-    shareButton.textContent = isOpen ? '×' : '+';
-    shareButton.setAttribute('aria-label', isOpen ? 'Cerrar formulario' : 'Compartir en Comunidad');
+    return Boolean(isOpen);
 },
 
 renderCommunityComposerLocally: function() {
@@ -10723,14 +10709,6 @@ const communityGuidelinesOpen = this.communityGuidelinesOpen === true;
                     <p>Comparte con sencillez lo que Dios te habló en esta lectura.</p>
                 </div>
                 <div class="community-hero-actions">
-                    <button
-                        class="community-icon-btn"
-                        type="button"
-                        data-action="share-community-reflection"
-                        aria-label="${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir en Comunidad'}"
-                    >
-                        ${this.communityFormOpen ? '×' : '+'}
-                    </button>
                     <button
                         class="community-rules-btn"
                         type="button"
@@ -13390,7 +13368,7 @@ if (closeBibleReaderPickerBtn || e.target.classList?.contains('bible-picker-shee
 
 const openBibleVersionPickerBtn = e.target.closest('[data-action="open-bible-version-picker"]');
 if (openBibleVersionPickerBtn) {
-    this.showToast('Elige la versión desde la barra inferior');
+    this.showToast('Elige la versión desde el panel superior');
     return;
 }
 
