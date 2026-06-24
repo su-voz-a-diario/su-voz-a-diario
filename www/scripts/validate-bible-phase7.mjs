@@ -132,11 +132,21 @@ for (const methodName of [
     assert.match(appSource, new RegExp(`${methodName}\\s*:`));
 }
 assert.match(appSource, /data-reading-date="\$\{this\.escapeHtml\(readingDateKey\)\}"/);
+assert.match(appSource, /renderBibleReaderVersionSwitcher/);
+assert.match(appSource, /data-action="switch-bible-version"/);
+assert.match(appSource, /switchBibleReaderVersion/);
+assert.match(appSource, /su-voz-bible-reading-state-v1/);
+assert.match(appSource, /saveBibleReadingScrollPosition/);
+assert.match(appSource, /restoreBibleReadingScrollPosition/);
+assert.match(appSource, /bindBibleReadingContinuityLifecycle/);
+assert.match(appSource, /shouldAutoRestoreBibleReading/);
+assert.doesNotMatch(appSource, /this\.handleRoute\(\)\.catch\(error => \{\s*console\.error\('\[Route\] Error cambiando versión:/);
 
 console.log(JSON.stringify({
     internalTestFlag: BIBLE_REMOTE_INTERNAL_TEST,
     remoteVersionsTested: remoteRequests.map(request => request.versionId),
-    remoteVersionsVisible: false,
+    remoteVersionButtonsVisible: true,
+    readingContinuity: true,
     localFallback: `${localChapter.versionLabel} Juan 3`,
     persistentRemoteTextCache: false
 }, null, 2));

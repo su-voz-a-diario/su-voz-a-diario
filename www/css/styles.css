@@ -3020,6 +3020,115 @@ body.dark-mode .devotional-step-tab.active {
     font-weight: 500;
 }
 
+.community-hero-compact {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 14px;
+}
+
+.community-hero-copy {
+    min-width: 0;
+}
+
+.community-hero-compact .community-hero-kicker {
+    margin-bottom: 4px;
+    padding: 3px 8px;
+    font-size: 0.58rem;
+}
+
+.community-hero-compact h2 {
+    font-size: clamp(1.28rem, 4.6vw, 1.75rem);
+}
+
+.community-hero-compact p {
+    margin-top: 3px;
+    font-size: 0.82rem;
+    line-height: 1.32;
+}
+
+.community-hero-actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.community-icon-btn,
+.community-rules-btn {
+    border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-weight: 800;
+}
+
+.community-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 7px 16px rgba(49, 130, 206, 0.22);
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+.community-rules-btn {
+    min-height: 36px;
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: color-mix(in srgb, var(--surface-color) 90%, transparent);
+    color: var(--accent);
+    font-size: 0.78rem;
+}
+
+.community-guidelines-popover {
+    position: relative;
+    display: grid;
+    gap: 6px;
+    align-self: flex-end;
+    width: min(100%, 28rem);
+    margin-top: -4px;
+    padding: 12px 38px 12px 14px;
+    border: 1px solid color-mix(in srgb, var(--accent) 20%, var(--border-color));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface-color) 96%, var(--bg-color));
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.community-guidelines-popover strong {
+    color: var(--text-main);
+    font-size: 0.86rem;
+}
+
+.community-guidelines-popover p {
+    margin: 0;
+}
+
+.community-guidelines-close {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    color: var(--accent);
+    cursor: pointer;
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
 .community-composer-card {
     display: flex;
     align-items: center;
@@ -3140,48 +3249,6 @@ body.dark-mode .devotional-step-tab.active {
     background: rgba(49, 130, 206, 0.1);
     color: var(--accent);
     font-weight: 800;
-}
-
-.community-featured-echo {
-    display: grid;
-    gap: 7px;
-    padding: 12px 13px;
-    border: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
-    border-radius: 16px;
-    background:
-        linear-gradient(135deg, rgba(49, 130, 206, 0.055), transparent 52%),
-        color-mix(in srgb, var(--surface-color) 94%, var(--bg-color));
-}
-
-.community-featured-label {
-    width: fit-content;
-    color: var(--accent);
-    font-size: 0.68rem;
-    font-weight: 850;
-    letter-spacing: 0.08em;
-    line-height: 1.2;
-    text-transform: uppercase;
-}
-
-.community-featured-text {
-    color: var(--text-main);
-    font-size: 0.9rem;
-    font-weight: 600;
-    line-height: 1.5;
-}
-
-.community-featured-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 10px;
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    font-weight: 700;
-    line-height: 1.25;
-}
-
-.community-featured-meta span {
-    min-width: 0;
 }
 
 .community-feed-heading {
@@ -3505,6 +3572,7 @@ body.dark-mode .devotional-step-tab.active {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
     gap: 10px;
     padding: 9px 11px;
     border-radius: 13px;
@@ -3522,6 +3590,23 @@ body.dark-mode .devotional-step-tab.active {
     font-weight: 800;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+.community-update-context {
+    flex: 1 0 100%;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    color: var(--accent);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.76rem;
+    font-weight: 750;
+    text-align: right;
+}
+
+.community-update-context:hover {
+    text-decoration: underline;
 }
 
 .community-form-group {
@@ -3740,10 +3825,15 @@ body.dark-mode .community-guidelines {
     background: rgba(255, 255, 255, 0.025);
 }
 
-body.dark-mode .community-featured-echo {
-    background:
-        linear-gradient(135deg, rgba(96, 165, 250, 0.055), transparent 52%),
-        rgba(255, 255, 255, 0.026);
+body.dark-mode .community-rules-btn {
+    background: rgba(255, 255, 255, 0.035);
+    border-color: rgba(96, 165, 250, 0.22);
+}
+
+body.dark-mode .community-guidelines-popover {
+    background: color-mix(in srgb, var(--surface-color) 92%, rgba(255, 255, 255, 0.03));
+    border-color: rgba(96, 165, 250, 0.20);
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
 }
 
 body.dark-mode .community-empty-state {
@@ -3774,6 +3864,11 @@ body.dark-mode .community-empty-icon {
         border-radius: 16px;
     }
 
+    .community-hero-compact {
+        padding: 10px 11px;
+        gap: 10px;
+    }
+
     .community-hero-kicker {
         margin-bottom: 5px;
         font-size: 0.58rem;
@@ -3787,6 +3882,40 @@ body.dark-mode .community-empty-icon {
         margin-top: 4px;
         font-size: 0.82rem;
         line-height: 1.35;
+    }
+
+    .community-hero-compact .community-hero-kicker {
+        margin-bottom: 3px;
+    }
+
+    .community-hero-compact h2 {
+        font-size: 1.28rem;
+    }
+
+    .community-hero-compact p {
+        font-size: 0.76rem;
+    }
+
+    .community-hero-actions {
+        gap: 6px;
+    }
+
+    .community-icon-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 1.42rem;
+    }
+
+    .community-rules-btn {
+        min-height: 34px;
+        padding: 6px 9px;
+        font-size: 0.72rem;
+    }
+
+    .community-guidelines-popover {
+        width: 100%;
+        padding: 11px 36px 11px 12px;
+        font-size: 0.78rem;
     }
 
     .community-composer-card {
@@ -3846,21 +3975,6 @@ body.dark-mode .community-empty-icon {
 
     .community-form-actions {
         gap: 8px;
-    }
-
-    .community-featured-echo {
-        gap: 6px;
-        padding: 10px 11px;
-        border-radius: 14px;
-    }
-
-    .community-featured-text {
-        font-size: 0.84rem;
-        line-height: 1.45;
-    }
-
-    .community-featured-meta {
-        font-size: 0.66rem;
     }
 
     .community-feed-heading {
@@ -7589,12 +7703,16 @@ body.selection-panel-open {
    ======================================== */
 
 body.keyboard-open .bottom-nav,
-body.keyboard-open .home-reading-bar {
+body.keyboard-open .home-reading-bar,
+body.keyboard-open .bible-reader-context-bar,
+body.keyboard-open .bible-reading-settings-panel {
     opacity: 0 !important;
     pointer-events: none !important;
 }
 
-body.keyboard-open .home-reading-bar {
+body.keyboard-open .home-reading-bar,
+body.keyboard-open .bible-reader-context-bar,
+body.keyboard-open .bible-reading-settings-panel {
     transform: translateX(-50%) translateY(24px) !important;
 }
 
@@ -8715,10 +8833,11 @@ body.bible-version-picker-open .bottom-nav {
 
 .bible-reader-content {
     margin-top: 0;
+    padding-bottom: calc(92px + env(safe-area-inset-bottom));
 }
 
 .bible-reader-bottom-nav {
-    display: grid;
+    display: none;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
     gap: 8px;
@@ -8853,15 +8972,15 @@ body.bible-version-picker-open .bottom-nav {
 }
 
 .bible-reader-focus-mode .bible-reader-subbar,
-.bible-reader-focus-mode .bible-reader-bottom-nav {
+.bible-reader-focus-mode .bible-reader-context-bar {
     opacity: 0.42;
     transition: opacity 0.18s ease;
 }
 
 .bible-reader-focus-mode .bible-reader-subbar:hover,
-.bible-reader-focus-mode .bible-reader-bottom-nav:hover,
+.bible-reader-focus-mode .bible-reader-context-bar:hover,
 .bible-reader-focus-mode .bible-reader-subbar:focus-within,
-.bible-reader-focus-mode .bible-reader-bottom-nav:focus-within {
+.bible-reader-focus-mode .bible-reader-context-bar:focus-within {
     opacity: 1;
 }
 
@@ -8872,11 +8991,11 @@ body.bible-version-picker-open .bottom-nav {
 .bible-reader-context-bar {
     position: fixed;
     left: 50%;
-    bottom: calc(78px + env(safe-area-inset-bottom));
+    bottom: calc(76px + max(env(safe-area-inset-bottom), 0px));
     z-index: 1180;
-    width: min(calc(100vw - 24px), 460px);
+    width: min(calc(100vw - 16px), 560px);
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(48px, 0.72fr)) minmax(58px, 0.76fr) minmax(168px, 1.72fr);
     gap: 4px;
     padding: 5px;
     border: 1px solid color-mix(in srgb, var(--accent) 16%, var(--border-color));
@@ -8889,7 +9008,7 @@ body.bible-version-picker-open .bottom-nav {
 }
 
 .bible-reader-context-bar.has-audio-stop {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(44px, 0.64fr)) minmax(56px, 0.68fr) minmax(168px, 1.68fr);
 }
 
 .bible-reader-tool {
@@ -8932,10 +9051,50 @@ body.bible-version-picker-open .bottom-nav {
     line-height: 1;
 }
 
+.bible-reader-version-switcher {
+    min-width: 0;
+    min-height: 46px;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 3px;
+    padding: 3px;
+    border-radius: 13px;
+    background: color-mix(in srgb, var(--accent) 7%, transparent);
+}
+
+.bible-reader-version-chip {
+    min-width: 0;
+    min-height: 40px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    transition: transform 0.15s ease, background 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+}
+
+.bible-reader-version-chip:active {
+    transform: scale(0.96);
+}
+
+.bible-reader-version-chip.is-active {
+    background: var(--accent);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(49, 130, 206, 0.22);
+}
+
+.bible-reader-version-chip.is-loading {
+    opacity: 0.72;
+}
+
 .bible-reading-settings-panel {
     position: fixed;
     left: 50%;
-    bottom: calc(146px + env(safe-area-inset-bottom));
+    bottom: calc(142px + max(env(safe-area-inset-bottom), 0px));
     z-index: 1190;
     width: min(calc(100vw - 24px), 380px);
     display: flex;
@@ -9143,6 +9302,15 @@ body.dark-mode .bible-reader-tool:hover {
     color: #93c5fd;
 }
 
+body.dark-mode .bible-reader-version-switcher {
+    background: rgba(96, 165, 250, 0.08);
+}
+
+body.dark-mode .bible-reader-version-chip.is-active {
+    background: #2563eb;
+    color: #eff6ff;
+}
+
 body.dark-mode .bible-reading-settings-close,
 body.dark-mode .bible-reading-focus-toggle {
     background: #111827;
@@ -9223,9 +9391,42 @@ body.dark-mode .bible-reading-focus-toggle.is-active {
     }
 
     .bible-reader-bottom-nav {
-        grid-template-columns: 1fr;
-        gap: 7px;
-        padding: 9px;
+        display: none;
+    }
+
+    .bible-reader-context-bar {
+        bottom: calc(74px + max(env(safe-area-inset-bottom), 0px));
+        width: min(calc(100vw - 10px), 560px);
+        grid-template-columns: repeat(4, minmax(42px, 0.7fr)) minmax(148px, 1.65fr);
+        border-radius: 16px;
+    }
+
+    .bible-reader-context-bar.has-audio-stop {
+        grid-template-columns: repeat(5, minmax(38px, 0.58fr)) minmax(138px, 1.55fr);
+    }
+
+    .bible-reader-tool {
+        min-height: 42px;
+        font-size: 0.6rem;
+        border-radius: 11px;
+    }
+
+    .bible-reader-tool-icon {
+        height: 18px;
+        font-size: 0.78rem;
+    }
+
+    .bible-reader-version-switcher {
+        min-height: 42px;
+        gap: 2px;
+        padding: 2px;
+        border-radius: 11px;
+    }
+
+    .bible-reader-version-chip {
+        min-height: 38px;
+        font-size: 0.58rem;
+        border-radius: 9px;
     }
 
     .bible-reader-content .verse-item {
@@ -9239,18 +9440,18 @@ body.dark-mode .bible-reading-focus-toggle.is-active {
 
 @media (min-width: 760px) {
     .bible-reader-context-bar {
-        bottom: 92px;
-        width: min(460px, calc(100vw - 48px));
+        bottom: 90px;
+        width: min(560px, calc(100vw - 48px));
     }
 
     .bible-reading-settings-panel {
-        bottom: 158px;
+        bottom: 156px;
     }
 }
 
 @media (max-width: 759px) {
     .bible-reader-content {
-        padding-bottom: 68px;
+        padding-bottom: calc(96px + env(safe-area-inset-bottom));
     }
 }
 

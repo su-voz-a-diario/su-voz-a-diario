@@ -143,8 +143,11 @@ async function loadRV1909Bible() {
     return localRv1909Provider.loadBible();
 }
 
-async function getBibleChapter(bookId, chapterNumber) {
-    const versionId = window.App?.currentBibleVersion || RV1909_VERSION_ID;
+function getBibleReaderVersionId() {
+    return window.App?.currentBibleVersion || RV1909_VERSION_ID;
+}
+
+async function getBibleChapter(bookId, chapterNumber, versionId = getBibleReaderVersionId()) {
     const chapterData = await bibleRepository.getChapter(
         versionId,
         bookId,
@@ -487,6 +490,11 @@ const App = {
     bibleReaderPickerBook: null,
     bibleVersionPickerOpen: false,
     bibleReadingSettingsOpen: false,
+    bibleRestoreScrollPending: false,
+    bibleSuppressScrollSave: false,
+    skipBibleAutoRestoreOnce: false,
+    _bibleReadingContinuityBound: false,
+    _bibleScrollSaveTimer: null,
     _bottomNavStateGuardBound: false,
     _bottomNavStateObserver: null,
     _bottomNavStateCheckScheduled: false,
@@ -628,6 +636,7 @@ this.bindBottomNavStateGuard();
 this.setupAndroidBackButton();
 this.setupNativePushActionListeners();
 this.bindCommunityDraftLifecycle();
+this.bindBibleReadingContinuityLifecycle();
 await this.loadData();
 
 await this.handleRoute();
@@ -2567,6 +2576,44 @@ getCommunityDraft: function() {
 
 hasCommunityDraftContent: function(draft = this.loadCommunityDraftState()) {
     return Boolean(draft.text.trim());
+},
+
+getCommunityTodayContext: function() {
+    const readingDate = this.getTodayDateStr();
+    const reading = this.getReadingMetadataByDate(readingDate);
+
+    return {
+        readingDate,
+        reference: reading?.reference || 'Lectura del día'
+    };
+},
+
+isCommunityDraftContextOutdated: function(draft = this.loadCommunityDraftState(), todayContext = this.getCommunityTodayContext()) {
+    if (!this.hasCommunityDraftContent(draft)) return false;
+
+    const draftDate = draft.readingDate || null;
+    const draftReference = draft.reference || null;
+
+    return Boolean(
+        (draftDate && draftDate !== todayContext.readingDate)
+        || (draftReference && draftReference !== todayContext.reference)
+    );
+},
+
+ensureCommunityDraftContext: function(draft = this.loadCommunityDraftState()) {
+    const todayContext = this.getCommunityTodayContext();
+    const hasDraftText = this.hasCommunityDraftContent(draft);
+
+    if (!hasDraftText) {
+        draft.readingDate = todayContext.readingDate;
+        draft.reference = todayContext.reference;
+        return draft;
+    }
+
+    if (!draft.readingDate) draft.readingDate = todayContext.readingDate;
+    if (!draft.reference) draft.reference = todayContext.reference;
+
+    return draft;
 },
 
 persistCommunityDraftState: function({ force = false } = {}) {
@@ -6123,6 +6170,7 @@ closeTransientBibleUI: function() {
     }
 
     if (oldView === 'bible-reading' && view !== 'bible-reading') {
+        this.saveBibleReadingScrollPosition();
         this.stopBibleChapterVoice(true);
     }
 
@@ -6160,9 +6208,17 @@ this.updateNavUI();
         this.homeViewingDate = this.getTodayDateStr();
     }
     await this.renderHome();
-} else if (view === 'bible') {
-    this.renderBible();
-} else if (view === 'bible-search') {
+	} else if (view === 'bible') {
+	    if (this.shouldAutoRestoreBibleReading(oldView) && this.restoreBibleLastLocation()) {
+	        this.currentView = 'bible-reading';
+	        this.bibleRestoreScrollPending = true;
+            this.bibleSuppressScrollSave = true;
+	        this.updateNavUI();
+	        await this.renderBibleReading();
+	    } else {
+	        this.renderBible();
+	    }
+	} else if (view === 'bible-search') {
     this.$content.innerHTML = this.renderBibleSearch();
     requestAnimationFrame(() => {
         const searchInput = document.getElementById('bible-search-input');
@@ -6172,8 +6228,13 @@ this.updateNavUI();
     this.$content.innerHTML = this.renderBibleMemoryView();
 } else if (view === 'strong-dictionary') {
     await this.renderStrongDictionaryView();
-} else if (view === 'bible-reading') {
-    await this.renderBibleReading();
+	} else if (view === 'bible-reading') {
+	    if (!this.selectedBibleBook || !this.selectedBibleChapter) {
+	        this.bibleRestoreScrollPending = true;
+            this.bibleSuppressScrollSave = true;
+	        this.restoreBibleLastLocation();
+	    }
+	    await this.renderBibleReading();
 } else if (view === 'calendar') {
     this.renderCalendar();
 } else if (view === 'community') {
@@ -8523,56 +8584,102 @@ scrollToTargetVerse: function() {
     }, 300);
 },
 
+getBibleReadingStateKey: function() {
+    return 'su-voz-bible-reading-state-v1';
+},
+
+getLegacyBibleLastLocationKey: function() {
+    return 'su-voz-bible-last-location';
+},
+
+normalizeBibleReadingState: function(value = null) {
+    const bookId = String(value?.bookId || '').trim().toLowerCase();
+    const chapter = Number(value?.chapter);
+    const book = this.bibleBooks.find(item => item.id === bookId);
+    const versionId = String(value?.versionId || value?.version || this.currentBibleVersion || RV1909_VERSION_ID)
+        .trim()
+        .toLowerCase();
+    const allowedVersion = this.getBibleReaderVersions()
+        .some(version => version.id === versionId)
+        ? versionId
+        : RV1909_VERSION_ID;
+    const scrollY = Math.max(0, Number(value?.scrollY) || 0);
+
+    if (!book || !Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) {
+        return null;
+    }
+
+    return {
+        mode: 'chapter',
+        versionId: allowedVersion,
+        bookId,
+        chapter,
+        scrollY,
+        updatedAt: String(value?.updatedAt || new Date().toISOString())
+    };
+},
+
 getBibleLastLocation: function() {
     try {
-        const saved = sessionStorage.getItem('su-voz-bible-last-location');
-        if (!saved) return null;
+        const state = this.normalizeBibleReadingState(
+            this.storage.get(this.getBibleReadingStateKey(), null)
+        );
 
-        const location = JSON.parse(saved);
+        if (state) return state;
 
-        if (location?.mode === 'books') {
-            return { mode: 'books', bookId: null, chapter: null };
+        const legacyRaw = sessionStorage.getItem(this.getLegacyBibleLastLocationKey());
+        if (!legacyRaw) return null;
+
+        const legacyState = this.normalizeBibleReadingState(JSON.parse(legacyRaw));
+
+        if (legacyState) {
+            this.storage.set(this.getBibleReadingStateKey(), legacyState);
+            sessionStorage.removeItem(this.getLegacyBibleLastLocationKey());
         }
 
-        const bookId = location?.bookId;
-        const chapter = Number(location?.chapter);
-        const book = this.bibleBooks.find(item => item.id === bookId);
-
-        if (!book || !Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) {
-            sessionStorage.removeItem('su-voz-bible-last-location');
-            return null;
-        }
-
-        return { mode: 'chapter', bookId, chapter };
+        return legacyState;
     } catch (error) {
-        sessionStorage.removeItem('su-voz-bible-last-location');
+        this.storage.remove(this.getBibleReadingStateKey());
+        sessionStorage.removeItem(this.getLegacyBibleLastLocationKey());
         return null;
     }
 },
 
-saveBibleLastLocation: function(bookId, chapter) {
+saveBibleLastLocation: function(bookId, chapter, options = {}) {
     const book = this.bibleBooks.find(item => item.id === bookId);
     const chapterNumber = Number(chapter);
+    const versionId = String(options.versionId || this.currentBibleVersion || RV1909_VERSION_ID)
+        .trim()
+        .toLowerCase();
+    const existing = this.getBibleLastLocation();
+    const shouldPreserveScroll =
+        options.scrollY === undefined &&
+        existing?.bookId === bookId &&
+        existing?.chapter === chapterNumber &&
+        existing?.versionId === versionId;
+    const scrollY = shouldPreserveScroll
+        ? existing.scrollY
+        : Math.max(0, Number(options.scrollY) || 0);
 
     if (!book || !Number.isInteger(chapterNumber) || chapterNumber < 1 || chapterNumber > book.chapters) {
         return false;
     }
 
-    sessionStorage.setItem('su-voz-bible-last-location', JSON.stringify({
+    this.storage.set(this.getBibleReadingStateKey(), {
         mode: 'chapter',
+        versionId,
         bookId,
-        chapter: chapterNumber
-    }));
+        chapter: chapterNumber,
+        scrollY,
+        updatedAt: new Date().toISOString()
+    });
 
     return true;
 },
 
 saveBibleBooksMode: function() {
-    sessionStorage.setItem('su-voz-bible-last-location', JSON.stringify({
-        mode: 'books',
-        bookId: null,
-        chapter: null
-    }));
+    // La vista de libros no debe borrar la última lectura continua.
+    return true;
 },
 
 restoreBibleLastLocation: function() {
@@ -8582,15 +8689,107 @@ restoreBibleLastLocation: function() {
 
     const location = this.getBibleLastLocation();
 
-    if (!location || location.mode === 'books') {
+    if (!location) {
         this.selectedBibleBook = null;
         this.selectedBibleChapter = null;
         return false;
     }
 
+    this.currentBibleVersion = location.versionId || RV1909_VERSION_ID;
+    localStorage.setItem('current-bible-version', this.currentBibleVersion);
     this.selectedBibleBook = location.bookId;
     this.selectedBibleChapter = location.chapter;
     return true;
+},
+
+saveBibleReadingScrollPosition: function() {
+    if (
+        this.currentView !== 'bible-reading' ||
+        this.bibleSuppressScrollSave ||
+        !this.selectedBibleBook ||
+        !this.selectedBibleChapter
+    ) {
+        return false;
+    }
+
+    return this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter, {
+        scrollY: window.scrollY || window.pageYOffset || 0
+    });
+},
+
+scheduleBibleReadingScrollSave: function() {
+    if (this.currentView !== 'bible-reading') return;
+
+    if (this._bibleScrollSaveTimer) {
+        clearTimeout(this._bibleScrollSaveTimer);
+    }
+
+    this._bibleScrollSaveTimer = setTimeout(() => {
+        this._bibleScrollSaveTimer = null;
+        this.saveBibleReadingScrollPosition();
+    }, 250);
+},
+
+bindBibleReadingContinuityLifecycle: function() {
+    if (this._bibleReadingContinuityBound) return;
+    this._bibleReadingContinuityBound = true;
+
+    window.addEventListener('scroll', () => {
+        this.scheduleBibleReadingScrollSave();
+    }, { passive: true });
+
+    const flush = () => this.saveBibleReadingScrollPosition();
+
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flush();
+    });
+
+    const AppPlugin = this.getCapacitorPlugin('App');
+    const listenerPromise = AppPlugin?.addListener?.('appStateChange', ({ isActive }) => {
+        if (!isActive) flush();
+    });
+    listenerPromise?.catch?.(error => {
+        console.warn('[Bible] No se pudo registrar continuidad nativa:', error);
+    });
+},
+
+shouldAutoRestoreBibleReading: function(oldView) {
+    if (this.skipBibleAutoRestoreOnce) {
+        this.skipBibleAutoRestoreOnce = false;
+        return false;
+    }
+
+    return oldView !== 'bible-reading' && Boolean(this.getBibleLastLocation());
+},
+
+restoreBibleReadingScrollPosition: function() {
+    const location = this.getBibleLastLocation();
+
+    if (
+        !location ||
+        location.bookId !== this.selectedBibleBook ||
+        Number(location.chapter) !== Number(this.selectedBibleChapter) ||
+        String(location.versionId || RV1909_VERSION_ID) !== String(this.currentBibleVersion || RV1909_VERSION_ID)
+    ) {
+        this.bibleSuppressScrollSave = false;
+        return;
+    }
+
+    const scrollY = Math.max(0, Number(location.scrollY) || 0);
+
+    this.bibleSuppressScrollSave = true;
+    requestAnimationFrame(() => {
+        window.scrollTo({ top: scrollY, behavior: 'auto' });
+        requestAnimationFrame(() => {
+            window.scrollTo({ top: scrollY, behavior: 'auto' });
+            setTimeout(() => {
+                this.bibleSuppressScrollSave = false;
+                this.saveBibleReadingScrollPosition();
+            }, 120);
+        });
+    });
 },
 
 renderBible: function() {
@@ -9224,6 +9423,42 @@ closeBibleVersionPicker: function() {
     this.mountBibleVersionPicker();
 },
 
+getBibleReaderVersions: function() {
+    return [
+        { id: 'rv1909', label: 'RV1909', name: 'Reina-Valera 1909' },
+        { id: 'nbla', label: 'NBLA', name: 'Nueva Biblia de las Américas' },
+        { id: 'nvi', label: 'NVI', name: 'Nueva Versión Internacional' },
+        { id: 'biblia-libre', label: 'BL', name: 'Biblia Libre' }
+    ];
+},
+
+renderBibleReaderVersionSwitcher: function() {
+    const currentVersion = String(this.currentBibleVersion || RV1909_VERSION_ID)
+        .trim()
+        .toLowerCase();
+
+    return `
+        <div class="bible-reader-version-switcher" role="group" aria-label="Versiones bíblicas">
+            ${this.getBibleReaderVersions().map(version => {
+                const isActive = currentVersion === version.id;
+
+                return `
+                    <button
+                        class="bible-reader-version-chip ${isActive ? 'is-active' : ''}"
+                        type="button"
+                        data-action="switch-bible-version"
+                        data-version-id="${this.escapeHtml(version.id)}"
+                        aria-label="Cambiar a ${this.escapeHtml(version.name)}"
+                        aria-pressed="${isActive ? 'true' : 'false'}"
+                    >
+                        ${this.escapeHtml(version.label)}
+                    </button>
+                `;
+            }).join('')}
+        </div>
+    `;
+},
+
 renderBibleReaderContextBar: function(bookName, chapterNumber) {
     const key = `${bookName}-${chapterNumber}`;
     const status = this.getBibleChapterVoiceStatus(key);
@@ -9285,6 +9520,7 @@ renderBibleReaderContextBar: function(bookName, chapterNumber) {
                 <span class="bible-reader-tool-icon" aria-hidden="true">Aa</span>
                 <span>Ajustes</span>
             </button>
+            ${this.renderBibleReaderVersionSwitcher()}
         </div>
     `;
 },
@@ -9427,6 +9663,148 @@ toggleBibleChapterVoiceFromContext: function() {
     this.toggleBibleChapterVoice(key, verses, `${book.name} ${chapter}`);
 },
 
+captureBibleReaderScrollAnchor: function() {
+    const shell = this.$content?.querySelector('.bible-reader-content .reading-text-shell');
+    const verses = Array.from(shell?.querySelectorAll('.verse-item') || []);
+    const topGuard = Math.max(
+        72,
+        (this.$content?.querySelector('.bible-reader-topbar')?.getBoundingClientRect().bottom || 0) + 12
+    );
+
+    const anchor = verses.find(item => item.getBoundingClientRect().bottom >= topGuard) ||
+        verses[0] ||
+        null;
+
+    if (!anchor) {
+        return {
+            verseNumber: null,
+            top: 0
+        };
+    }
+
+    return {
+        verseNumber: Number(anchor.getAttribute('data-verse-number')) || null,
+        top: anchor.getBoundingClientRect().top
+    };
+},
+
+restoreBibleReaderScrollAnchor: function(anchor) {
+    if (!anchor?.verseNumber) return;
+
+    requestAnimationFrame(() => {
+        const nextAnchor = this.$content?.querySelector(
+            `.bible-reader-content .verse-item[data-verse-number="${anchor.verseNumber}"]`
+        );
+
+        if (!nextAnchor) return;
+
+        const nextTop = nextAnchor.getBoundingClientRect().top;
+        window.scrollBy({
+            top: nextTop - anchor.top,
+            left: 0,
+            behavior: 'instant'
+        });
+    });
+},
+
+updateBibleReaderVersionButtons: function({ loadingVersionId = '' } = {}) {
+    const currentVersion = String(this.currentBibleVersion || RV1909_VERSION_ID)
+        .trim()
+        .toLowerCase();
+
+    this.$content?.querySelectorAll('.bible-reader-version-chip').forEach(button => {
+        const versionId = String(button.getAttribute('data-version-id') || '')
+            .trim()
+            .toLowerCase();
+        const isActive = versionId === currentVersion;
+        const isLoading = versionId === loadingVersionId;
+
+        button.classList.toggle('is-active', isActive);
+        button.classList.toggle('is-loading', isLoading);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+        button.disabled = Boolean(loadingVersionId);
+    });
+
+    const versionLabel = this.$content?.querySelector('.bible-reader-version');
+    if (versionLabel) {
+        versionLabel.textContent = this.getBibleVersionLabel(currentVersion);
+    }
+},
+
+async switchBibleReaderVersion(versionId) {
+    const nextVersionId = String(versionId || '').trim().toLowerCase();
+    const allowed = this.getBibleReaderVersions().some(version => version.id === nextVersionId);
+    const previousVersionId = this.currentBibleVersion || RV1909_VERSION_ID;
+    const requestedBookId = this.selectedBibleBook;
+    const requestedChapter = Number(this.selectedBibleChapter);
+    const requestedBook = this.bibleBooks.find(book => book.id === requestedBookId);
+    const content = this.$content?.querySelector('.bible-reader-content');
+
+    if (!allowed || !requestedBook || !requestedChapter || !content) return;
+    if (nextVersionId === previousVersionId) return;
+
+    const anchor = this.captureBibleReaderScrollAnchor();
+    this.stopBibleChapterVoice(true);
+    this.currentBibleVersion = nextVersionId;
+    localStorage.setItem('current-bible-version', this.currentBibleVersion);
+    this.updateBibleReaderVersionButtons({ loadingVersionId: nextVersionId });
+
+    try {
+        const chapterData = await getBibleChapter(
+            requestedBookId,
+            requestedChapter,
+            nextVersionId
+        );
+
+        if (
+            this.currentView !== 'bible-reading' ||
+            this.selectedBibleBook !== requestedBookId ||
+            Number(this.selectedBibleChapter) !== requestedChapter ||
+            this.currentBibleVersion !== nextVersionId
+        ) {
+            return;
+        }
+
+        const readingDateKey = createBibleReadingKey(
+            chapterData.versionId,
+            requestedBookId,
+            requestedChapter
+        );
+        const currentShell = content.querySelector('.reading-text-shell');
+
+        this.currentBibleChapterData = chapterData;
+
+        if (currentShell) {
+            currentShell.outerHTML = `
+                <div class="reading-text-shell" data-reading-date="${this.escapeHtml(readingDateKey)}">
+                    <div class="reading-text bible-api-content selection-surface">
+                        ${this.renderBibleChapterVoiceControl(requestedBook.name, requestedChapter)}
+                        ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        this.restoreHighlightsInDOMForVerses(readingDateKey);
+        this.updateBibleReaderContextBarUI();
+        this.updateBibleReaderVersionButtons();
+        this.restoreBibleReaderScrollAnchor(anchor);
+        requestAnimationFrame(() => {
+            this.saveBibleLastLocation(requestedBookId, requestedChapter, {
+                versionId: nextVersionId,
+                scrollY: window.scrollY || window.pageYOffset || 0
+            });
+        });
+    } catch (error) {
+        console.error('[Bible] Error cambiando versión sin recargar vista:', error);
+        this.currentBibleVersion = previousVersionId;
+        localStorage.setItem('current-bible-version', previousVersionId);
+        this.updateBibleReaderContextBarUI();
+        this.updateBibleReaderVersionButtons();
+        this.showToast(error?.message || 'No se pudo cambiar la versión bíblica');
+    }
+},
+
 renderBibleReading: async function() {
     this.stopBibleChapterVoice(true);
 
@@ -9443,20 +9821,6 @@ renderBibleReading: async function() {
 
     const previousDisabled = requestedChapter <= 1;
     const nextDisabled = requestedChapter >= requestedBook.chapters;
-
-    const versionSelectorHtml = `
-        <div class="bible-version-select-wrapper">
-            <button
-                id="bible-version-button"
-                class="bible-version-button"
-                type="button"
-                data-action="open-bible-version-picker"
-                aria-label="Seleccionar versión bíblica. Versión actual: ${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}"
-            >
-                ${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))} ▼
-            </button>
-        </div>
-    `;
 
     const renderReaderShell = (bodyHtml) => `
         <div class="${this.getBibleReaderClassNames()}">
@@ -9514,7 +9878,7 @@ renderBibleReading: async function() {
                     ‹
                 </button>
 
-                ${versionSelectorHtml}
+                <div class="bible-reader-version">${this.escapeHtml(this.getBibleVersionLabel(this.currentBibleVersion))}</div>
 
                 <button
                     class="bible-reader-nav-btn"
@@ -9532,7 +9896,6 @@ renderBibleReading: async function() {
             ${this.renderBibleReaderContextBar(requestedBook.name, requestedChapter)}
             ${this.renderBibleReadingSettingsPanel()}
             ${this.renderBibleReaderPicker()}
-            ${this.renderBibleVersionPicker()}
         </div>
     `;
 
@@ -9569,33 +9932,6 @@ renderBibleReading: async function() {
                         ${chapterData.content || '<p style="text-align: center; color: var(--text-muted);">No se pudo cargar el contenido.</p>'}
                     </div>
                 </div>
-                <nav class="bible-reader-bottom-nav" aria-label="Navegación de capítulos">
-                    <button
-                        class="bible-reader-bottom-btn"
-                        type="button"
-                        data-action="bible-prev-chapter"
-                        ${previousDisabled ? 'disabled' : ''}
-                    >
-                        ${previousDisabled ? 'Anterior' : `← ${this.escapeHtml(requestedBook.name)} ${requestedChapter - 1}`}
-                    </button>
-
-                    <button
-                        class="bible-reader-bottom-btn primary"
-                        type="button"
-                        data-action="open-bible-chapters"
-                    >
-                        Capítulos
-                    </button>
-
-                    <button
-                        class="bible-reader-bottom-btn"
-                        type="button"
-                        data-action="bible-next-chapter"
-                        ${nextDisabled ? 'disabled' : ''}
-                    >
-                        ${nextDisabled ? 'Siguiente' : `${this.escapeHtml(requestedBook.name)} ${requestedChapter + 1} →`}
-                    </button>
-                </nav>
             </div>
         `);
 
@@ -9603,6 +9939,14 @@ renderBibleReading: async function() {
 
         if (this.targetVerse) {
             this.scrollToTargetVerse();
+            this.bibleRestoreScrollPending = false;
+            this.bibleSuppressScrollSave = false;
+        } else if (this.bibleRestoreScrollPending) {
+            this.bibleRestoreScrollPending = false;
+            this.restoreBibleReadingScrollPosition();
+        } else {
+            this.bibleRestoreScrollPending = false;
+            this.bibleSuppressScrollSave = false;
         }
     } catch (error) {
         const isOffline = error?.code === 'BIBLE_OFFLINE' || navigator.onLine === false;
@@ -10113,10 +10457,158 @@ renderCommunityLoadError: function(error) {
     `;
 },
 
+renderCommunityComposerCardHtml: function(reference = this.getCommunityTodayContext().reference) {
+    return `
+            <div class="community-composer-card">
+                <div class="community-composer-copy">
+                    <div class="community-composer-question">¿Qué escuchaste de su voz hoy?</div>
+                    <div class="community-composer-reference">${this.escapeHtml(reference)}</div>
+                </div>
+                <button class="community-composer-btn" type="button" data-action="share-community-reflection">
+                    Compartir
+                </button>
+            </div>
+    `;
+},
+
+renderCommunityFormCardHtml: function(options = {}) {
+    const todayContext = this.getCommunityTodayContext();
+    const todayReference = todayContext.reference;
+    const communityDraftState = this.ensureCommunityDraftContext(this.loadCommunityDraftState());
+    const communityDraft = communityDraftState.text || '';
+    const hasCommunityDraft = this.hasCommunityDraftContent(communityDraftState);
+    const showCommunityDraftRestored = options.showRestoredNotice === true
+        || (this.communityDraftRestoredNoticePending && hasCommunityDraft);
+    const draftContextOutdated = this.isCommunityDraftContextOutdated(communityDraftState, todayContext);
+
+    return `
+                <div class="community-form-card">
+                    <div class="community-form-title">¿Qué escuchaste de su voz hoy?</div>
+
+                    <div class="community-passage-context">
+                        <span>${draftContextOutdated ? 'Borrador iniciado con la lectura' : 'Lectura de hoy'}</span>
+                        <strong>${this.escapeHtml(communityDraftState.reference || todayReference)}</strong>
+                        ${draftContextOutdated ? `
+                            <button
+                                class="community-update-context"
+                                type="button"
+                                data-action="update-community-draft-context"
+                            >
+                                Usar lectura de hoy: ${this.escapeHtml(todayReference)}
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <div class="community-form-group community-check-group">
+                        <label class="community-check-label">
+                            <input
+                                type="checkbox"
+                                id="community-anonymous"
+                                ${communityDraftState.isAnonymous ? 'checked' : ''}
+                            >
+                            <span>Publicar como Anónimo</span>
+                        </label>
+                    </div>
+
+                    <div class="community-form-group community-name-group ${communityDraftState.isAnonymous ? 'is-hidden' : ''}">
+                        <label class="community-label" for="community-name">Nombre</label>
+                        <input
+                            type="text"
+                            class="community-input"
+                            id="community-name"
+                            placeholder="${communityDraftState.isAnonymous ? 'Se publicará como Anónimo' : 'Escribe tu nombre'}"
+                            value="${this.escapeHtml(communityDraftState.name)}"
+                            ${communityDraftState.isAnonymous ? 'disabled' : ''}
+                        >
+                    </div>
+
+                    <div class="community-form-group">
+                        <label class="community-label" for="community-reflection">¿Qué escuchaste de su voz hoy?</label>
+                        <textarea
+                            class="community-textarea"
+                            id="community-reflection"
+                            placeholder="Escribe con sencillez lo que Dios te mostró en esta lectura..."
+                            maxlength="1200"
+                        >${this.escapeHtml(communityDraft)}</textarea>
+
+                        <div class="community-char-counter" id="community-char-counter">${communityDraft.length} / 1200</div>
+                        ${showCommunityDraftRestored ? '<div class="community-draft-restored" role="status">Se restauró tu borrador anterior.</div>' : ''}
+                    </div>
+
+                    <div class="community-form-actions">
+                        <button class="btn-secondary" data-action="cancel-community-form">
+                            Cerrar
+                        </button>
+                        <button class="btn-primary" data-action="publish-community-reflection">
+                            Publicar
+                        </button>
+                        ${hasCommunityDraft ? `
+                            <button class="community-discard-draft" type="button" data-action="discard-community-draft">
+                                Descartar borrador
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+    `;
+},
+
+setCommunityShareButtonState: function(isOpen = this.communityFormOpen) {
+    const shareButton = this.$content?.querySelector('.community-icon-btn[data-action="share-community-reflection"]');
+    if (!shareButton) return;
+
+    shareButton.textContent = isOpen ? '×' : '+';
+    shareButton.setAttribute('aria-label', isOpen ? 'Cerrar formulario' : 'Compartir en Comunidad');
+},
+
+renderCommunityComposerLocally: function() {
+    if (this.currentView !== 'community' || !this.$content) return false;
+
+    const container = this.$content.querySelector('.community-container');
+    if (!container) return false;
+
+    const todayReference = this.getCommunityTodayContext().reference;
+    const existingComposer = container.querySelector('.community-composer-card');
+    const existingForm = container.querySelector('.community-form-card');
+
+    this.setCommunityShareButtonState(this.communityFormOpen);
+
+    if (this.communityFormOpen) {
+        const formHtml = this.renderCommunityFormCardHtml();
+
+        if (existingForm) {
+            existingForm.outerHTML = formHtml;
+        } else if (existingComposer) {
+            existingComposer.outerHTML = formHtml;
+        } else {
+            const anchor = container.querySelector('.community-guidelines-popover')
+                || container.querySelector('.community-hero');
+            anchor?.insertAdjacentHTML('afterend', formHtml);
+        }
+
+        if (this.communityDraftRestoredNoticePending && this.hasCommunityDraftContent()) {
+            this.armCommunityDraftRestoredNoticeDismissal();
+        }
+    } else {
+        const composerHtml = this.renderCommunityComposerCardHtml(todayReference);
+
+        if (existingComposer) {
+            existingComposer.outerHTML = composerHtml;
+        } else if (existingForm) {
+            existingForm.outerHTML = composerHtml;
+        } else {
+            const anchor = container.querySelector('.community-guidelines-popover')
+                || container.querySelector('.community-hero');
+            anchor?.insertAdjacentHTML('afterend', composerHtml);
+        }
+    }
+
+    return true;
+},
+
    renderCommunity: async function(options = {}) {
-    const todayStr = this.getTodayDateStr();
-    const todayReading = this.getReadingMetadataByDate(todayStr);
-    const todayReference = todayReading ? todayReading.reference : 'Lectura del día';
+    const todayContext = this.getCommunityTodayContext();
+    const todayStr = todayContext.readingDate;
+    const todayReference = todayContext.reference;
     const showSkeleton = options.showSkeleton !== false;
     const viewportAnchor = options.preserveAnchor
         ? this.captureCommunityViewportAnchor()
@@ -10215,150 +10707,56 @@ renderCommunityLoadError: function(error) {
 
 if (this.currentView !== 'community') return;
 
-const communityDraftState = this.loadCommunityDraftState();
-if (!communityDraftState.readingDate || !communityDraftState.reference) {
-    communityDraftState.readingDate = todayStr;
-    communityDraftState.reference = todayReference;
-}
-const communityDraft = this.communityFormOpen ? communityDraftState.text : '';
+const communityDraftState = this.ensureCommunityDraftContext(this.loadCommunityDraftState());
 const hasCommunityDraft = this.hasCommunityDraftContent(communityDraftState);
 const showCommunityDraftRestored =
     this.communityDraftRestoredNoticePending && hasCommunityDraft;
-const highlightedPost = posts.length ? posts
-    .map(post => {
-        const reactionData = reactionSummary[post.id] || this.getEmptyCommunityReactionState();
-        const replies = repliesSummary[post.id] || [];
-        const counts = reactionData.counts || {};
-        const usefulCount = Number(counts.useful) || 0;
-        const thanksCount = Number(counts.thanks) || 0;
-
-        return {
-            post,
-            replies,
-            usefulCount,
-            thanksCount,
-            score: (usefulCount * 2) + thanksCount + (replies.length * 1.5)
-        };
-    })
-    .sort((a, b) => b.score - a.score || Number(b.post.createdAt?.seconds || 0) - Number(a.post.createdAt?.seconds || 0))[0]
-    : null;
+const communityGuidelinesOpen = this.communityGuidelinesOpen === true;
     
     // Renderizar el contenido
     this.$content.innerHTML = `
         <div class="community-container">
-            <section class="community-hero">
-                <div>
+            <section class="community-hero community-hero-compact">
+                <div class="community-hero-copy">
                     <div class="community-hero-kicker">Su Voz a Diario</div>
                     <h2>Comunidad</h2>
-                    <p>Un espacio para compartir lo que escuchaste de Dios en esta lectura.</p>
+                    <p>Comparte con sencillez lo que Dios te habló en esta lectura.</p>
+                </div>
+                <div class="community-hero-actions">
+                    <button
+                        class="community-icon-btn"
+                        type="button"
+                        data-action="share-community-reflection"
+                        aria-label="${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir en Comunidad'}"
+                    >
+                        ${this.communityFormOpen ? '×' : '+'}
+                    </button>
+                    <button
+                        class="community-rules-btn"
+                        type="button"
+                        data-action="toggle-community-guidelines"
+                        aria-expanded="${communityGuidelinesOpen ? 'true' : 'false'}"
+                    >
+                        Normas
+                    </button>
                 </div>
             </section>
 
-            <details class="community-guidelines">
-                <summary>
-                    <span>Antes de compartir</span>
-                    <span class="community-guidelines-hint">Ver normas</span>
-                </summary>
-                <div class="community-intro-text">
-                    Este espacio existe para compartir lo que Dios habló a través de esta lectura.
-                    Comparte con respeto, claridad y sencillez. Evita discusiones, ataques personales,
-                    lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
-                    <br><br>
-                    Lo que publiques aquí podrá ser visible para otros usuarios y moderado por la aplicación.
-                </div>
-            </details>
-
-            <div class="community-composer-card">
-                <div class="community-composer-copy">
-                    <div class="community-composer-question">¿Qué escuchaste de su voz hoy?</div>
-                    <div class="community-composer-reference">${this.escapeHtml(todayReference)}</div>
-                </div>
-                <button class="community-composer-btn" type="button" data-action="share-community-reflection">
-                    ${this.communityFormOpen ? 'Cerrar formulario' : 'Compartir lo que Dios me habló'}
-                </button>
-            </div>
-
-            ${this.communityFormOpen ? `
-                <div class="community-form-card">
-                    <div class="community-form-title">Compartir lo que Dios me habló</div>
-
-                    <div class="community-passage-context">
-                        <span>Lectura de hoy</span>
-                        <strong>${this.escapeHtml(communityDraftState.reference || todayReference)}</strong>
-                    </div>
-
-                    <div class="community-form-group community-check-group">
-                        <label class="community-check-label">
-                            <input
-                                type="checkbox"
-                                id="community-anonymous"
-                                ${communityDraftState.isAnonymous ? 'checked' : ''}
-                            >
-                            <span>Publicar como Anónimo</span>
-                        </label>
-                    </div>
-
-                    <div class="community-form-group community-name-group ${communityDraftState.isAnonymous ? 'is-hidden' : ''}">
-                        <label class="community-label" for="community-name">Nombre</label>
-                        <input
-                            type="text"
-                            class="community-input"
-                            id="community-name"
-                            placeholder="${communityDraftState.isAnonymous ? 'Se publicará como Anónimo' : 'Escribe tu nombre'}"
-                            value="${this.escapeHtml(communityDraftState.name)}"
-                            ${communityDraftState.isAnonymous ? 'disabled' : ''}
-                        >
-                    </div>
-
-                    <div class="community-form-group">
-                        <label class="community-label" for="community-reflection">¿Qué escuchaste de su voz hoy?</label>
-                        <textarea 
-                            class="community-textarea" 
-                            id="community-reflection" 
-                            placeholder="Escribe con sencillez lo que Dios te mostró en esta lectura..."
-                            maxlength="1200"
-                        >${this.escapeHtml(communityDraft)}</textarea>
-
-                        <div class="community-char-counter" id="community-char-counter">${communityDraft.length} / 1200</div>
-                        ${showCommunityDraftRestored ? '<div class="community-draft-restored" role="status">Se restauró tu borrador anterior.</div>' : ''}
-                    </div>
-
-                    <div class="community-form-actions">
-                        <button class="btn-secondary" data-action="cancel-community-form">
-                            Cerrar
-                        </button>
-                        <button class="btn-primary" data-action="publish-community-reflection">
-                            Publicar
-                        </button>
-                        ${hasCommunityDraft ? `
-                            <button class="community-discard-draft" type="button" data-action="discard-community-draft">
-                                Descartar borrador
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
+            ${communityGuidelinesOpen ? `
+                <section class="community-guidelines-popover" role="note" aria-label="Normas de la comunidad">
+                    <button class="community-guidelines-close" type="button" data-action="toggle-community-guidelines" aria-label="Cerrar normas">×</button>
+                    <strong>Antes de compartir</strong>
+                    <p>
+                        Comparte con respeto, claridad y sencillez. Evita discusiones, ataques personales,
+                        lenguaje ofensivo o contenido ajeno al propósito de esta comunidad.
+                    </p>
+                    <p>Lo que publiques aquí podrá ser visible para otros usuarios y moderado por la aplicación.</p>
+                </section>
             ` : ''}
 
-            ${highlightedPost ? (() => {
-                const post = highlightedPost.post;
-                const authorName = post.name || 'Anónimo';
-                const isAnonymous = !post.name || authorName.trim().toLowerCase() === 'anónimo';
-                const displayName = isAnonymous ? 'Alguien de la comunidad' : authorName;
-                const excerpt = (post.text || '').length > 150 ? `${(post.text || '').slice(0, 150).trim()}...` : (post.text || '');
-                const gratitudeTotal = highlightedPost.usefulCount + highlightedPost.thanksCount;
-
-                return `
-                    <section class="community-featured-echo" aria-label="Eco destacado de la comunidad">
-                        <div class="community-featured-label">Eco destacado de la comunidad</div>
-                        <div class="community-featured-text">${this.escapeHtml(excerpt)}</div>
-                        <div class="community-featured-meta">
-                            <span>${this.escapeHtml(displayName)}</span>
-                            <span>${gratitudeTotal} ${gratitudeTotal === 1 ? 'señal de gratitud' : 'señales de gratitud'}</span>
-                            ${highlightedPost.replies.length ? `<span>${highlightedPost.replies.length === 1 ? '1 hermano participó' : `${highlightedPost.replies.length} hermanos participaron`}</span>` : ''}
-                        </div>
-                    </section>
-                `;
-            })() : ''}
+            ${this.communityFormOpen
+                ? this.renderCommunityFormCardHtml({ showRestoredNotice: showCommunityDraftRestored })
+                : this.renderCommunityComposerCardHtml(todayReference)}
 
             <div class="community-feed-heading">
                 <div>
@@ -12715,19 +13113,21 @@ const openBibleContinueBtn = e.target.closest('[data-action="open-bible-continue
 if (openBibleContinueBtn) {
     const location = this.getBibleLastLocation();
 
-    if (location?.mode === 'chapter') {
-        this.selectedBibleBook = location.bookId;
-        this.selectedBibleChapter = location.chapter;
-    } else {
-        this.selectedBibleBook = 'gen';
-        this.selectedBibleChapter = 1;
-        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
-    }
+	if (location?.mode === 'chapter') {
+	    this.selectedBibleBook = location.bookId;
+	    this.selectedBibleChapter = location.chapter;
+        this.currentBibleVersion = location.versionId || RV1909_VERSION_ID;
+        localStorage.setItem('current-bible-version', this.currentBibleVersion);
+	} else {
+	    this.selectedBibleBook = 'gen';
+	    this.selectedBibleChapter = 1;
+	    this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter, { scrollY: 0 });
+	}
 
-    this.bibleChapterPickerMode = false;
-    this.navigate('bible-reading');
-    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
-    return;
+	this.bibleChapterPickerMode = false;
+    this.bibleRestoreScrollPending = true;
+	this.navigate('bible-reading');
+	return;
 }
 
 const openTodayReadingBtn = e.target.closest('[data-action="open-today-reading"]');
@@ -12857,10 +13257,10 @@ if (bibleMemoryPassageBtn) {
     if (book && Number.isInteger(chapter) && chapter >= 1 && chapter <= book.chapters) {
         this.selectedBibleBook = book.id;
         this.selectedBibleChapter = chapter;
-        this.bibleChapterPickerMode = false;
-        this.saveBibleLastLocation(book.id, chapter);
-        this.navigate('bible-reading');
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+	    this.bibleChapterPickerMode = false;
+	    this.saveBibleLastLocation(book.id, chapter, { scrollY: 0 });
+	    this.navigate('bible-reading');
+	    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
     }
     return;
 }
@@ -12955,12 +13355,14 @@ if (revertToRv1909Btn) {
 
 const backToBibleBooksBtn = e.target.closest('[data-action="back-to-bible-books"]');
 if (backToBibleBooksBtn) {
+    this.saveBibleReadingScrollPosition();
     this.stopBibleChapterVoice(true);
     this.bibleReaderPickerOpen = false;
     document.body.classList.remove('bible-picker-open');
     this.selectedBibleBook = null;
     this.selectedBibleChapter = null;
     this.bibleChapterPickerMode = false;
+    this.skipBibleAutoRestoreOnce = true;
     this.saveBibleBooksMode();
     this.navigate('bible');
     return;
@@ -12972,6 +13374,14 @@ if (openBibleReaderPickerBtn) {
     return;
 }
 
+const switchBibleVersionBtn = e.target.closest('[data-action="switch-bible-version"]');
+if (switchBibleVersionBtn) {
+    this.switchBibleReaderVersion(
+        switchBibleVersionBtn.getAttribute('data-version-id')
+    );
+    return;
+}
+
 const closeBibleReaderPickerBtn = e.target.closest('[data-action="close-bible-reader-picker"]');
 if (closeBibleReaderPickerBtn || e.target.classList?.contains('bible-picker-sheet')) {
     this.closeBibleReaderPicker();
@@ -12980,7 +13390,7 @@ if (closeBibleReaderPickerBtn || e.target.classList?.contains('bible-picker-shee
 
 const openBibleVersionPickerBtn = e.target.closest('[data-action="open-bible-version-picker"]');
 if (openBibleVersionPickerBtn) {
-    this.openBibleVersionPicker();
+    this.showToast('Elige la versión desde la barra inferior');
     return;
 }
 
@@ -12994,16 +13404,8 @@ const selectVersionOptionBtn = e.target.closest('[data-action="select-version-op
 if (selectVersionOptionBtn) {
     const versionId = selectVersionOptionBtn.getAttribute('data-version-id');
 
-    this.currentBibleVersion = versionId;
-    localStorage.setItem('current-bible-version', this.currentBibleVersion);
-
     this.closeBibleVersionPicker();
-
-    this.handleRoute().catch(error => {
-        console.error('[Route] Error cambiando versión:', error);
-    });
-
-    this.showToast(`Versión cambiada a ${this.getBibleVersionLabel(this.currentBibleVersion)}`);
+    this.switchBibleReaderVersion(versionId);
     return;
 }
 
@@ -13050,11 +13452,11 @@ if (readerPickerChapterBtn) {
         this.selectedBibleBook = book.id;
         this.selectedBibleChapter = chapter;
         this.bibleChapterPickerMode = false;
-        this.bibleReaderPickerOpen = false;
-        document.body.classList.remove('bible-picker-open');
-        this.saveBibleLastLocation(book.id, chapter);
-        this.navigate('bible-reading');
-        requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
+	    this.bibleReaderPickerOpen = false;
+	    document.body.classList.remove('bible-picker-open');
+	    this.saveBibleLastLocation(book.id, chapter, { scrollY: 0 });
+	    this.navigate('bible-reading');
+	    requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
     }
     return;
 }
@@ -13066,21 +13468,23 @@ if (openBibleChaptersBtn) {
         return;
     }
 
-    this.stopBibleChapterVoice(true);
-    this.selectedBibleChapter = null;
-    this.bibleChapterPickerMode = true;
-    this.navigate('bible');
+	this.stopBibleChapterVoice(true);
+	this.selectedBibleChapter = null;
+	this.bibleChapterPickerMode = true;
+    this.skipBibleAutoRestoreOnce = true;
+	this.navigate('bible');
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
     return;
 }
 
 const clearBibleBookBtn = e.target.closest('[data-action="clear-bible-book"]');
 if (clearBibleBookBtn) {
-    this.selectedBibleBook = null;
-    this.selectedBibleChapter = null;
-    this.bibleChapterPickerMode = false;
-    this.saveBibleBooksMode();
-    this.navigate('bible');
+	this.selectedBibleBook = null;
+	this.selectedBibleChapter = null;
+	this.bibleChapterPickerMode = false;
+    this.skipBibleAutoRestoreOnce = true;
+	this.saveBibleBooksMode();
+	this.navigate('bible');
     return;
 }
          
@@ -13089,12 +13493,12 @@ if (openBibleChapterBtn) {
     const bookId = openBibleChapterBtn.getAttribute('data-book-id');
     const chapter = Number(openBibleChapterBtn.getAttribute('data-chapter'));
 
-    this.selectedBibleBook = bookId;
-    this.selectedBibleChapter = chapter;
-    this.bibleChapterPickerMode = false;
-    this.saveBibleLastLocation(bookId, chapter);
+	this.selectedBibleBook = bookId;
+	this.selectedBibleChapter = chapter;
+	this.bibleChapterPickerMode = false;
+	this.saveBibleLastLocation(bookId, chapter, { scrollY: 0 });
 
-    this.navigate('bible-reading');
+	this.navigate('bible-reading');
     requestAnimationFrame(() => window.scrollTo({ top: 0, behavior: 'auto' }));
     return;
 }
@@ -13102,10 +13506,10 @@ if (openBibleChapterBtn) {
 const prevChapterBtn = e.target.closest('[data-action="bible-prev-chapter"]');
 if (prevChapterBtn) {
     if (this.selectedBibleChapter > 1) {
-        this.stopBibleChapterVoice(true);
-        this.selectedBibleChapter -= 1;
-        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
-        this.navigate('bible-reading');
+	    this.stopBibleChapterVoice(true);
+	    this.selectedBibleChapter -= 1;
+	    this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter, { scrollY: 0 });
+	    this.navigate('bible-reading');
     }
     return;
 }
@@ -13115,10 +13519,10 @@ if (nextChapterBtn) {
     const currentBook = this.bibleBooks.find(b => b.id === this.selectedBibleBook);
 
     if (currentBook && this.selectedBibleChapter < currentBook.chapters) {
-        this.stopBibleChapterVoice(true);
-        this.selectedBibleChapter += 1;
-        this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter);
-        this.navigate('bible-reading');
+	    this.stopBibleChapterVoice(true);
+	    this.selectedBibleChapter += 1;
+	    this.saveBibleLastLocation(this.selectedBibleBook, this.selectedBibleChapter, { scrollY: 0 });
+	    this.navigate('bible-reading');
     }
     return;
 }
@@ -13397,22 +13801,61 @@ if (statsOpenMomentBtn) {
 const shareCommunityBtn = e.target.closest('[data-action="share-community-reflection"]');
 if (shareCommunityBtn) {
     this.communityFormOpen = !this.communityFormOpen;
-    const draft = this.loadCommunityDraftState();
-    const todayStr = this.getTodayDateStr();
-    const todayReading = this.getReadingMetadataByDate(todayStr);
+    const draft = this.ensureCommunityDraftContext(this.loadCommunityDraftState());
     this.updateCommunityDraftState({
         formOpen: this.communityFormOpen,
-        readingDate: draft.readingDate || todayStr,
-        reference: draft.reference || todayReading?.reference || 'Lectura del día'
+        readingDate: draft.readingDate,
+        reference: draft.reference
     }, { immediate: true });
 
     if ('vibrate' in navigator) {
         navigator.vibrate(25);
     }
 
-   this.handleRoute().catch(error => {
-    console.error('[Route] Error actualizando comunidad:', error);
+    if (!this.renderCommunityComposerLocally()) {
+        this.renderCommunity({
+            showSkeleton: false,
+            preserveAnchor: true,
+            skipTargetLookup: true
+        }).catch(error => {
+            console.error('[Community] Error actualizando formulario:', error);
+        });
+    }
+    return;
+}
+
+const toggleCommunityGuidelinesBtn = e.target.closest('[data-action="toggle-community-guidelines"]');
+if (toggleCommunityGuidelinesBtn) {
+    this.communityGuidelinesOpen = !this.communityGuidelinesOpen;
+    this.renderCommunity({
+        showSkeleton: false,
+        preserveAnchor: true,
+        skipTargetLookup: true
+    }).catch(error => {
+        console.error('[Community] Error mostrando normas:', error);
     });
+    return;
+}
+
+const updateCommunityDraftContextBtn = e.target.closest('[data-action="update-community-draft-context"]');
+if (updateCommunityDraftContextBtn) {
+    const todayContext = this.getCommunityTodayContext();
+    this.updateCommunityDraftState({
+        readingDate: todayContext.readingDate,
+        reference: todayContext.reference,
+        formOpen: true
+    }, { immediate: true });
+    this.showToast('Borrador actualizado a la lectura de hoy');
+    this.communityFormOpen = true;
+    if (!this.renderCommunityComposerLocally()) {
+        this.renderCommunity({
+            showSkeleton: false,
+            preserveAnchor: true,
+            skipTargetLookup: true
+        }).catch(error => {
+            console.error('[Community] Error actualizando lectura del borrador:', error);
+        });
+    }
     return;
 }
 
@@ -13462,9 +13905,15 @@ if (cancelCommunityBtn) {
         navigator.vibrate(20);
     }
 
-    this.handleRoute().catch(error => {
-        console.error('[Route] Error actualizando comunidad:', error);
-    });
+    if (!this.renderCommunityComposerLocally()) {
+        this.renderCommunity({
+            showSkeleton: false,
+            preserveAnchor: true,
+            skipTargetLookup: true
+        }).catch(error => {
+            console.error('[Community] Error cerrando formulario:', error);
+        });
+    }
     return;
 }
 
@@ -13472,12 +13921,7 @@ const discardCommunityDraftBtn = e.target.closest('[data-action="discard-communi
 if (discardCommunityDraftBtn) {
     this.discardCommunityDraft();
     this.showToast('Borrador descartado');
-    this.renderCommunity({
-        showSkeleton: false,
-        preserveAnchor: true
-    }).catch(error => {
-        console.error('[Community] Error descartando borrador:', error);
-    });
+    this.renderCommunityComposerLocally();
     return;
 }
            
@@ -13528,8 +13972,8 @@ if (publishCommunityBtn) {
         return;
     }
 
-    const draftState = this.loadCommunityDraftState();
-    const todayStr = draftState.readingDate || this.getTodayDateStr();
+    const draftState = this.ensureCommunityDraftContext(this.loadCommunityDraftState());
+    const todayStr = draftState.readingDate;
     const todayReading = this.getReadingMetadataByDate(todayStr);
 
     const newPost = {
@@ -13560,10 +14004,7 @@ if (publishCommunityBtn) {
 
     this.$content.querySelector('.community-form-card')?.remove();
 
-    const composerButton = this.$content.querySelector('[data-action="share-community-reflection"]');
-    if (composerButton) {
-        composerButton.textContent = 'Compartir lo que Dios me habló';
-    }
+    this.setCommunityShareButtonState(false);
 
     this.communityMode = 'recent';
     this.invalidateCommunityCache('recent');
