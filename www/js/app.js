@@ -9253,7 +9253,7 @@ renderBibleReaderPicker: function() {
                                 aria-label="Volver a libros"
                             >
                                 <span aria-hidden="true">←</span>
-                                Libros
+                                Volver a libros
                             </button>
                             <strong>${this.escapeHtml(selectedBook.name)}</strong>
                             <span>${selectedBook.chapters} capítulos</span>
@@ -9330,12 +9330,12 @@ mountBibleReaderPicker: function() {
     }
 },
 
-openBibleReaderPicker: function() {
+openBibleReaderPicker: function({ startAtCurrentBook = false } = {}) {
     const currentBook = this.bibleBooks.find(item => item.id === this.selectedBibleBook);
 
     this.closeBibleVersionPicker();
     this.bibleReaderPickerOpen = true;
-    this.bibleReaderPickerBook = null;
+    this.bibleReaderPickerBook = startAtCurrentBook && currentBook ? currentBook.id : null;
     this.bibleReaderPickerTestament = this.getTestamentFromBookId(currentBook?.id) === 'new' ? 'new' : 'old';
     this.mountBibleReaderPicker();
 },
@@ -13348,7 +13348,7 @@ if (backToBibleBooksBtn) {
 
 const openBibleReaderPickerBtn = e.target.closest('[data-action="open-bible-reader-picker"]');
 if (openBibleReaderPickerBtn) {
-    this.openBibleReaderPicker();
+    this.openBibleReaderPicker({ startAtCurrentBook: this.currentView === 'bible-reading' });
     return;
 }
 
@@ -13442,7 +13442,7 @@ if (readerPickerChapterBtn) {
 const openBibleChaptersBtn = e.target.closest('[data-action="open-bible-chapters"]');
 if (openBibleChaptersBtn) {
     if (this.currentView === 'bible-reading') {
-        this.openBibleReaderPicker();
+        this.openBibleReaderPicker({ startAtCurrentBook: true });
         return;
     }
 
