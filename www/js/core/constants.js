@@ -25,10 +25,20 @@ export const INTRO_VIDEO_CONFIG_2TIMOTHY = {
     note: 'Antes de continuar la lectura de este libro, mira esta breve introducción para comprender mejor su contexto, propósito y mensaje principal.'
 };
 
+export const INTRO_VIDEO_CONFIG_PSALMS = {
+    startDate: '2026-07-01',
+    endDate: '2026-07-10',
+    url: 'https://www.youtube.com/embed/iW__xJmVyJ0',
+    label: '🎬 Video introductorio',
+    title: 'Introducción al libro de Salmos',
+    note: 'Antes de comenzar la lectura de Salmos, te recomendamos ver esta breve introducción para comprender mejor su contexto, mensaje y propósito.'
+};
+
 export const INTRO_VIDEO_CONFIGS = [
     INTRO_VIDEO_CONFIG,
     INTRO_VIDEO_CONFIG_2TIMOTHY,
-    INTRO_VIDEO_CONFIG_MICAH
+    INTRO_VIDEO_CONFIG_MICAH,
+    INTRO_VIDEO_CONFIG_PSALMS
 ];
 
 export function getIntroVideoConfig(dateStr) {
