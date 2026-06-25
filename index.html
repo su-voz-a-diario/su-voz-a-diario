@@ -161,7 +161,7 @@
 
     document.addEventListener('DOMContentLoaded', () => hideSplash(3500));
     window.addEventListener('load', () => hideSplash(1800));
-    hideSplash(6500);
+    hideSplash(shouldPlayVideo ? 6500 : 3000);
 })();
 </script>
 
