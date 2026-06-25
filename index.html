@@ -67,30 +67,101 @@
 <body>
 
 <div id="splash-screen">
-    <img src="icons/splash.png" alt="Splash">
+    <img src="icons/splash 2.png" alt="Splash">
+    <video id="splash-video" src="media/intro.mp4" playsinline muted preload="auto"></video>
 </div>
 
 <script>
 (function () {
-    function hideSplashFallback(delay) {
+    const LAST_PLAYED_KEY = 'su-voz-splash-video-last-played-date';
+    const todayDate = new Date();
+    const today = [
+        todayDate.getFullYear(),
+        String(todayDate.getMonth() + 1).padStart(2, '0'),
+        String(todayDate.getDate()).padStart(2, '0')
+    ].join('-');
+    const splash = document.getElementById('splash-screen');
+    const video = document.getElementById('splash-video');
+    let hideRequested = false;
+    let hideDelay = 0;
+    let videoFinished = false;
+    let hiding = false;
+
+    function shouldPlaySplashVideoToday() {
+        try {
+            return localStorage.getItem(LAST_PLAYED_KEY) !== today;
+        } catch (error) {
+            return true;
+        }
+    }
+
+    const shouldPlayVideo = Boolean(video && shouldPlaySplashVideoToday());
+
+    function rememberSplashVideoPlayedToday() {
+        try {
+            localStorage.setItem(LAST_PLAYED_KEY, today);
+        } catch (error) {
+            // Si el almacenamiento local no está disponible, se conserva el flujo visual.
+        }
+    }
+
+    function finishSplashVideo() {
+        videoFinished = true;
+        splash?.classList.remove('is-video-playing');
+
+        if (hideRequested) {
+            hideSplash(hideDelay);
+        }
+    }
+
+    function hideSplash(delay = 0) {
+        hideRequested = true;
+        hideDelay = Math.max(0, delay);
+
+        if (hiding || !splash) return;
+
+        if (shouldPlayVideo && !videoFinished) {
+            return;
+        }
+
+        hiding = true;
+
         setTimeout(() => {
-            const splash = document.getElementById('splash-screen');
-            if (!splash) return;
+            if (!splash.isConnected) return;
 
             splash.style.opacity = '0';
 
             setTimeout(() => {
-                if (splash && splash.parentNode) {
-                    splash.parentNode.removeChild(splash);
+                if (splash.isConnected) {
+                    splash.remove();
                 }
             }, 800);
-        }, delay);
+        }, hideDelay);
     }
 
-    window.suVozHideSplash = hideSplashFallback;
-    document.addEventListener('DOMContentLoaded', () => hideSplashFallback(3500));
-    window.addEventListener('load', () => hideSplashFallback(1800));
-    hideSplashFallback(6500);
+    window.suVozHideSplash = hideSplash;
+    window.suVozShouldPlaySplashVideoToday = shouldPlaySplashVideoToday;
+
+    if (shouldPlayVideo) {
+        video.addEventListener('ended', () => finishSplashVideo(), { once: true });
+        video.addEventListener('error', () => finishSplashVideo(false), { once: true });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            splash?.classList.add('is-video-playing');
+            rememberSplashVideoPlayedToday();
+            const playback = video.play();
+
+            if (playback?.catch) {
+                playback.catch(() => finishSplashVideo(false));
+            }
+        });
+    } else {
+        videoFinished = true;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => hideSplash(3500));
+    window.addEventListener('load', () => hideSplash(1800));
+    hideSplash(6500);
 })();
 </script>
 

@@ -14566,6 +14566,11 @@ const Sanitizer = {
 };
 
 function hideSplashScreen(delay = 0) {
+    if (typeof window.suVozHideSplash === 'function') {
+        window.suVozHideSplash(delay);
+        return;
+    }
+
     const splash = document.getElementById('splash-screen');
     if (!splash) return;
 
