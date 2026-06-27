@@ -8579,11 +8579,16 @@ body.dark-mode .view-hero {
     gap: 10px;
 }
 
-.bible-reader-topbar {
+.bible-reader-fixed-header {
     position: sticky;
     top: calc(56px + env(safe-area-inset-top));
     z-index: 900;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
 
+.bible-reader-topbar {
     display: grid;
     grid-template-columns: 42px 1fr 42px;
     align-items: center;
@@ -8930,6 +8935,10 @@ body.bible-version-picker-open .bottom-nav {
 .bible-reader-focus-mode .bible-reader-context-bar:hover,
 .bible-reader-focus-mode .bible-reader-subbar:focus-within,
 .bible-reader-focus-mode .bible-reader-context-bar:focus-within {
+    opacity: 1;
+}
+
+.bible-reader-focus-mode .bible-reader-fixed-header:focus-within .bible-reader-subbar {
     opacity: 1;
 }
 

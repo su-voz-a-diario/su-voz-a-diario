@@ -9658,7 +9658,7 @@ captureBibleReaderScrollAnchor: function() {
     const verses = Array.from(shell?.querySelectorAll('.verse-item') || []);
     const topGuard = Math.max(
         72,
-        (this.$content?.querySelector('.bible-reader-topbar')?.getBoundingClientRect().bottom || 0) + 12
+        (this.$content?.querySelector('.bible-reader-fixed-header')?.getBoundingClientRect().bottom || 0) + 12
     );
 
     const anchor = verses.find(item => item.getBoundingClientRect().bottom >= topGuard) ||
@@ -9814,72 +9814,74 @@ renderBibleReading: async function() {
 
     const renderReaderShell = (bodyHtml) => `
         <div class="${this.getBibleReaderClassNames()}">
-            <div class="bible-reader-topbar">
-                <button
-                    class="bible-reader-icon-btn"
-                    type="button"
-                    data-action="back-to-bible-books"
-                    aria-label="Abrir libros"
-                    title="Libros"
-                >
-                    ☰
-                </button>
-
-                <div class="bible-reader-title-split" aria-label="Navegación del capítulo">
+            <div class="bible-reader-fixed-header">
+                <div class="bible-reader-topbar">
                     <button
-                        class="bible-reader-title-btn bible-reader-book-btn"
+                        class="bible-reader-icon-btn"
                         type="button"
-                        data-action="open-bible-reader-picker"
-                        aria-label="Cambiar libro o capítulo"
+                        data-action="back-to-bible-books"
+                        aria-label="Abrir libros"
+                        title="Libros"
                     >
-                        <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
+                        ☰
                     </button>
 
+                    <div class="bible-reader-title-split" aria-label="Navegación del capítulo">
+                        <button
+                            class="bible-reader-title-btn bible-reader-book-btn"
+                            type="button"
+                            data-action="open-bible-reader-picker"
+                            aria-label="Cambiar libro o capítulo"
+                        >
+                            <span class="bible-reader-book">${this.escapeHtml(requestedBook.name)}</span>
+                        </button>
+
+                        <button
+                            class="bible-reader-title-btn bible-reader-chapter-btn"
+                            type="button"
+                            data-action="open-bible-reader-picker"
+                            aria-label="Abrir selector de ${this.escapeHtml(requestedBook.name)} ${requestedChapter}"
+                        >
+                            <span class="bible-reader-chapter">Cap. ${requestedChapter} ▼</span>
+                        </button>
+                    </div>
+
                     <button
-                        class="bible-reader-title-btn bible-reader-chapter-btn"
+                        class="bible-reader-icon-btn"
                         type="button"
-                        data-action="open-bible-reader-picker"
-                        aria-label="Abrir selector de ${this.escapeHtml(requestedBook.name)} ${requestedChapter}"
+                        data-action="open-bible-search"
+                        aria-label="Buscar en la Biblia"
+                        title="Buscar"
                     >
-                        <span class="bible-reader-chapter">Cap. ${requestedChapter} ▼</span>
+                        🔍
                     </button>
                 </div>
 
-                <button
-                    class="bible-reader-icon-btn"
-                    type="button"
-                    data-action="open-bible-search"
-                    aria-label="Buscar en la Biblia"
-                    title="Buscar"
-                >
-                    🔍
-                </button>
-            </div>
+                <div class="bible-reader-subbar">
+                    <button
+                        class="bible-reader-nav-btn"
+                        type="button"
+                        data-action="bible-prev-chapter"
+                        aria-label="Capítulo anterior"
+                        title="Capítulo anterior"
+                        ${previousDisabled ? 'disabled' : ''}
+                    >
+                        ‹
+                    </button>
 
-            <div class="bible-reader-subbar">
-                <button
-                    class="bible-reader-nav-btn"
-                    type="button"
-                    data-action="bible-prev-chapter"
-                    aria-label="Capítulo anterior"
-                    title="Capítulo anterior"
-                    ${previousDisabled ? 'disabled' : ''}
-                >
-                    ‹
-                </button>
+                    ${this.renderBibleReaderVersionSwitcher()}
 
-                ${this.renderBibleReaderVersionSwitcher()}
-
-                <button
-                    class="bible-reader-nav-btn"
-                    type="button"
-                    data-action="bible-next-chapter"
-                    aria-label="Capítulo siguiente"
-                    title="Capítulo siguiente"
-                    ${nextDisabled ? 'disabled' : ''}
-                >
-                    ›
-                </button>
+                    <button
+                        class="bible-reader-nav-btn"
+                        type="button"
+                        data-action="bible-next-chapter"
+                        aria-label="Capítulo siguiente"
+                        title="Capítulo siguiente"
+                        ${nextDisabled ? 'disabled' : ''}
+                    >
+                        ›
+                    </button>
+                </div>
             </div>
 
             ${bodyHtml}
