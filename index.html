@@ -120,16 +120,29 @@
         videoFinished = true;
         splash?.classList.remove('is-video-playing');
 
-        if (hideRequested) {
-            hideSplash(hideDelay);
+        if (video) {
+            video.style.display = 'none';
+            video.pause();
+            video.removeAttribute('src');
+            video.load();
         }
+
+        hideSplash(0, true);
     }
 
-    function hideSplash(delay = 0) {
+    function hideSplash(delay = 0, immediate = false) {
         hideRequested = true;
         hideDelay = Math.max(0, delay);
 
         if (hiding || !splash) return;
+
+        if (immediate) {
+            hiding = true;
+            if (splash.isConnected) {
+                splash.remove();
+            }
+            return;
+        }
 
         if (shouldPlayVideo && !videoFinished) {
             return;
@@ -140,7 +153,7 @@
         setTimeout(() => {
             if (!splash.isConnected) return;
 
-            splash.style.opacity = '0';
+            splash.classList.add('is-hidden');
 
             setTimeout(() => {
                 if (splash.isConnected) {

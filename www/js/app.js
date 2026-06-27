@@ -14576,7 +14576,7 @@ function hideSplashScreen(delay = 0) {
 
     setTimeout(() => {
         if (!splash.isConnected) return;
-        splash.style.opacity = '0';
+        splash.classList.add('is-hidden');
 
         setTimeout(() => {
             if (splash.isConnected) splash.remove();
